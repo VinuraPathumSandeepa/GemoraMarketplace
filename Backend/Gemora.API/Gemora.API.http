@@ -1,0 +1,6 @@
+@Gemora.API_HostAddress = http://localhost:5198
+
+GET {{Gemora.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

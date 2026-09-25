@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gemora.API", "Gemora.API\Gemora.API.csproj", "{23D14D2C-BD3E-42C7-8893-C0C9BA6B8882}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gemora.Domain", "Gemora.Domain\Gemora.Domain.csproj", "{3F615AA6-AF9F-41A1-B272-F7184F387845}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gemora.Application", "Gemora.Application\Gemora.Application.csproj", "{A59976FB-24AF-4894-9D1C-471667623291}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gemora.Infrastructure", "Gemora.Infrastructure\Gemora.Infrastructure.csproj", "{3D7F0979-D4DE-43BF-90FD-14CDFA7170D1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{23D14D2C-BD3E-42C7-8893-C0C9BA6B8882}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{23D14D2C-BD3E-42C7-8893-C0C9BA6B8882}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{23D14D2C-BD3E-42C7-8893-C0C9BA6B8882}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{23D14D2C-BD3E-42C7-8893-C0C9BA6B8882}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3F615AA6-AF9F-41A1-B272-F7184F387845}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3F615AA6-AF9F-41A1-B272-F7184F387845}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3F615AA6-AF9F-41A1-B272-F7184F387845}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3F615AA6-AF9F-41A1-B272-F7184F387845}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A59976FB-24AF-4894-9D1C-471667623291}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A59976FB-24AF-4894-9D1C-471667623291}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A59976FB-24AF-4894-9D1C-471667623291}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A59976FB-24AF-4894-9D1C-471667623291}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3D7F0979-D4DE-43BF-90FD-14CDFA7170D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3D7F0979-D4DE-43BF-90FD-14CDFA7170D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3D7F0979-D4DE-43BF-90FD-14CDFA7170D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3D7F0979-D4DE-43BF-90FD-14CDFA7170D1}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
