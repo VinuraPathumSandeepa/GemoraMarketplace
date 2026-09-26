@@ -2,6 +2,7 @@ using System.Text.Json;
 using Gemora.Application.DTOs.GemAI;
 using Gemora.Application.Interfaces;
 using Gemora.Domain.AI;
+using Gemora.Domain.Interfaces;
 using Gemora.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,15 +13,19 @@ public class GemVerificationAgent : IGemVerificationAgent
     private readonly ApplicationDbContext _context;
     private readonly IGemEvidenceValidator _evidenceValidator;
     private readonly IGemAiModelClient _aiModelClient;
+    private readonly IGemImageReader _gemImageReader;
+
 
     public GemVerificationAgent(
         ApplicationDbContext context,
         IGemEvidenceValidator evidenceValidator,
-        IGemAiModelClient aiModelClient)
+        IGemAiModelClient aiModelClient,
+        IGemImageReader gemImageReader)
     {
         _context = context;
         _evidenceValidator = evidenceValidator;
         _aiModelClient = aiModelClient;
+        _gemImageReader = gemImageReader;
     }
 
 
@@ -37,6 +42,7 @@ public class GemVerificationAgent : IGemVerificationAgent
                 .FirstOrDefaultAsync(
                     v => v.Id == verificationId);
 
+
         if (verification == null)
         {
             throw new KeyNotFoundException(
@@ -47,6 +53,7 @@ public class GemVerificationAgent : IGemVerificationAgent
         var listing =
             verification.GemListing;
 
+
         if (listing == null)
         {
             throw new InvalidOperationException(
@@ -56,6 +63,8 @@ public class GemVerificationAgent : IGemVerificationAgent
 
         // ========================================================
         // STEP 2 — CHECK HUMAN REVIEW STATE
+        //
+        // AI can only assist while the human decision is Pending.
         // ========================================================
 
         if (!string.Equals(
@@ -69,7 +78,7 @@ public class GemVerificationAgent : IGemVerificationAgent
 
 
         // ========================================================
-        // STEP 3 — PREVENT CONCURRENT EXECUTION
+        // STEP 3 — PREVENT CONCURRENT AI EXECUTION
         // ========================================================
 
         if (string.Equals(
@@ -83,11 +92,12 @@ public class GemVerificationAgent : IGemVerificationAgent
 
 
         // ========================================================
-        // STEP 4 — PERSIST PROCESSING STATE
+        // STEP 4 — MARK AGENT AS PROCESSING
         // ========================================================
 
         verification.AiStatus =
             "Processing";
+
 
         await _context.SaveChangesAsync();
 
@@ -99,6 +109,7 @@ public class GemVerificationAgent : IGemVerificationAgent
         result.StepsCompleted.Add(
             "Verification and listing loaded.");
 
+
         result.StepsCompleted.Add(
             "Verification workflow state checked.");
 
@@ -106,7 +117,9 @@ public class GemVerificationAgent : IGemVerificationAgent
         try
         {
             // ====================================================
-            // STEP 5 — DETERMINISTIC VALIDATION TOOL
+            // STEP 5 — DETERMINISTIC EVIDENCE VALIDATION
+            //
+            // This runs BEFORE Gemini.
             // ====================================================
 
             var validation =
@@ -139,14 +152,23 @@ public class GemVerificationAgent : IGemVerificationAgent
                 result.Status =
                     "NeedsMoreEvidence";
 
+
                 result.SuggestedGemType =
                     null;
+
 
                 result.ConfidenceScore =
                     null;
 
+
+                result.ImageAnalyzed =
+                    false;
+
+
                 result.Findings =
-                    "Required evidence validation failed. AI model analysis was not performed. Human review is required.";
+                    "Required evidence validation failed. " +
+                    "AI model analysis was not performed. " +
+                    "Human review is required.";
 
 
                 result.StepsCompleted.Add(
@@ -161,91 +183,212 @@ public class GemVerificationAgent : IGemVerificationAgent
 
                 await _context.SaveChangesAsync();
 
+
                 return result;
             }
 
 
             // ====================================================
-            // STEP 7 — CALL ALLOW-LISTED AI MODEL TOOL
+            // STEP 7 — LOAD TRUSTED GEMSTONE IMAGE
             //
-            // Current implementation:
+            // The Application layer does not know:
             //
-            // IGemAiModelClient
-            //      ↓
-            // GeminiGemAnalysisClient
-            //      ↓
-            // Gemini API
+            // - wwwroot
+            // - physical server paths
+            // - IWebHostEnvironment
             //
-            // The provider remains hidden behind the interface.
+            // Infrastructure handles those details through
+            // IGemImageReader.
             // ====================================================
 
-            result.StepsCompleted.Add(
-                "AI model analysis started.");
+            GemImageReadResult? imageEvidence =
+                null;
 
 
-            var modelResult =
-                await _aiModelClient.AnalyzeAsync(
-                    listing);
-
-
-            // ====================================================
-            // STEP 8 — MERGE MODEL RESULT
-            // ====================================================
-
-            result.Status =
-                "Completed";
-
-
-            result.SuggestedGemType =
-                modelResult.SuggestedGemType;
-
-
-            result.ConfidenceScore =
-                modelResult.ConfidenceScore;
-
-
-            result.Findings =
-                modelResult.Findings;
-
-
-            if (modelResult.RiskFlags != null)
+            try
             {
-                result.RiskFlags.AddRange(
-                    modelResult.RiskFlags);
+                imageEvidence =
+                    await _gemImageReader.OpenImageAsync(
+                        listing.PrimaryImageUrl);
+
+
+                if (imageEvidence != null)
+                {
+                    result.StepsCompleted.Add(
+                        "Uploaded gemstone image loaded for multimodal analysis.");
+                }
+                else
+                {
+                    result.RiskFlags.Add(
+                        "The gemstone image could not be loaded for visual AI analysis.");
+
+
+                    result.StepsCompleted.Add(
+                        "Gemstone image was unavailable; AI will use listing metadata only.");
+                }
+
+
+                // ================================================
+                // STEP 8 — CALL ALLOW-LISTED AI MODEL TOOL
+                // ================================================
+
+                if (imageEvidence != null)
+                {
+                    result.StepsCompleted.Add(
+                        "Multimodal AI analysis started with listing metadata and gemstone image.");
+                }
+                else
+                {
+                    result.StepsCompleted.Add(
+                        "AI metadata analysis started.");
+                }
+
+
+                var modelResult =
+                    await _aiModelClient.AnalyzeAsync(
+                        listing,
+                        imageEvidence?.Stream,
+                        imageEvidence?.ContentType);
+
+
+                // ================================================
+                // STEP 9 — MERGE AI MODEL RESULT
+                // ================================================
+
+                result.Status =
+                    "Completed";
+
+
+                result.SuggestedGemType =
+                    modelResult.SuggestedGemType;
+
+
+                result.ConfidenceScore =
+                    modelResult.ConfidenceScore;
+
+
+                result.Findings =
+                    modelResult.Findings;
+
+
+                result.ImageAnalyzed =
+                    modelResult.ImageAnalyzed;
+
+
+                // ================================================
+                // VISUAL OBSERVATIONS
+                // ================================================
+
+                if (modelResult.VisualObservations != null)
+                {
+                    foreach (var observation in
+                             modelResult.VisualObservations)
+                    {
+                        if (string.IsNullOrWhiteSpace(
+                                observation))
+                        {
+                            continue;
+                        }
+
+
+                        if (!result.VisualObservations.Contains(
+                                observation,
+                                StringComparer.OrdinalIgnoreCase))
+                        {
+                            result.VisualObservations.Add(
+                                observation);
+                        }
+                    }
+                }
+
+
+                // ================================================
+                // MERGE RISK FLAGS
+                //
+                // Keep deterministic warnings + Gemini flags.
+                // Avoid duplicates.
+                // ================================================
+
+                if (modelResult.RiskFlags != null)
+                {
+                    foreach (var riskFlag in
+                             modelResult.RiskFlags)
+                    {
+                        if (string.IsNullOrWhiteSpace(
+                                riskFlag))
+                        {
+                            continue;
+                        }
+
+
+                        if (!result.RiskFlags.Contains(
+                                riskFlag,
+                                StringComparer.OrdinalIgnoreCase))
+                        {
+                            result.RiskFlags.Add(
+                                riskFlag);
+                        }
+                    }
+                }
+
+
+                // ================================================
+                // AUDIT STEPS
+                // ================================================
+
+                if (modelResult.ImageAnalyzed)
+                {
+                    result.StepsCompleted.Add(
+                        "Gemstone image and listing metadata analyzed by the AI model.");
+                }
+                else
+                {
+                    result.StepsCompleted.Add(
+                        "Listing metadata analyzed by the AI model.");
+                }
+
+
+                result.StepsCompleted.Add(
+                    "AI findings prepared for human Gemologist review.");
+
+
+                // ================================================
+                // STEP 10 — PERSIST COMPLETED AI RESULT
+                // ================================================
+
+                PersistResult(
+                    verification,
+                    result,
+                    "Completed");
+
+
+                await _context.SaveChangesAsync();
+
+
+                return result;
             }
+            finally
+            {
+                // ================================================
+                // ALWAYS CLOSE IMAGE STREAM
+                // ================================================
 
-
-            result.StepsCompleted.Add(
-                "AI model analysis completed.");
-
-
-            result.StepsCompleted.Add(
-                "AI findings prepared for human Gemologist review.");
-
-
-            // ====================================================
-            // STEP 9 — PERSIST COMPLETED AGENT RESULT
-            // ====================================================
-
-            PersistResult(
-                verification,
-                result,
-                "Completed");
-
-
-            await _context.SaveChangesAsync();
-
-
-            return result;
+                if (imageEvidence != null)
+                {
+                    await imageEvidence.DisposeAsync();
+                }
+            }
         }
         catch
         {
             // ====================================================
-            // STEP 10 — SAFE FAILURE
+            // STEP 11 — SAFE FAILURE
             //
-            // Never leave the verification permanently stuck in:
+            // Never leave:
             //
             // AiStatus = Processing
+            //
+            // when Gemini/file processing fails.
             // ====================================================
 
             verification.AiStatus =
@@ -296,11 +439,34 @@ public class GemVerificationAgent : IGemVerificationAgent
             result.Findings;
 
 
-        // Store the structured audit information as JSON.
+        // ========================================================
+        // Store structured supporting information as JSON.
+        //
+        // Current DB field:
+        //
+        // AiRiskFlags
+        //
+        // For this assignment version it also stores:
+        //
+        // - imageAnalyzed
+        // - visualObservations
+        // - riskFlags
+        // - validationIssues
+        // - stepsCompleted
+        //
+        // This provides basic persistent AI execution/audit state.
+        // ========================================================
+
         verification.AiRiskFlags =
             JsonSerializer.Serialize(
                 new
                 {
+                    imageAnalyzed =
+                        result.ImageAnalyzed,
+
+                    visualObservations =
+                        result.VisualObservations,
+
                     riskFlags =
                         result.RiskFlags,
 

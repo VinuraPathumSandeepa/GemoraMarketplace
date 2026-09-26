@@ -6,5 +6,7 @@ public interface IGemAiModelClient
 {
     Task<GemAiModelResult> AnalyzeAsync(
         GemListing listing,
+        Stream? imageStream = null,
+        string? imageContentType = null,
         CancellationToken cancellationToken = default);
 }

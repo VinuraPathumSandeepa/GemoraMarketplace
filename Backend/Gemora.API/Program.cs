@@ -1,8 +1,8 @@
-using Gemora.Domain.AI;
 using System.Text;
 using Gemora.API.Middleware;
 using Gemora.Application.Interfaces;
 using Gemora.Application.Services;
+using Gemora.Domain.AI;
 using Gemora.Domain.Interfaces;
 using Gemora.Infrastructure.AI;
 using Gemora.Infrastructure.Data;
@@ -21,14 +21,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 var connectionString =
     builder.Configuration
-        .GetConnectionString("DefaultConnection")
+        .GetConnectionString(
+            "DefaultConnection")
     ?? throw new InvalidOperationException(
         "Database connection string 'DefaultConnection' is not configured.");
+
 
 builder.Services.AddDbContext<ApplicationDbContext>(
     options =>
     {
-        options.UseNpgsql(connectionString);
+        options.UseNpgsql(
+            connectionString);
     });
 
 
@@ -36,13 +39,13 @@ builder.Services.AddDbContext<ApplicationDbContext>(
 // APPLICATION SERVICES
 // ============================================================
 
-// Authentication service
+// Authentication
 builder.Services.AddScoped<
     IAuthService,
     AuthService>();
 
 
-// JWT token generation service
+// JWT token generation
 builder.Services.AddScoped<
     TokenService>();
 
@@ -53,23 +56,16 @@ builder.Services.AddScoped<
     GemListingService>();
 
 
-// Gemologist verification/review workflow
+// Human Gemologist verification workflow
 builder.Services.AddScoped<
     IGemVerificationService,
     GemVerificationService>();
 
 
 // ============================================================
-// GEM AI — DETERMINISTIC EVIDENCE VALIDATOR
+// DETERMINISTIC GEM EVIDENCE VALIDATOR
 //
-// This performs normal C# validation before Gemini is used.
-//
-// It checks:
-// - Basic listing information
-// - Gem image availability
-// - Certificate evidence
-// - Certificate metadata
-// - Gemstone characteristics
+// Runs before the generative AI model.
 // ============================================================
 
 builder.Services.AddScoped<
@@ -78,25 +74,21 @@ builder.Services.AddScoped<
 
 
 // ============================================================
-// GEM AI — VERIFICATION AGENT
+// GEM VERIFICATION AGENT
 //
-// This is the orchestration layer.
+// Orchestrates:
 //
-// Current/final intended flow:
-//
-// NotStarted
-//      ↓
-// Processing
+// Verification
 //      ↓
 // Deterministic validation
 //      ↓
-// AI model analysis
+// Image evidence reader
 //      ↓
-// Completed
+// Gemini multimodal analysis
 //      ↓
-// Human Gemologist review
-//
-// The AI does NOT approve or reject listings.
+// Persistent AI result
+//      ↓
+// Human Gemologist decision
 // ============================================================
 
 builder.Services.AddScoped<
@@ -107,13 +99,12 @@ builder.Services.AddScoped<
 // ============================================================
 // GEMINI CONFIGURATION
 //
-// Reads:
+// Local development values are stored in User Secrets:
 //
 // Gemini:ApiKey
 // Gemini:Model
 //
-// The API key is stored in .NET User Secrets during local
-// development and must NOT be committed to GitHub.
+// Never place the real API key in appsettings.json.
 // ============================================================
 
 builder.Services.Configure<GeminiOptions>(
@@ -122,14 +113,7 @@ builder.Services.Configure<GeminiOptions>(
 
 
 // ============================================================
-// GEMINI AI MODEL CLIENT
-//
-// IGemAiModelClient is the application-level abstraction.
-//
-// GeminiGemAnalysisClient is the infrastructure implementation.
-//
-// This keeps Gemini-specific HTTP code outside the application
-// orchestration service.
+// GEMINI MODEL CLIENT
 // ============================================================
 
 builder.Services.AddHttpClient<
@@ -141,22 +125,25 @@ builder.Services.AddHttpClient<
                 new Uri(
                     "https://generativelanguage.googleapis.com/");
 
+
             client.Timeout =
                 TimeSpan.FromSeconds(60);
         });
 
 
 // ============================================================
-// FILE STORAGE
+// LOCAL FILE STORAGE SERVICE
 //
-// Uploaded files are stored inside:
+// Physical root:
 //
-// Gemora.API/wwwroot/uploads
+// Gemora.API
+//   └── wwwroot
+//       └── uploads
 //
-// app.UseStaticFiles() then exposes:
+// Subdirectories:
 //
-// /uploads/gem-images/...
-// /uploads/certificates/...
+// uploads/gem-images
+// uploads/certificates
 // ============================================================
 
 builder.Services.AddScoped<IFileStorageService>(
@@ -164,15 +151,14 @@ builder.Services.AddScoped<IFileStorageService>(
     {
         var environment =
             serviceProvider
-                .GetRequiredService<IWebHostEnvironment>();
+                .GetRequiredService<
+                    IWebHostEnvironment>();
 
 
         var webRootPath =
             environment.WebRootPath;
 
 
-        // WebRootPath may be null if wwwroot did not exist when
-        // the application host was initialized.
         if (string.IsNullOrWhiteSpace(
                 webRootPath))
         {
@@ -198,6 +184,66 @@ builder.Services.AddScoped<IFileStorageService>(
 
 
         return new LocalFileStorageService(
+            uploadRoot);
+    });
+
+
+// ============================================================
+// GEM IMAGE READER
+//
+// This is separate from the Application layer.
+//
+// Application sees:
+//
+// IGemImageReader
+//
+// Infrastructure handles:
+//
+// wwwroot
+// physical paths
+// FileStream
+// MIME type
+// path safety
+// ============================================================
+
+builder.Services.AddScoped<IGemImageReader>(
+    serviceProvider =>
+    {
+        var environment =
+            serviceProvider
+                .GetRequiredService<
+                    IWebHostEnvironment>();
+
+
+        var webRootPath =
+            environment.WebRootPath;
+
+
+        if (string.IsNullOrWhiteSpace(
+                webRootPath))
+        {
+            webRootPath =
+                Path.Combine(
+                    environment.ContentRootPath,
+                    "wwwroot");
+        }
+
+
+        Directory.CreateDirectory(
+            webRootPath);
+
+
+        var uploadRoot =
+            Path.Combine(
+                webRootPath,
+                "uploads");
+
+
+        Directory.CreateDirectory(
+            uploadRoot);
+
+
+        return new LocalGemImageReader(
             uploadRoot);
     });
 
@@ -269,6 +315,7 @@ builder.Services
                 JwtBearerDefaults
                     .AuthenticationScheme;
 
+
             options.DefaultChallengeScheme =
                 JwtBearerDefaults
                     .AuthenticationScheme;
@@ -279,17 +326,17 @@ builder.Services
             options.TokenValidationParameters =
                 new TokenValidationParameters
                 {
-                    // Validate who issued the JWT.
-                    ValidateIssuer = true,
+                    ValidateIssuer =
+                        true,
 
-                    // Validate the intended audience.
-                    ValidateAudience = true,
+                    ValidateAudience =
+                        true,
 
-                    // Reject expired JWT tokens.
-                    ValidateLifetime = true,
+                    ValidateLifetime =
+                        true,
 
-                    // Validate the JWT signature.
-                    ValidateIssuerSigningKey = true,
+                    ValidateIssuerSigningKey =
+                        true,
 
 
                     ValidIssuer =
@@ -306,8 +353,6 @@ builder.Services
                                 jwtKey)),
 
 
-                    // Token expires exactly at its expiration
-                    // time without an additional grace period.
                     ClockSkew =
                         TimeSpan.Zero
                 };
@@ -326,6 +371,7 @@ builder.Services.AddAuthorization();
 // ============================================================
 
 builder.Services.AddEndpointsApiExplorer();
+
 
 builder.Services.AddSwaggerGen(
     options =>
@@ -346,7 +392,7 @@ builder.Services.AddSwaggerGen(
 
 
         // ========================================================
-        // JWT BEARER AUTHENTICATION IN SWAGGER
+        // SWAGGER JWT AUTHENTICATION
         // ========================================================
 
         options.AddSecurityDefinition(
@@ -408,19 +454,19 @@ var app =
 // ============================================================
 // GLOBAL EXCEPTION HANDLER
 //
-// Existing behavior:
+// Existing mappings:
 //
 // InvalidOperationException
-//      → 409 Conflict
+//      → 409
 //
 // UnauthorizedAccessException
-//      → 403 Forbidden
+//      → 403
 //
 // KeyNotFoundException
-//      → 404 Not Found
+//      → 404
 //
-// Other unexpected exception
-//      → 500 Internal Server Error
+// Unexpected exception
+//      → 500
 // ============================================================
 
 app.UseMiddleware<
@@ -443,15 +489,13 @@ if (app.Environment
 // ============================================================
 // STATIC FILES
 //
-// Required for gemstone images and certificates.
+// Allows public gemstone image URLs such as:
 //
-// Example:
+// /uploads/gem-images/example.jpg
 //
-// http://localhost:5198/uploads/gem-images/xxx.jpg
-//
-// Physical location:
-//
-// Gemora.API/wwwroot/uploads/gem-images/xxx.jpg
+// NOTE:
+// Before final production deployment we should review whether
+// certificate documents should remain publicly accessible.
 // ============================================================
 
 app.UseStaticFiles();
@@ -467,8 +511,6 @@ app.UseCors(
 
 // ============================================================
 // AUTHENTICATION
-//
-// Authentication MUST execute before Authorization.
 // ============================================================
 
 app.UseAuthentication();
@@ -482,7 +524,7 @@ app.UseAuthorization();
 
 
 // ============================================================
-// MAP CONTROLLERS
+// CONTROLLERS
 // ============================================================
 
 app.MapControllers();
@@ -491,15 +533,13 @@ app.MapControllers();
 // ============================================================
 // DATABASE SEEDING
 //
-// Seeds required Gemora staff accounts.
+// Seeds staff users such as:
 //
-// Examples:
-// - Admin
-// - Gemologist
-// - Export Officer
+// Admin
+// Gemologist
+// ExportOfficer
 //
-// Passwords are read from configuration/User Secrets and are
-// not stored directly in this source file.
+// Passwords come from secure configuration/User Secrets.
 // ============================================================
 
 using (var scope =
@@ -507,6 +547,7 @@ using (var scope =
 {
     var services =
         scope.ServiceProvider;
+
 
     try
     {

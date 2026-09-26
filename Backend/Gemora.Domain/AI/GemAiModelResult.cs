@@ -8,5 +8,9 @@ public class GemAiModelResult
 
     public string Findings { get; set; } = string.Empty;
 
+    public List<string> VisualObservations { get; set; } = new();
+
     public List<string> RiskFlags { get; set; } = new();
+
+    public bool ImageAnalyzed { get; set; }
 }
