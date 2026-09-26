@@ -2,6 +2,7 @@ using Gemora.Application.DTOs.GemListings;
 using Gemora.Application.Interfaces;
 using Gemora.Domain.Constants;
 using Gemora.Domain.Entities;
+using Gemora.Domain.Interfaces;
 using Gemora.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,10 +11,14 @@ namespace Gemora.Application.Services;
 public class GemListingService : IGemListingService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IFileStorageService _fileStorageService;
 
-    public GemListingService(ApplicationDbContext context)
+    public GemListingService(
+        ApplicationDbContext context,
+        IFileStorageService fileStorageService)
     {
         _context = context;
+        _fileStorageService = fileStorageService;
     }
 
 
@@ -25,9 +30,11 @@ public class GemListingService : IGemListingService
         Guid sellerId,
         CreateGemListingDto dto)
     {
-        var sellerExists = await _context.Users.AnyAsync(
-            u => u.Id == sellerId &&
-                 u.Role == UserRoles.Seller);
+        var sellerExists =
+            await _context.Users.AnyAsync(
+                u =>
+                    u.Id == sellerId &&
+                    u.Role == UserRoles.Seller);
 
         if (!sellerExists)
         {
@@ -55,40 +62,48 @@ public class GemListingService : IGemListingService
 
             Price = dto.Price,
 
-            Currency = dto.Currency
-                .Trim()
-                .ToUpperInvariant(),
+            Currency =
+                dto.Currency
+                    .Trim()
+                    .ToUpperInvariant(),
 
             // ----------------------------------------------------
             // Evidence
             // ----------------------------------------------------
 
             PrimaryImageUrl =
-                CleanOptionalValue(dto.PrimaryImageUrl),
+                CleanOptionalValue(
+                    dto.PrimaryImageUrl),
 
             CertificateNumber =
-                CleanOptionalValue(dto.CertificateNumber),
+                CleanOptionalValue(
+                    dto.CertificateNumber),
 
             CertificateAuthority =
-                CleanOptionalValue(dto.CertificateAuthority),
+                CleanOptionalValue(
+                    dto.CertificateAuthority),
 
             CertificateUrl =
-                CleanOptionalValue(dto.CertificateUrl),
+                CleanOptionalValue(
+                    dto.CertificateUrl),
 
             // ----------------------------------------------------
             // Workflow
             // ----------------------------------------------------
 
-            Status = GemListingStatuses.Draft,
+            Status =
+                GemListingStatuses.Draft,
 
-            CreatedAt = DateTime.UtcNow
+            CreatedAt =
+                DateTime.UtcNow
         };
 
         _context.GemListings.Add(listing);
 
         await _context.SaveChangesAsync();
 
-        return await GetListingDtoAsync(listing.Id);
+        return await GetListingDtoAsync(
+            listing.Id);
     }
 
 
@@ -97,7 +112,8 @@ public class GemListingService : IGemListingService
     // ============================================================
 
     public async Task<List<GemListingDto>>
-        GetMyListingsAsync(Guid sellerId)
+        GetMyListingsAsync(
+            Guid sellerId)
     {
         return await _context.GemListings
             .AsNoTracking()
@@ -121,9 +137,11 @@ public class GemListingService : IGemListingService
 
                 GemType = g.GemType,
 
-                Description = g.Description,
+                Description =
+                    g.Description,
 
-                CaratWeight = g.CaratWeight,
+                CaratWeight =
+                    g.CaratWeight,
 
                 Color = g.Color,
 
@@ -157,9 +175,11 @@ public class GemListingService : IGemListingService
 
                 Status = g.Status,
 
-                CreatedAt = g.CreatedAt,
+                CreatedAt =
+                    g.CreatedAt,
 
-                UpdatedAt = g.UpdatedAt
+                UpdatedAt =
+                    g.UpdatedAt
             })
 
             .ToListAsync();
@@ -169,7 +189,8 @@ public class GemListingService : IGemListingService
     // ============================================================
     // GET ONE LISTING
     //
-    // Seller ownership is enforced here.
+    // Ownership is enforced.
+    // A seller cannot retrieve another seller's listing here.
     // ============================================================
 
     public async Task<GemListingDto?>
@@ -197,9 +218,11 @@ public class GemListingService : IGemListingService
 
                 GemType = g.GemType,
 
-                Description = g.Description,
+                Description =
+                    g.Description,
 
-                CaratWeight = g.CaratWeight,
+                CaratWeight =
+                    g.CaratWeight,
 
                 Color = g.Color,
 
@@ -233,9 +256,11 @@ public class GemListingService : IGemListingService
 
                 Status = g.Status,
 
-                CreatedAt = g.CreatedAt,
+                CreatedAt =
+                    g.CreatedAt,
 
-                UpdatedAt = g.UpdatedAt
+                UpdatedAt =
+                    g.UpdatedAt
             })
 
             .FirstOrDefaultAsync();
@@ -245,7 +270,7 @@ public class GemListingService : IGemListingService
     // ============================================================
     // UPDATE LISTING
     //
-    // Only Draft or ChangesRequested listings can be edited.
+    // Only Draft and ChangesRequested listings can be edited.
     // ============================================================
 
     public async Task<bool> UpdateAsync(
@@ -265,8 +290,10 @@ public class GemListingService : IGemListingService
             return false;
         }
 
-        if (listing.Status != GemListingStatuses.Draft &&
-            listing.Status != GemListingStatuses.ChangesRequested)
+        if (listing.Status !=
+                GemListingStatuses.Draft &&
+            listing.Status !=
+                GemListingStatuses.ChangesRequested)
         {
             throw new InvalidOperationException(
                 "Only Draft or ChangesRequested listings can be edited.");
@@ -274,7 +301,7 @@ public class GemListingService : IGemListingService
 
 
         // --------------------------------------------------------
-        // Basic information
+        // Basic gem information
         // --------------------------------------------------------
 
         listing.Title =
@@ -308,20 +335,24 @@ public class GemListingService : IGemListingService
 
 
         // --------------------------------------------------------
-        // Evidence
+        // Evidence metadata
         // --------------------------------------------------------
 
         listing.PrimaryImageUrl =
-            CleanOptionalValue(dto.PrimaryImageUrl);
+            CleanOptionalValue(
+                dto.PrimaryImageUrl);
 
         listing.CertificateNumber =
-            CleanOptionalValue(dto.CertificateNumber);
+            CleanOptionalValue(
+                dto.CertificateNumber);
 
         listing.CertificateAuthority =
-            CleanOptionalValue(dto.CertificateAuthority);
+            CleanOptionalValue(
+                dto.CertificateAuthority);
 
         listing.CertificateUrl =
-            CleanOptionalValue(dto.CertificateUrl);
+            CleanOptionalValue(
+                dto.CertificateUrl);
 
 
         // --------------------------------------------------------
@@ -330,7 +361,6 @@ public class GemListingService : IGemListingService
 
         listing.UpdatedAt =
             DateTime.UtcNow;
-
 
         await _context.SaveChangesAsync();
 
@@ -360,29 +390,58 @@ public class GemListingService : IGemListingService
             return false;
         }
 
-        if (listing.Status != GemListingStatuses.Draft)
+        if (listing.Status !=
+            GemListingStatuses.Draft)
         {
             throw new InvalidOperationException(
                 "Only Draft listings can be deleted.");
         }
 
-        _context.GemListings.Remove(listing);
+
+        // --------------------------------------------------------
+        // Remember locally stored evidence so it can be removed
+        // after the database operation succeeds.
+        // --------------------------------------------------------
+
+        var imageUrl =
+            listing.PrimaryImageUrl;
+
+        var certificateUrl =
+            listing.CertificateUrl;
+
+
+        _context.GemListings.Remove(
+            listing);
 
         await _context.SaveChangesAsync();
+
+
+        // --------------------------------------------------------
+        // Clean up locally uploaded files.
+        //
+        // DeleteFileAsync ignores external URLs, so our old
+        // example.com test URLs will not be deleted.
+        // --------------------------------------------------------
+
+        await _fileStorageService
+            .DeleteFileAsync(imageUrl);
+
+        await _fileStorageService
+            .DeleteFileAsync(certificateUrl);
 
         return true;
     }
 
 
     // ============================================================
-    // SUBMIT LISTING FOR VERIFICATION
+    // SUBMIT FOR VERIFICATION
     //
-    // Draft or ChangesRequested
-    //        ↓
+    // Draft / ChangesRequested
+    //          ↓
     // PendingVerification
     //
-    // A NEW GemVerification record is created every time the
-    // listing is submitted/resubmitted.
+    // Every submission creates a NEW GemVerification record,
+    // preserving verification history.
     // ============================================================
 
     public async Task<GemListingDto?>
@@ -402,8 +461,10 @@ public class GemListingService : IGemListingService
             return null;
         }
 
-        if (listing.Status != GemListingStatuses.Draft &&
-            listing.Status != GemListingStatuses.ChangesRequested)
+        if (listing.Status !=
+                GemListingStatuses.Draft &&
+            listing.Status !=
+                GemListingStatuses.ChangesRequested)
         {
             throw new InvalidOperationException(
                 "Only Draft or ChangesRequested listings can be submitted for verification.");
@@ -422,9 +483,7 @@ public class GemListingService : IGemListingService
 
 
         // --------------------------------------------------------
-        // Create a NEW verification attempt.
-        //
-        // This preserves previous verification history.
+        // Create a new verification attempt
         // --------------------------------------------------------
 
         var verification =
@@ -478,6 +537,217 @@ public class GemListingService : IGemListingService
 
 
     // ============================================================
+    // UPLOAD / REPLACE PRIMARY GEM IMAGE
+    //
+    // Only the owner can upload.
+    // Only Draft / ChangesRequested listings can be changed.
+    // ============================================================
+
+    public async Task<GemListingDto?>
+        UploadGemImageAsync(
+            int id,
+            Guid sellerId,
+            Stream fileStream,
+            string fileName,
+            string contentType,
+            long fileLength)
+    {
+        var listing =
+            await _context.GemListings
+                .FirstOrDefaultAsync(
+                    g =>
+                        g.Id == id &&
+                        g.SellerId == sellerId);
+
+        if (listing == null)
+        {
+            return null;
+        }
+
+        if (listing.Status !=
+                GemListingStatuses.Draft &&
+            listing.Status !=
+                GemListingStatuses.ChangesRequested)
+        {
+            throw new InvalidOperationException(
+                "The gemstone image can only be changed while the listing is Draft or ChangesRequested.");
+        }
+
+
+        // --------------------------------------------------------
+        // Remember existing image.
+        // --------------------------------------------------------
+
+        var oldImageUrl =
+            listing.PrimaryImageUrl;
+
+
+        // --------------------------------------------------------
+        // Save new image first.
+        //
+        // LocalFileStorageService performs file validation.
+        // --------------------------------------------------------
+
+        var newImageUrl =
+            await _fileStorageService
+                .SaveGemImageAsync(
+                    fileStream,
+                    fileName,
+                    contentType,
+                    fileLength);
+
+
+        // --------------------------------------------------------
+        // Update database
+        // --------------------------------------------------------
+
+        listing.PrimaryImageUrl =
+            newImageUrl;
+
+        listing.UpdatedAt =
+            DateTime.UtcNow;
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch
+        {
+            // If DB update fails, remove the newly uploaded file
+            // so we do not leave an orphaned file on disk.
+
+            await _fileStorageService
+                .DeleteFileAsync(
+                    newImageUrl);
+
+            throw;
+        }
+
+
+        // --------------------------------------------------------
+        // Database update succeeded.
+        // We can now safely remove the previous local image.
+        // --------------------------------------------------------
+
+        if (!string.IsNullOrWhiteSpace(
+                oldImageUrl) &&
+            oldImageUrl != newImageUrl)
+        {
+            await _fileStorageService
+                .DeleteFileAsync(
+                    oldImageUrl);
+        }
+
+
+        return await GetListingDtoAsync(
+            listing.Id);
+    }
+
+
+    // ============================================================
+    // UPLOAD / REPLACE CERTIFICATE
+    //
+    // Supported by storage service:
+    // PDF / JPG / JPEG / PNG
+    // ============================================================
+
+    public async Task<GemListingDto?>
+        UploadCertificateAsync(
+            int id,
+            Guid sellerId,
+            Stream fileStream,
+            string fileName,
+            string contentType,
+            long fileLength)
+    {
+        var listing =
+            await _context.GemListings
+                .FirstOrDefaultAsync(
+                    g =>
+                        g.Id == id &&
+                        g.SellerId == sellerId);
+
+        if (listing == null)
+        {
+            return null;
+        }
+
+        if (listing.Status !=
+                GemListingStatuses.Draft &&
+            listing.Status !=
+                GemListingStatuses.ChangesRequested)
+        {
+            throw new InvalidOperationException(
+                "The certificate can only be changed while the listing is Draft or ChangesRequested.");
+        }
+
+
+        // --------------------------------------------------------
+        // Remember existing certificate.
+        // --------------------------------------------------------
+
+        var oldCertificateUrl =
+            listing.CertificateUrl;
+
+
+        // --------------------------------------------------------
+        // Save new certificate
+        // --------------------------------------------------------
+
+        var newCertificateUrl =
+            await _fileStorageService
+                .SaveCertificateAsync(
+                    fileStream,
+                    fileName,
+                    contentType,
+                    fileLength);
+
+
+        // --------------------------------------------------------
+        // Update database
+        // --------------------------------------------------------
+
+        listing.CertificateUrl =
+            newCertificateUrl;
+
+        listing.UpdatedAt =
+            DateTime.UtcNow;
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch
+        {
+            await _fileStorageService
+                .DeleteFileAsync(
+                    newCertificateUrl);
+
+            throw;
+        }
+
+
+        // --------------------------------------------------------
+        // Remove previous local certificate only after DB success.
+        // --------------------------------------------------------
+
+        if (!string.IsNullOrWhiteSpace(
+                oldCertificateUrl) &&
+            oldCertificateUrl !=
+                newCertificateUrl)
+        {
+            await _fileStorageService
+                .DeleteFileAsync(
+                    oldCertificateUrl);
+        }
+
+
+        return await GetListingDtoAsync(
+            listing.Id);
+    }
+
+
+    // ============================================================
     // INTERNAL DTO MAPPER
     // ============================================================
 
@@ -504,9 +774,11 @@ public class GemListingService : IGemListingService
 
                 GemType = g.GemType,
 
-                Description = g.Description,
+                Description =
+                    g.Description,
 
-                CaratWeight = g.CaratWeight,
+                CaratWeight =
+                    g.CaratWeight,
 
                 Color = g.Color,
 
@@ -540,9 +812,11 @@ public class GemListingService : IGemListingService
 
                 Status = g.Status,
 
-                CreatedAt = g.CreatedAt,
+                CreatedAt =
+                    g.CreatedAt,
 
-                UpdatedAt = g.UpdatedAt
+                UpdatedAt =
+                    g.UpdatedAt
             })
 
             .SingleAsync();
@@ -551,18 +825,11 @@ public class GemListingService : IGemListingService
 
     // ============================================================
     // OPTIONAL STRING CLEANER
-    //
-    // Converts:
-    //
-    // ""       → null
-    // "   "    → null
-    // " value " → "value"
-    //
-    // This keeps optional evidence fields clean in PostgreSQL.
     // ============================================================
 
-    private static string? CleanOptionalValue(
-        string? value)
+    private static string?
+        CleanOptionalValue(
+            string? value)
     {
         return string.IsNullOrWhiteSpace(value)
             ? null

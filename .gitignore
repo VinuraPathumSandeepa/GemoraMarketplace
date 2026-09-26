@@ -24,3 +24,6 @@ Mobile/.flutter-plugins-dependencies
 # Environment / secrets
 .env
 .env.*
+
+# Local Gemora uploaded files
+Backend/Gemora.API/wwwroot/uploads/

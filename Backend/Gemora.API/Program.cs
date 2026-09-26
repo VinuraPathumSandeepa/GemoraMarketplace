@@ -2,46 +2,117 @@ using System.Text;
 using Gemora.API.Middleware;
 using Gemora.Application.Interfaces;
 using Gemora.Application.Services;
+using Gemora.Domain.Interfaces;
 using Gemora.Infrastructure.Data;
+using Gemora.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder =
+    WebApplication.CreateBuilder(args);
+
 
 // ============================================================
-// DATABASE CONFIGURATION
+// DATABASE
 // ============================================================
 
 var connectionString =
-    builder.Configuration.GetConnectionString("DefaultConnection");
+    builder.Configuration
+        .GetConnectionString(
+            "DefaultConnection")
+    ?? throw new InvalidOperationException(
+        "Database connection string 'DefaultConnection' is not configured.");
 
-if (string.IsNullOrWhiteSpace(connectionString))
-{
-    throw new InvalidOperationException(
-        "Database connection string is not configured.");
-}
-
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+builder.Services
+    .AddDbContext<ApplicationDbContext>(
+        options =>
+        {
+            options.UseNpgsql(
+                connectionString);
+        });
 
 
 // ============================================================
-// APPLICATION SERVICES / DEPENDENCY INJECTION
+// APPLICATION SERVICES
 // ============================================================
 
-// Authentication service
-builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<
+    IAuthService,
+    AuthService>();
 
-// JWT token service
-builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<
+    TokenService>();
 
-// Gem Listing service - Component 1
-builder.Services.AddScoped<IGemListingService, GemListingService>();
+builder.Services.AddScoped<
+    IGemListingService,
+    GemListingService>();
 
-// Gem Verification service - Component 2
-builder.Services.AddScoped<IGemVerificationService, GemVerificationService>();
+builder.Services.AddScoped<
+    IGemVerificationService,
+    GemVerificationService>();
+
+
+// ============================================================
+// FILE STORAGE
+//
+// IMPORTANT:
+//
+// LocalFileStorageService must save files inside the actual
+// Gemora.API wwwroot directory.
+//
+// We therefore obtain the path from IWebHostEnvironment instead
+// of using Directory.GetCurrentDirectory().
+// ============================================================
+
+builder.Services.AddScoped<IFileStorageService>(
+    serviceProvider =>
+    {
+        var environment =
+            serviceProvider
+                .GetRequiredService<
+                    IWebHostEnvironment>();
+
+
+        // Normally this resolves to:
+        //
+        // ...\Backend\Gemora.API\wwwroot
+        //
+        // If WebRootPath has not been initialized yet,
+        // fall back to ContentRootPath + wwwroot.
+        var webRootPath =
+            environment.WebRootPath;
+
+        if (string.IsNullOrWhiteSpace(
+                webRootPath))
+        {
+            webRootPath =
+                Path.Combine(
+                    environment.ContentRootPath,
+                    "wwwroot");
+        }
+
+
+        // Ensure wwwroot exists.
+        Directory.CreateDirectory(
+            webRootPath);
+
+
+        var uploadRoot =
+            Path.Combine(
+                webRootPath,
+                "uploads");
+
+
+        Directory.CreateDirectory(
+            uploadRoot);
+
+
+        return new LocalFileStorageService(
+            uploadRoot);
+    });
+
 
 // ============================================================
 // CONTROLLERS
@@ -51,67 +122,95 @@ builder.Services.AddControllers();
 
 
 // ============================================================
+// CORS
+//
+// React development server:
+// http://localhost:5173
+// ============================================================
+
+builder.Services.AddCors(
+    options =>
+    {
+        options.AddPolicy(
+            "GemoraCorsPolicy",
+            policy =>
+            {
+                policy
+                    .WithOrigins(
+                        "http://localhost:5173",
+                        "https://localhost:5173")
+                    .AllowAnyHeader()
+                    .AllowAnyMethod();
+            });
+    });
+
+
+// ============================================================
 // JWT AUTHENTICATION
 // ============================================================
 
-var jwtKey = builder.Configuration["Jwt:Key"];
-var jwtIssuer = builder.Configuration["Jwt:Issuer"];
-var jwtAudience = builder.Configuration["Jwt:Audience"];
+var jwtKey =
+    builder.Configuration[
+        "Jwt:Key"];
 
-if (string.IsNullOrWhiteSpace(jwtKey))
+if (string.IsNullOrWhiteSpace(
+        jwtKey))
 {
     throw new InvalidOperationException(
         "JWT signing key is not configured.");
 }
 
-if (string.IsNullOrWhiteSpace(jwtIssuer))
-{
-    throw new InvalidOperationException(
-        "JWT issuer is not configured.");
-}
 
-if (string.IsNullOrWhiteSpace(jwtAudience))
-{
-    throw new InvalidOperationException(
-        "JWT audience is not configured.");
-}
+var jwtIssuer =
+    builder.Configuration[
+        "Jwt:Issuer"];
+
+var jwtAudience =
+    builder.Configuration[
+        "Jwt:Audience"];
+
 
 builder.Services
-    .AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme =
-            JwtBearerDefaults.AuthenticationScheme;
+    .AddAuthentication(
+        options =>
+        {
+            options.DefaultAuthenticateScheme =
+                JwtBearerDefaults
+                    .AuthenticationScheme;
 
-        options.DefaultChallengeScheme =
-            JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme =
+                JwtBearerDefaults
+                    .AuthenticationScheme;
+        })
+    .AddJwtBearer(
+        options =>
+        {
+            options.TokenValidationParameters =
+                new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
 
-        options.DefaultScheme =
-            JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
-    {
-        options.RequireHttpsMetadata = false;
+                    ValidateAudience = true,
 
-        options.SaveToken = true;
+                    ValidateLifetime = true,
 
-        options.TokenValidationParameters =
-            new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
+                    ValidateIssuerSigningKey = true,
 
-                ValidIssuer = jwtIssuer,
-                ValidAudience = jwtAudience,
+                    ValidIssuer =
+                        jwtIssuer,
 
-                IssuerSigningKey =
-                    new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(jwtKey)),
+                    ValidAudience =
+                        jwtAudience,
 
-                ClockSkew = TimeSpan.Zero
-            };
-    });
+                    IssuerSigningKey =
+                        new SymmetricSecurityKey(
+                            Encoding.UTF8.GetBytes(
+                                jwtKey)),
+
+                    ClockSkew =
+                        TimeSpan.Zero
+                };
+        });
 
 
 // ============================================================
@@ -122,107 +221,106 @@ builder.Services.AddAuthorization();
 
 
 // ============================================================
-// CORS
-// ============================================================
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(
-        "AllowReact",
-        policy =>
-        {
-            policy
-                .WithOrigins(
-                    "http://localhost:5173",
-                    "http://127.0.0.1:5173")
-                .AllowAnyHeader()
-                .AllowAnyMethod();
-        });
-});
-
-
-// ============================================================
-// SWAGGER / OPENAPI
+// SWAGGER
 // ============================================================
 
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc(
-        "v1",
-        new OpenApiInfo
-        {
-            Title = "Gemora Marketplace API",
-            Version = "v1",
-            Description =
-                "ASP.NET Core Web API for the Gemora Marketplace."
-        });
-
-    // Add JWT Bearer authentication support to Swagger
-    options.AddSecurityDefinition(
-        "Bearer",
-        new OpenApiSecurityScheme
-        {
-            Name = "Authorization",
-
-            Type = SecuritySchemeType.Http,
-
-            Scheme = "bearer",
-
-            BearerFormat = "JWT",
-
-            In = ParameterLocation.Header,
-
-            Description =
-                "Enter your JWT token."
-        });
-
-    options.AddSecurityRequirement(
-        new OpenApiSecurityRequirement
-        {
+builder.Services.AddSwaggerGen(
+    options =>
+    {
+        options.SwaggerDoc(
+            "v1",
+            new OpenApiInfo
             {
-                new OpenApiSecurityScheme
+                Title =
+                    "Gemora API",
+
+                Version =
+                    "v1",
+
+                Description =
+                    "Gemora Marketplace ASP.NET Core Web API"
+            });
+
+
+        // --------------------------------------------------------
+        // JWT Bearer support in Swagger
+        // --------------------------------------------------------
+
+        options.AddSecurityDefinition(
+            "Bearer",
+            new OpenApiSecurityScheme
+            {
+                Name =
+                    "Authorization",
+
+                Type =
+                    SecuritySchemeType.Http,
+
+                Scheme =
+                    "bearer",
+
+                BearerFormat =
+                    "JWT",
+
+                In =
+                    ParameterLocation.Header,
+
+                Description =
+                    "Enter your JWT token."
+            });
+
+
+        options.AddSecurityRequirement(
+            new OpenApiSecurityRequirement
+            {
                 {
-                    Reference =
-                        new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                        }
-                },
-                Array.Empty<string>()
-            }
-        });
-});
+                    new OpenApiSecurityScheme
+                    {
+                        Reference =
+                            new OpenApiReference
+                            {
+                                Type =
+                                    ReferenceType
+                                        .SecurityScheme,
+
+                                Id =
+                                    "Bearer"
+                            }
+                    },
+
+                    Array.Empty<string>()
+                }
+            });
+    });
 
 
 // ============================================================
 // BUILD APPLICATION
 // ============================================================
 
-var app = builder.Build();
+var app =
+    builder.Build();
 
 
 // ============================================================
 // GLOBAL EXCEPTION HANDLER
+//
+// Existing middleware:
+// Gemora.API/Middleware/GlobalExceptionHandler.cs
 // ============================================================
 
-// This catches exceptions from controllers/services.
-//
-// InvalidOperationException   -> 409 Conflict
-// UnauthorizedAccessException -> 403 Forbidden
-// KeyNotFoundException       -> 404 Not Found
-// Other exceptions           -> 500 Internal Server Error
-
-app.UseMiddleware<GlobalExceptionHandler>();
+app.UseMiddleware<
+    GlobalExceptionHandler>();
 
 
 // ============================================================
 // SWAGGER
 // ============================================================
 
-if (app.Environment.IsDevelopment())
+if (app.Environment
+    .IsDevelopment())
 {
     app.UseSwagger();
 
@@ -231,59 +329,95 @@ if (app.Environment.IsDevelopment())
 
 
 // ============================================================
-// HTTPS
+// STATIC FILES
+//
+// This exposes:
+//
+// /uploads/gem-images/...
+// /uploads/certificates/...
+//
+// from:
+//
+// Gemora.API/wwwroot/uploads/...
 // ============================================================
 
-// We are currently developing/testing the API over localhost HTTP.
-// Do NOT enable UseHttpsRedirection here yet if Swagger/React/Flutter
-// are calling http://localhost:5198.
-//
-// app.UseHttpsRedirection();
+app.UseStaticFiles();
 
 
 // ============================================================
 // CORS
 // ============================================================
 
-app.UseCors("AllowReact");
+app.UseCors(
+    "GemoraCorsPolicy");
 
 
 // ============================================================
-// AUTHENTICATION + AUTHORIZATION
+// AUTHENTICATION
+//
+// Authentication must run BEFORE Authorization.
 // ============================================================
-
-// Authentication MUST come before Authorization.
 
 app.UseAuthentication();
+
+
+// ============================================================
+// AUTHORIZATION
+// ============================================================
 
 app.UseAuthorization();
 
 
 // ============================================================
-// DATABASE SEEDING
-// ============================================================
-
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext =
-        scope.ServiceProvider
-            .GetRequiredService<ApplicationDbContext>();
-
-    await DbSeeder.SeedAsync(
-        dbContext,
-        builder.Configuration);
-}
-
-
-// ============================================================
-// MAP CONTROLLERS
+// CONTROLLERS
 // ============================================================
 
 app.MapControllers();
 
 
 // ============================================================
-// RUN APPLICATION
+// DATABASE SEEDING
+//
+// Existing DbSeeder signature:
+//
+// SeedAsync(
+//     ApplicationDbContext,
+//     IConfiguration)
+// ============================================================
+
+using (var scope =
+       app.Services.CreateScope())
+{
+    var services =
+        scope.ServiceProvider;
+
+    try
+    {
+        var dbContext =
+            services.GetRequiredService<
+                ApplicationDbContext>();
+
+        await DbSeeder.SeedAsync(
+            dbContext,
+            builder.Configuration);
+    }
+    catch (Exception ex)
+    {
+        var logger =
+            services.GetRequiredService<
+                ILogger<Program>>();
+
+        logger.LogError(
+            ex,
+            "An error occurred while seeding the Gemora database.");
+
+        throw;
+    }
+}
+
+
+// ============================================================
+// START APPLICATION
 // ============================================================
 
 app.Run();

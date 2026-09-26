@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Gemora.API.Models.Uploads;
 using Gemora.Application.DTOs.GemListings;
 using Gemora.Application.Interfaces;
 using Gemora.Domain.Constants;
@@ -20,13 +21,15 @@ public class GemListingsController : ControllerBase
         _gemListingService = gemListingService;
     }
 
+
     // ============================================================
     // CREATE GEM LISTING
-    // POST: /api/GemListings
+    //
+    // POST /api/GemListings
     // ============================================================
 
     [HttpPost]
-    public async Task<IActionResult> Create(
+    public async Task<ActionResult<GemListingDto>> Create(
         [FromBody] CreateGemListingDto dto)
     {
         var sellerId = GetCurrentUserId();
@@ -42,52 +45,67 @@ public class GemListingsController : ControllerBase
             listing);
     }
 
+
     // ============================================================
-    // GET ALL LISTINGS OF CURRENT SELLER
-    // GET: /api/GemListings/my
+    // GET CURRENT SELLER'S LISTINGS
+    //
+    // GET /api/GemListings/my
     // ============================================================
 
     [HttpGet("my")]
-    public async Task<IActionResult> GetMyListings()
+    public async Task<ActionResult<List<GemListingDto>>>
+        GetMyListings()
     {
         var sellerId = GetCurrentUserId();
 
         var listings =
-            await _gemListingService.GetMyListingsAsync(
-                sellerId);
+            await _gemListingService
+                .GetMyListingsAsync(
+                    sellerId);
 
         return Ok(listings);
     }
 
+
     // ============================================================
-    // GET ONE LISTING OF CURRENT SELLER
-    // GET: /api/GemListings/{id}
+    // GET ONE LISTING
+    //
+    // GET /api/GemListings/{id}
+    //
+    // The service also checks ownership.
     // ============================================================
 
     [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<ActionResult<GemListingDto>>
+        GetById(int id)
     {
         var sellerId = GetCurrentUserId();
 
         var listing =
-            await _gemListingService.GetByIdAsync(
-                id,
-                sellerId);
+            await _gemListingService
+                .GetByIdAsync(
+                    id,
+                    sellerId);
 
         if (listing == null)
         {
             return NotFound(new
             {
-                message = "Gem listing not found."
+                message =
+                    "Gem listing was not found."
             });
         }
 
         return Ok(listing);
     }
 
+
     // ============================================================
-    // UPDATE GEM LISTING
-    // PUT: /api/GemListings/{id}
+    // UPDATE LISTING
+    //
+    // PUT /api/GemListings/{id}
+    //
+    // Only Draft / ChangesRequested listings can be edited.
     // ============================================================
 
     [HttpPut("{id:int}")]
@@ -98,64 +116,220 @@ public class GemListingsController : ControllerBase
         var sellerId = GetCurrentUserId();
 
         var updated =
-            await _gemListingService.UpdateAsync(
-                id,
-                sellerId,
-                dto);
+            await _gemListingService
+                .UpdateAsync(
+                    id,
+                    sellerId,
+                    dto);
 
         if (!updated)
         {
             return NotFound(new
             {
-                message = "Gem listing not found."
+                message =
+                    "Gem listing was not found."
             });
         }
 
         return Ok(new
         {
-            message = "Gem listing updated successfully."
+            message =
+                "Gem listing updated successfully."
         });
     }
 
+
     // ============================================================
-    // DELETE GEM LISTING
-    // DELETE: /api/GemListings/{id}
+    // DELETE LISTING
+    //
+    // DELETE /api/GemListings/{id}
+    //
+    // Only Draft listings can be deleted.
     // ============================================================
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(
+        int id)
     {
         var sellerId = GetCurrentUserId();
 
         var deleted =
-            await _gemListingService.DeleteAsync(
-                id,
-                sellerId);
+            await _gemListingService
+                .DeleteAsync(
+                    id,
+                    sellerId);
 
         if (!deleted)
         {
             return NotFound(new
             {
-                message = "Gem listing not found."
+                message =
+                    "Gem listing was not found."
             });
         }
 
         return Ok(new
         {
-            message = "Gem listing deleted successfully."
+            message =
+                "Gem listing deleted successfully."
         });
     }
 
+
     // ============================================================
-    // SUBMIT GEM LISTING FOR VERIFICATION
-    // POST: /api/GemListings/{id}/submit-verification
+    // UPLOAD / REPLACE PRIMARY GEM IMAGE
+    //
+    // POST /api/GemListings/{id}/image
+    //
+    // multipart/form-data
+    //
+    // Allowed by LocalFileStorageService:
+    // JPG
+    // JPEG
+    // PNG
+    // WEBP
+    //
+    // Maximum size:
+    // 5 MB
+    // ============================================================
+
+    [HttpPost("{id:int}/image")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    public async Task<ActionResult<GemListingDto>>
+        UploadGemImage(
+            int id,
+            [FromForm] GemImageUploadRequest request)
+    {
+        if (request.File == null ||
+            request.File.Length == 0)
+        {
+            return BadRequest(new
+            {
+                message =
+                    "Please select a gemstone image to upload."
+            });
+        }
+
+        var sellerId =
+            GetCurrentUserId();
+
+        await using var fileStream =
+            request.File.OpenReadStream();
+
+        var listing =
+            await _gemListingService
+                .UploadGemImageAsync(
+                    id,
+                    sellerId,
+                    fileStream,
+                    request.File.FileName,
+                    request.File.ContentType,
+                    request.File.Length);
+
+        if (listing == null)
+        {
+            return NotFound(new
+            {
+                message =
+                    "Gem listing was not found."
+            });
+        }
+
+        return Ok(listing);
+    }
+
+
+    // ============================================================
+    // UPLOAD / REPLACE CERTIFICATE
+    //
+    // POST /api/GemListings/{id}/certificate
+    //
+    // multipart/form-data
+    //
+    // Allowed by LocalFileStorageService:
+    // PDF
+    // JPG
+    // JPEG
+    // PNG
+    //
+    // Maximum size:
+    // 10 MB
+    // ============================================================
+
+    [HttpPost("{id:int}/certificate")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<ActionResult<GemListingDto>>
+        UploadCertificate(
+            int id,
+            [FromForm] CertificateUploadRequest request)
+    {
+        if (request.File == null ||
+            request.File.Length == 0)
+        {
+            return BadRequest(new
+            {
+                message =
+                    "Please select a certificate file to upload."
+            });
+        }
+
+        var sellerId =
+            GetCurrentUserId();
+
+        await using var fileStream =
+            request.File.OpenReadStream();
+
+        var listing =
+            await _gemListingService
+                .UploadCertificateAsync(
+                    id,
+                    sellerId,
+                    fileStream,
+                    request.File.FileName,
+                    request.File.ContentType,
+                    request.File.Length);
+
+        if (listing == null)
+        {
+            return NotFound(new
+            {
+                message =
+                    "Gem listing was not found."
+            });
+        }
+
+        return Ok(listing);
+    }
+
+
+    // ============================================================
+    // SUBMIT LISTING FOR VERIFICATION
+    //
+    // POST /api/GemListings/{id}/submit-verification
+    //
+    // Draft
+    //      ↓
+    // PendingVerification
+    //
+    // OR
+    //
+    // ChangesRequested
+    //      ↓
+    // PendingVerification
+    //
+    // A new GemVerification record is created for every
+    // submission/resubmission.
     // ============================================================
 
     [HttpPost("{id:int}/submit-verification")]
-    public async Task<IActionResult> SubmitForVerification(
-        int id)
+    public async Task<ActionResult<GemListingDto>>
+        SubmitForVerification(
+            int id)
     {
-        var sellerId = GetCurrentUserId();
+        var sellerId =
+            GetCurrentUserId();
 
         var listing =
             await _gemListingService
@@ -167,36 +341,35 @@ public class GemListingsController : ControllerBase
         {
             return NotFound(new
             {
-                message = "Gem listing not found."
+                message =
+                    "Gem listing was not found."
             });
         }
 
-        return Ok(new
-        {
-            message =
-                "Gem listing submitted for verification successfully.",
-
-            listing
-        });
+        return Ok(listing);
     }
 
+
     // ============================================================
-    // GET CURRENT AUTHENTICATED USER ID FROM JWT
+    // GET AUTHENTICATED USER ID
+    //
+    // JWT NameIdentifier contains User.Id (Guid).
     // ============================================================
 
     private Guid GetCurrentUserId()
     {
-        var userId =
+        var userIdValue =
             User.FindFirstValue(
                 ClaimTypes.NameIdentifier);
 
-        if (string.IsNullOrWhiteSpace(userId) ||
-            !Guid.TryParse(userId, out var id))
+        if (!Guid.TryParse(
+                userIdValue,
+                out var userId))
         {
             throw new UnauthorizedAccessException(
-                "Invalid authenticated user.");
+                "The authenticated user ID is invalid.");
         }
 
-        return id;
+        return userId;
     }
 }
