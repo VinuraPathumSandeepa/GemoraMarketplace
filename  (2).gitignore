@@ -1,0 +1,26 @@
+# .NET
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+
+# JetBrains / Android Studio
+.idea/
+
+# VS Code
+.vscode/
+
+# Node / React
+**/node_modules/
+**/dist/
+
+# Flutter
+Mobile/.dart_tool/
+Mobile/build/
+Mobile/.flutter-plugins
+Mobile/.flutter-plugins-dependencies
+
+# Environment / secrets
+.env
+.env.*

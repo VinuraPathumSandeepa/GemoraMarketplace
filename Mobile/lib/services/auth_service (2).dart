@@ -1,0 +1,155 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
+import '../config/api_config.dart';
+import '../models/user_model.dart';
+import 'token_storage_service.dart';
+
+class AuthService {
+  final TokenStorageService _tokenStorage =
+      TokenStorageService();
+
+  // ==========================================
+  // LOGIN
+  // ==========================================
+
+  Future<UserModel> login(
+    String email,
+    String password,
+  ) async {
+    final response = await http.post(
+      Uri.parse(ApiConfig.login),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'email': email.trim(),
+        'password': password,
+      }),
+    );
+
+    Map<String, dynamic> responseData = {};
+
+    if (response.body.isNotEmpty) {
+      responseData =
+          jsonDecode(response.body)
+              as Map<String, dynamic>;
+    }
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        responseData['message'] ??
+            'Login failed.',
+      );
+    }
+
+    final token =
+        responseData['token'] as String?;
+
+    if (token == null || token.isEmpty) {
+      throw Exception(
+        'Authentication token was not returned.',
+      );
+    }
+
+    await _tokenStorage.saveToken(token);
+
+    try {
+      return await getCurrentUser();
+    } catch (_) {
+      await _tokenStorage.deleteToken();
+      rethrow;
+    }
+  }
+
+  // ==========================================
+  // REGISTER
+  // ==========================================
+
+  Future<void> register({
+    required String fullName,
+    required String email,
+    required String password,
+    required String role,
+  }) async {
+    final response = await http.post(
+      Uri.parse(ApiConfig.register),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'fullName': fullName.trim(),
+        'email': email.trim(),
+        'password': password,
+        'role': role,
+      }),
+    );
+
+    Map<String, dynamic> responseData = {};
+
+    if (response.body.isNotEmpty) {
+      responseData =
+          jsonDecode(response.body)
+              as Map<String, dynamic>;
+    }
+
+    if (response.statusCode != 201) {
+      throw Exception(
+        responseData['message'] ??
+            'Registration failed.',
+      );
+    }
+  }
+
+  // ==========================================
+  // GET CURRENT USER
+  // ==========================================
+
+  Future<UserModel> getCurrentUser() async {
+    final token =
+        await _tokenStorage.getToken();
+
+    if (token == null || token.isEmpty) {
+      throw Exception(
+        'Authentication token not found.',
+      );
+    }
+
+    final response = await http.get(
+      Uri.parse(ApiConfig.currentUser),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Unable to load current user.',
+      );
+    }
+
+    final data =
+        jsonDecode(response.body)
+            as Map<String, dynamic>;
+
+    return UserModel.fromJson(data);
+  }
+
+  // ==========================================
+  // LOGOUT
+  // ==========================================
+
+  Future<void> logout() async {
+    await _tokenStorage.deleteToken();
+  }
+
+  // ==========================================
+  // CHECK SAVED TOKEN
+  // ==========================================
+
+  Future<bool> hasToken() async {
+    return await _tokenStorage.hasToken();
+  }
+}
