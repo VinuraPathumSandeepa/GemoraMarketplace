@@ -1,187 +1,165 @@
+using System.Text;
 using Gemora.API.Middleware;
 using Gemora.Application.Interfaces;
 using Gemora.Application.Services;
 using Gemora.Infrastructure.Data;
-
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
-using System.Text;
-
 var builder = WebApplication.CreateBuilder(args);
 
-
-// ======================================================
-// 1. DATABASE - PostgreSQL + Entity Framework Core
-// ======================================================
-// The actual connection string is stored securely in
-// .NET User Secrets during local development.
-// ======================================================
+// ============================================================
+// DATABASE CONFIGURATION
+// ============================================================
 
 var connectionString =
-    builder.Configuration.GetConnectionString(
-        "DefaultConnection"
-    );
+    builder.Configuration.GetConnectionString("DefaultConnection");
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {
     throw new InvalidOperationException(
-        "Database connection string is not configured."
-    );
+        "Database connection string is not configured.");
 }
 
-builder.Services.AddDbContext<ApplicationDbContext>(
-    options =>
-        options.UseNpgsql(connectionString)
-);
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
 
-// ======================================================
-// 2. DEPENDENCY INJECTION
-// ======================================================
+// ============================================================
+// APPLICATION SERVICES / DEPENDENCY INJECTION
+// ============================================================
 
+// Authentication service
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+// JWT token service
 builder.Services.AddScoped<TokenService>();
 
+// Gem Listing service - Component 1
+builder.Services.AddScoped<IGemListingService, GemListingService>();
 
-// ======================================================
-// 3. CONTROLLERS
-// ======================================================
+// Gem Verification service - Component 2
+builder.Services.AddScoped<IGemVerificationService, GemVerificationService>();
+
+// ============================================================
+// CONTROLLERS
+// ============================================================
 
 builder.Services.AddControllers();
 
 
-// ======================================================
-// 4. JWT CONFIGURATION
-// ======================================================
-// JWT Key comes from .NET User Secrets.
-// Issuer and Audience come from appsettings.json.
-// ======================================================
+// ============================================================
+// JWT AUTHENTICATION
+// ============================================================
 
-var jwtKey =
-    builder.Configuration["Jwt:Key"];
-
-var jwtIssuer =
-    builder.Configuration["Jwt:Issuer"];
-
-var jwtAudience =
-    builder.Configuration["Jwt:Audience"];
-
+var jwtKey = builder.Configuration["Jwt:Key"];
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+var jwtAudience = builder.Configuration["Jwt:Audience"];
 
 if (string.IsNullOrWhiteSpace(jwtKey))
 {
     throw new InvalidOperationException(
-        "JWT Key is not configured."
-    );
+        "JWT signing key is not configured.");
 }
 
 if (string.IsNullOrWhiteSpace(jwtIssuer))
 {
     throw new InvalidOperationException(
-        "JWT Issuer is not configured."
-    );
+        "JWT issuer is not configured.");
 }
 
 if (string.IsNullOrWhiteSpace(jwtAudience))
 {
     throw new InvalidOperationException(
-        "JWT Audience is not configured."
-    );
+        "JWT audience is not configured.");
 }
 
-
-// ======================================================
-// 5. JWT AUTHENTICATION
-// ======================================================
-
 builder.Services
-    .AddAuthentication(
-        JwtBearerDefaults.AuthenticationScheme
-    )
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme =
+            JwtBearerDefaults.AuthenticationScheme;
+
+        options.DefaultChallengeScheme =
+            JwtBearerDefaults.AuthenticationScheme;
+
+        options.DefaultScheme =
+            JwtBearerDefaults.AuthenticationScheme;
+    })
     .AddJwtBearer(options =>
     {
+        options.RequireHttpsMetadata = false;
+
+        options.SaveToken = true;
+
         options.TokenValidationParameters =
             new TokenValidationParameters
             {
-                // Verify who created the token
                 ValidateIssuer = true,
-
-                // Verify who the token is intended for
                 ValidateAudience = true,
-
-                // Reject expired tokens
                 ValidateLifetime = true,
-
-                // Verify the token signature
                 ValidateIssuerSigningKey = true,
 
-                // Expected issuer
                 ValidIssuer = jwtIssuer,
-
-                // Expected audience
                 ValidAudience = jwtAudience,
 
-                // Secret signing key
                 IssuerSigningKey =
                     new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(jwtKey)
-                    ),
+                        Encoding.UTF8.GetBytes(jwtKey)),
 
-                // Token expires exactly at expiration time
                 ClockSkew = TimeSpan.Zero
             };
     });
 
 
-// ======================================================
-// 6. AUTHORIZATION
-// ======================================================
+// ============================================================
+// AUTHORIZATION
+// ============================================================
 
 builder.Services.AddAuthorization();
 
 
-// ======================================================
-// 7. CORS
-// ======================================================
-// React/Vite development application:
-// http://localhost:5173
-//
-// Flutter does not have browser CORS restrictions in
-// the same way, but it will use the same ASP.NET API.
-// ======================================================
+// ============================================================
+// CORS
+// ============================================================
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(
-        "GemoraCorsPolicy",
+        "AllowReact",
         policy =>
         {
             policy
                 .WithOrigins(
-                    "http://localhost:5173"
-                )
+                    "http://localhost:5173",
+                    "http://127.0.0.1:5173")
                 .AllowAnyHeader()
                 .AllowAnyMethod();
-        }
-    );
+        });
 });
 
 
-// ======================================================
-// 8. SWAGGER / OPENAPI
-// ======================================================
+// ============================================================
+// SWAGGER / OPENAPI
+// ============================================================
 
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
 {
-    // ----------------------------------------------
-    // JWT Bearer authentication in Swagger
-    // ----------------------------------------------
+    options.SwaggerDoc(
+        "v1",
+        new OpenApiInfo
+        {
+            Title = "Gemora Marketplace API",
+            Version = "v1",
+            Description =
+                "ASP.NET Core Web API for the Gemora Marketplace."
+        });
 
+    // Add JWT Bearer authentication support to Swagger
     options.AddSecurityDefinition(
         "Bearer",
         new OpenApiSecurityScheme
@@ -198,13 +176,7 @@ builder.Services.AddSwaggerGen(options =>
 
             Description =
                 "Enter your JWT token."
-        }
-    );
-
-
-    // ----------------------------------------------
-    // Add Bearer authentication to Swagger requests
-    // ----------------------------------------------
+        });
 
     options.AddSecurityRequirement(
         new OpenApiSecurityRequirement
@@ -215,30 +187,40 @@ builder.Services.AddSwaggerGen(options =>
                     Reference =
                         new OpenApiReference
                         {
-                            Type =
-                                ReferenceType.SecurityScheme,
-
+                            Type = ReferenceType.SecurityScheme,
                             Id = "Bearer"
                         }
                 },
-
                 Array.Empty<string>()
             }
-        }
-    );
+        });
 });
 
 
-// ======================================================
-// 9. BUILD APPLICATION
-// ======================================================
+// ============================================================
+// BUILD APPLICATION
+// ============================================================
 
 var app = builder.Build();
 
 
-// ======================================================
-// 10. SWAGGER
-// ======================================================
+// ============================================================
+// GLOBAL EXCEPTION HANDLER
+// ============================================================
+
+// This catches exceptions from controllers/services.
+//
+// InvalidOperationException   -> 409 Conflict
+// UnauthorizedAccessException -> 403 Forbidden
+// KeyNotFoundException       -> 404 Not Found
+// Other exceptions           -> 500 Internal Server Error
+
+app.UseMiddleware<GlobalExceptionHandler>();
+
+
+// ============================================================
+// SWAGGER
+// ============================================================
 
 if (app.Environment.IsDevelopment())
 {
@@ -248,50 +230,38 @@ if (app.Environment.IsDevelopment())
 }
 
 
-// ======================================================
-// 11. GLOBAL EXCEPTION HANDLING
-// ======================================================
+// ============================================================
+// HTTPS
+// ============================================================
 
-app.UseMiddleware<GlobalExceptionHandler>();
-
-
-// ======================================================
-// 12. CORS
-// ======================================================
-
-app.UseCors("GemoraCorsPolicy");
+// We are currently developing/testing the API over localhost HTTP.
+// Do NOT enable UseHttpsRedirection here yet if Swagger/React/Flutter
+// are calling http://localhost:5198.
+//
+// app.UseHttpsRedirection();
 
 
-// ======================================================
-// 13. AUTHENTICATION
-// ======================================================
-// Authentication must run before authorization.
-// ======================================================
+// ============================================================
+// CORS
+// ============================================================
+
+app.UseCors("AllowReact");
+
+
+// ============================================================
+// AUTHENTICATION + AUTHORIZATION
+// ============================================================
+
+// Authentication MUST come before Authorization.
 
 app.UseAuthentication();
-
-
-// ======================================================
-// 14. AUTHORIZATION
-// ======================================================
 
 app.UseAuthorization();
 
 
-// ======================================================
-// 15. DATABASE SEEDING
-// ======================================================
-// Staff passwords are NOT stored here.
-//
-// They are read from:
-//
-// SeedUsers:AdminPassword
-// SeedUsers:GemologistPassword
-// SeedUsers:ExportOfficerPassword
-//
-// These values are stored in .NET User Secrets for
-// local development.
-// ======================================================
+// ============================================================
+// DATABASE SEEDING
+// ============================================================
 
 using (var scope = app.Services.CreateScope())
 {
@@ -301,20 +271,19 @@ using (var scope = app.Services.CreateScope())
 
     await DbSeeder.SeedAsync(
         dbContext,
-        builder.Configuration
-    );
+        builder.Configuration);
 }
 
 
-// ======================================================
-// 16. MAP CONTROLLERS
-// ======================================================
+// ============================================================
+// MAP CONTROLLERS
+// ============================================================
 
 app.MapControllers();
 
 
-// ======================================================
-// 17. START APPLICATION
-// ======================================================
+// ============================================================
+// RUN APPLICATION
+// ============================================================
 
 app.Run();
