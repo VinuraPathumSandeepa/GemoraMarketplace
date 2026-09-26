@@ -10,15 +10,13 @@ public class GemVerificationService : IGemVerificationService
 {
     private readonly ApplicationDbContext _context;
 
-    public GemVerificationService(
-        ApplicationDbContext context)
+    public GemVerificationService(ApplicationDbContext context)
     {
         _context = context;
     }
 
-
     // ============================================================
-    // GET PENDING VERIFICATION QUEUE
+    // GET ALL PENDING VERIFICATIONS
     // ============================================================
 
     public async Task<List<GemVerificationDto>>
@@ -26,14 +24,8 @@ public class GemVerificationService : IGemVerificationService
     {
         return await _context.GemVerifications
             .AsNoTracking()
-
-            // Only requests that are still waiting for
-            // a Gemologist decision.
             .Where(v => v.Decision == "Pending")
-
-            // Oldest verification requests first.
             .OrderBy(v => v.CreatedAt)
-
             .Select(v => new GemVerificationDto
             {
                 // ------------------------------------------------
@@ -41,6 +33,8 @@ public class GemVerificationService : IGemVerificationService
                 // ------------------------------------------------
 
                 VerificationId = v.Id,
+
+                GemListingId = v.GemListingId,
 
                 Decision = v.Decision,
 
@@ -55,46 +49,56 @@ public class GemVerificationService : IGemVerificationService
                 // GEM LISTING INFORMATION
                 // ------------------------------------------------
 
-                GemListingId = v.GemListingId,
-
                 SellerId = v.GemListing.SellerId,
 
-                SellerName =
-                    v.GemListing.Seller.FullName,
+                SellerName = v.GemListing.Seller.FullName,
 
-                Title =
-                    v.GemListing.Title,
+                Title = v.GemListing.Title,
 
-                GemType =
-                    v.GemListing.GemType,
+                GemType = v.GemListing.GemType,
 
-                Description =
-                    v.GemListing.Description,
+                Description = v.GemListing.Description,
 
-                CaratWeight =
-                    v.GemListing.CaratWeight,
+                CaratWeight = v.GemListing.CaratWeight,
 
-                Color =
-                    v.GemListing.Color,
+                Color = v.GemListing.Color,
 
-                Clarity =
-                    v.GemListing.Clarity,
+                Clarity = v.GemListing.Clarity,
 
-                Cut =
-                    v.GemListing.Cut,
+                Cut = v.GemListing.Cut,
 
-                Price =
-                    v.GemListing.Price,
+                Price = v.GemListing.Price,
 
-                Currency =
-                    v.GemListing.Currency,
+                Currency = v.GemListing.Currency,
+
+
+                // ------------------------------------------------
+                // GEM IMAGE / CERTIFICATE EVIDENCE
+                // ------------------------------------------------
+
+                PrimaryImageUrl =
+                    v.GemListing.PrimaryImageUrl,
+
+                CertificateNumber =
+                    v.GemListing.CertificateNumber,
+
+                CertificateAuthority =
+                    v.GemListing.CertificateAuthority,
+
+                CertificateUrl =
+                    v.GemListing.CertificateUrl,
+
+
+                // ------------------------------------------------
+                // LISTING WORKFLOW
+                // ------------------------------------------------
 
                 ListingStatus =
                     v.GemListing.Status,
 
 
                 // ------------------------------------------------
-                // AI INFORMATION
+                // AI VERIFICATION INFORMATION
                 // ------------------------------------------------
 
                 AiStatus =
@@ -112,6 +116,9 @@ public class GemVerificationService : IGemVerificationService
                 AiRiskFlags =
                     v.AiRiskFlags,
 
+                AiProcessedAt =
+                    v.AiProcessedAt,
+
 
                 // ------------------------------------------------
                 // GEMOLOGIST INFORMATION
@@ -125,7 +132,6 @@ public class GemVerificationService : IGemVerificationService
                         ? v.Gemologist.FullName
                         : null
             })
-
             .ToListAsync();
     }
 
@@ -140,78 +146,80 @@ public class GemVerificationService : IGemVerificationService
     {
         return await _context.GemVerifications
             .AsNoTracking()
-
-            .Where(v =>
-                v.Id == verificationId)
-
+            .Where(v => v.Id == verificationId)
             .Select(v => new GemVerificationDto
             {
                 // ------------------------------------------------
                 // VERIFICATION INFORMATION
                 // ------------------------------------------------
 
-                VerificationId =
-                    v.Id,
+                VerificationId = v.Id,
 
-                Decision =
-                    v.Decision,
+                GemListingId = v.GemListingId,
 
-                ReviewNotes =
-                    v.ReviewNotes,
+                Decision = v.Decision,
 
-                CreatedAt =
-                    v.CreatedAt,
+                ReviewNotes = v.ReviewNotes,
 
-                ReviewedAt =
-                    v.ReviewedAt,
+                CreatedAt = v.CreatedAt,
+
+                ReviewedAt = v.ReviewedAt,
 
 
                 // ------------------------------------------------
                 // GEM LISTING INFORMATION
                 // ------------------------------------------------
 
-                GemListingId =
-                    v.GemListingId,
+                SellerId = v.GemListing.SellerId,
 
-                SellerId =
-                    v.GemListing.SellerId,
+                SellerName = v.GemListing.Seller.FullName,
 
-                SellerName =
-                    v.GemListing.Seller.FullName,
+                Title = v.GemListing.Title,
 
-                Title =
-                    v.GemListing.Title,
+                GemType = v.GemListing.GemType,
 
-                GemType =
-                    v.GemListing.GemType,
+                Description = v.GemListing.Description,
 
-                Description =
-                    v.GemListing.Description,
+                CaratWeight = v.GemListing.CaratWeight,
 
-                CaratWeight =
-                    v.GemListing.CaratWeight,
+                Color = v.GemListing.Color,
 
-                Color =
-                    v.GemListing.Color,
+                Clarity = v.GemListing.Clarity,
 
-                Clarity =
-                    v.GemListing.Clarity,
+                Cut = v.GemListing.Cut,
 
-                Cut =
-                    v.GemListing.Cut,
+                Price = v.GemListing.Price,
 
-                Price =
-                    v.GemListing.Price,
+                Currency = v.GemListing.Currency,
 
-                Currency =
-                    v.GemListing.Currency,
+
+                // ------------------------------------------------
+                // GEM IMAGE / CERTIFICATE EVIDENCE
+                // ------------------------------------------------
+
+                PrimaryImageUrl =
+                    v.GemListing.PrimaryImageUrl,
+
+                CertificateNumber =
+                    v.GemListing.CertificateNumber,
+
+                CertificateAuthority =
+                    v.GemListing.CertificateAuthority,
+
+                CertificateUrl =
+                    v.GemListing.CertificateUrl,
+
+
+                // ------------------------------------------------
+                // LISTING WORKFLOW
+                // ------------------------------------------------
 
                 ListingStatus =
                     v.GemListing.Status,
 
 
                 // ------------------------------------------------
-                // AI INFORMATION
+                // AI VERIFICATION INFORMATION
                 // ------------------------------------------------
 
                 AiStatus =
@@ -229,6 +237,9 @@ public class GemVerificationService : IGemVerificationService
                 AiRiskFlags =
                     v.AiRiskFlags,
 
+                AiProcessedAt =
+                    v.AiProcessedAt,
+
 
                 // ------------------------------------------------
                 // GEMOLOGIST INFORMATION
@@ -242,24 +253,17 @@ public class GemVerificationService : IGemVerificationService
                         ? v.Gemologist.FullName
                         : null
             })
-
             .FirstOrDefaultAsync();
     }
 
 
     // ============================================================
-    // REVIEW GEM VERIFICATION
+    // REVIEW VERIFICATION
     //
-    // A Gemologist can:
-    //
-    // 1. Approve
-    // 2. Request Changes
-    // 3. Reject
-    //
-    // This operation updates both:
-    //
-    // GemVerification
-    // GemListing
+    // Allowed decisions:
+    // Approved
+    // ChangesRequested
+    // Rejected
     // ============================================================
 
     public async Task<GemVerificationDto?>
@@ -269,8 +273,7 @@ public class GemVerificationService : IGemVerificationService
             ReviewGemVerificationDto dto)
     {
         // --------------------------------------------------------
-        // STEP 1
-        // Verify that the authenticated user is a Gemologist.
+        // 1. Confirm current user is a Gemologist
         // --------------------------------------------------------
 
         var gemologistExists =
@@ -282,20 +285,17 @@ public class GemVerificationService : IGemVerificationService
         if (!gemologistExists)
         {
             throw new UnauthorizedAccessException(
-                "Only Gemologists can review gem verifications.");
+                "Only Gemologists can review gem verification requests.");
         }
 
 
         // --------------------------------------------------------
-        // STEP 2
-        // Find the verification and its GemListing.
+        // 2. Find verification and associated listing
         // --------------------------------------------------------
 
         var verification =
             await _context.GemVerifications
-
                 .Include(v => v.GemListing)
-
                 .FirstOrDefaultAsync(
                     v => v.Id == verificationId);
 
@@ -306,8 +306,7 @@ public class GemVerificationService : IGemVerificationService
 
 
         // --------------------------------------------------------
-        // STEP 3
-        // Prevent the same verification from being reviewed twice.
+        // 3. Prevent duplicate review
         // --------------------------------------------------------
 
         if (!string.Equals(
@@ -316,56 +315,30 @@ public class GemVerificationService : IGemVerificationService
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
-                "This verification has already been reviewed.");
+                "This verification request has already been reviewed.");
         }
 
 
         // --------------------------------------------------------
-        // STEP 4
-        // Make sure the related listing is actually waiting
-        // for verification.
+        // 4. Listing must currently be pending verification
         // --------------------------------------------------------
 
         if (verification.GemListing.Status !=
             GemListingStatuses.PendingVerification)
         {
             throw new InvalidOperationException(
-                "The gem listing is not pending verification.");
+                "This listing is not currently awaiting verification.");
         }
 
 
         // --------------------------------------------------------
-        // STEP 5
-        // Validate the decision received from the client.
+        // 5. Validate decision
         // --------------------------------------------------------
 
-        var requestedDecision =
-            dto.Decision.Trim();
+        var normalizedDecision =
+            NormalizeDecision(dto.Decision);
 
-        string normalizedDecision;
-
-        if (requestedDecision.Equals(
-                GemListingStatuses.Approved,
-                StringComparison.OrdinalIgnoreCase))
-        {
-            normalizedDecision =
-                GemListingStatuses.Approved;
-        }
-        else if (requestedDecision.Equals(
-                     GemListingStatuses.ChangesRequested,
-                     StringComparison.OrdinalIgnoreCase))
-        {
-            normalizedDecision =
-                GemListingStatuses.ChangesRequested;
-        }
-        else if (requestedDecision.Equals(
-                     GemListingStatuses.Rejected,
-                     StringComparison.OrdinalIgnoreCase))
-        {
-            normalizedDecision =
-                GemListingStatuses.Rejected;
-        }
-        else
+        if (normalizedDecision == null)
         {
             throw new InvalidOperationException(
                 "Decision must be Approved, ChangesRequested, or Rejected.");
@@ -373,13 +346,7 @@ public class GemVerificationService : IGemVerificationService
 
 
         // --------------------------------------------------------
-        // STEP 6
-        // Notes are mandatory when:
-        //
-        // - requesting changes
-        // - rejecting the listing
-        //
-        // Approval notes are optional.
+        // 6. Require notes for ChangesRequested / Rejected
         // --------------------------------------------------------
 
         if ((normalizedDecision ==
@@ -394,8 +361,7 @@ public class GemVerificationService : IGemVerificationService
 
 
         // --------------------------------------------------------
-        // STEP 7
-        // Update the GemVerification record.
+        // 7. Save Gemologist review
         // --------------------------------------------------------
 
         verification.GemologistId =
@@ -405,17 +371,18 @@ public class GemVerificationService : IGemVerificationService
             normalizedDecision;
 
         verification.ReviewNotes =
-            string.IsNullOrWhiteSpace(dto.ReviewNotes)
-                ? null
-                : dto.ReviewNotes.Trim();
+            CleanOptionalValue(dto.ReviewNotes);
 
         verification.ReviewedAt =
             DateTime.UtcNow;
 
 
         // --------------------------------------------------------
-        // STEP 8
-        // Synchronize GemListing status with human decision.
+        // 8. Update listing status
+        //
+        // PendingVerification
+        //        ↓
+        // Approved / ChangesRequested / Rejected
         // --------------------------------------------------------
 
         verification.GemListing.Status =
@@ -426,19 +393,72 @@ public class GemVerificationService : IGemVerificationService
 
 
         // --------------------------------------------------------
-        // STEP 9
-        // Save verification + listing changes together.
+        // 9. Save changes
         // --------------------------------------------------------
 
         await _context.SaveChangesAsync();
 
 
         // --------------------------------------------------------
-        // STEP 10
-        // Return the completed verification.
+        // 10. Return updated verification
         // --------------------------------------------------------
 
         return await GetVerificationByIdAsync(
             verificationId);
+    }
+
+
+    // ============================================================
+    // NORMALIZE DECISION
+    // ============================================================
+
+    private static string?
+        NormalizeDecision(
+            string decision)
+    {
+        if (string.IsNullOrWhiteSpace(decision))
+        {
+            return null;
+        }
+
+        var value =
+            decision.Trim();
+
+        if (value.Equals(
+                GemListingStatuses.Approved,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return GemListingStatuses.Approved;
+        }
+
+        if (value.Equals(
+                GemListingStatuses.ChangesRequested,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return GemListingStatuses.ChangesRequested;
+        }
+
+        if (value.Equals(
+                GemListingStatuses.Rejected,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return GemListingStatuses.Rejected;
+        }
+
+        return null;
+    }
+
+
+    // ============================================================
+    // OPTIONAL STRING CLEANER
+    // ============================================================
+
+    private static string?
+        CleanOptionalValue(
+            string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : value.Trim();
     }
 }

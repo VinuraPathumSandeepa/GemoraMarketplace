@@ -16,6 +16,7 @@ public class GemListingService : IGemListingService
         _context = context;
     }
 
+
     // ============================================================
     // CREATE GEM LISTING
     // ============================================================
@@ -24,7 +25,6 @@ public class GemListingService : IGemListingService
         Guid sellerId,
         CreateGemListingDto dto)
     {
-        // Make sure the authenticated user is actually a Seller.
         var sellerExists = await _context.Users.AnyAsync(
             u => u.Id == sellerId &&
                  u.Role == UserRoles.Seller);
@@ -38,17 +38,47 @@ public class GemListingService : IGemListingService
         var listing = new GemListing
         {
             SellerId = sellerId,
-            Title = dto.Title.Trim(),
-            GemType = dto.GemType.Trim(),
-            Description = dto.Description.Trim(),
-            CaratWeight = dto.CaratWeight,
-            Color = dto.Color.Trim(),
-            Clarity = dto.Clarity.Trim(),
-            Cut = dto.Cut.Trim(),
-            Price = dto.Price,
-            Currency = dto.Currency.Trim().ToUpperInvariant(),
 
-            // Every new listing starts as Draft.
+            Title = dto.Title.Trim(),
+
+            GemType = dto.GemType.Trim(),
+
+            Description = dto.Description.Trim(),
+
+            CaratWeight = dto.CaratWeight,
+
+            Color = dto.Color.Trim(),
+
+            Clarity = dto.Clarity.Trim(),
+
+            Cut = dto.Cut.Trim(),
+
+            Price = dto.Price,
+
+            Currency = dto.Currency
+                .Trim()
+                .ToUpperInvariant(),
+
+            // ----------------------------------------------------
+            // Evidence
+            // ----------------------------------------------------
+
+            PrimaryImageUrl =
+                CleanOptionalValue(dto.PrimaryImageUrl),
+
+            CertificateNumber =
+                CleanOptionalValue(dto.CertificateNumber),
+
+            CertificateAuthority =
+                CleanOptionalValue(dto.CertificateAuthority),
+
+            CertificateUrl =
+                CleanOptionalValue(dto.CertificateUrl),
+
+            // ----------------------------------------------------
+            // Workflow
+            // ----------------------------------------------------
+
             Status = GemListingStatuses.Draft,
 
             CreatedAt = DateTime.UtcNow
@@ -63,75 +93,159 @@ public class GemListingService : IGemListingService
 
 
     // ============================================================
-    // GET ALL LISTINGS OF CURRENT SELLER
+    // GET CURRENT SELLER'S LISTINGS
     // ============================================================
 
-    public async Task<List<GemListingDto>> GetMyListingsAsync(
-        Guid sellerId)
+    public async Task<List<GemListingDto>>
+        GetMyListingsAsync(Guid sellerId)
     {
         return await _context.GemListings
             .AsNoTracking()
-            .Where(g => g.SellerId == sellerId)
-            .OrderByDescending(g => g.CreatedAt)
+
+            .Where(g =>
+                g.SellerId == sellerId)
+
+            .OrderByDescending(g =>
+                g.CreatedAt)
+
             .Select(g => new GemListingDto
             {
                 Id = g.Id,
+
                 SellerId = g.SellerId,
-                SellerName = g.Seller.FullName,
+
+                SellerName =
+                    g.Seller.FullName,
+
                 Title = g.Title,
+
                 GemType = g.GemType,
+
                 Description = g.Description,
+
                 CaratWeight = g.CaratWeight,
+
                 Color = g.Color,
+
                 Clarity = g.Clarity,
+
                 Cut = g.Cut,
+
                 Price = g.Price,
+
                 Currency = g.Currency,
+
+                // -----------------------------------------------
+                // Evidence
+                // -----------------------------------------------
+
+                PrimaryImageUrl =
+                    g.PrimaryImageUrl,
+
+                CertificateNumber =
+                    g.CertificateNumber,
+
+                CertificateAuthority =
+                    g.CertificateAuthority,
+
+                CertificateUrl =
+                    g.CertificateUrl,
+
+                // -----------------------------------------------
+                // Workflow
+                // -----------------------------------------------
+
                 Status = g.Status,
+
                 CreatedAt = g.CreatedAt,
+
                 UpdatedAt = g.UpdatedAt
             })
+
             .ToListAsync();
     }
 
 
     // ============================================================
-    // GET ONE LISTING OF CURRENT SELLER
+    // GET ONE LISTING
+    //
+    // Seller ownership is enforced here.
     // ============================================================
 
-    public async Task<GemListingDto?> GetByIdAsync(
-        int id,
-        Guid sellerId)
+    public async Task<GemListingDto?>
+        GetByIdAsync(
+            int id,
+            Guid sellerId)
     {
         return await _context.GemListings
             .AsNoTracking()
+
             .Where(g =>
                 g.Id == id &&
                 g.SellerId == sellerId)
+
             .Select(g => new GemListingDto
             {
                 Id = g.Id,
+
                 SellerId = g.SellerId,
-                SellerName = g.Seller.FullName,
+
+                SellerName =
+                    g.Seller.FullName,
+
                 Title = g.Title,
+
                 GemType = g.GemType,
+
                 Description = g.Description,
+
                 CaratWeight = g.CaratWeight,
+
                 Color = g.Color,
+
                 Clarity = g.Clarity,
+
                 Cut = g.Cut,
+
                 Price = g.Price,
+
                 Currency = g.Currency,
+
+                // -----------------------------------------------
+                // Evidence
+                // -----------------------------------------------
+
+                PrimaryImageUrl =
+                    g.PrimaryImageUrl,
+
+                CertificateNumber =
+                    g.CertificateNumber,
+
+                CertificateAuthority =
+                    g.CertificateAuthority,
+
+                CertificateUrl =
+                    g.CertificateUrl,
+
+                // -----------------------------------------------
+                // Workflow
+                // -----------------------------------------------
+
                 Status = g.Status,
+
                 CreatedAt = g.CreatedAt,
+
                 UpdatedAt = g.UpdatedAt
             })
+
             .FirstOrDefaultAsync();
     }
 
 
     // ============================================================
-    // UPDATE GEM LISTING
+    // UPDATE LISTING
+    //
+    // Only Draft or ChangesRequested listings can be edited.
     // ============================================================
 
     public async Task<bool> UpdateAsync(
@@ -139,17 +253,18 @@ public class GemListingService : IGemListingService
         Guid sellerId,
         UpdateGemListingDto dto)
     {
-        var listing = await _context.GemListings
-            .FirstOrDefaultAsync(g =>
-                g.Id == id &&
-                g.SellerId == sellerId);
+        var listing =
+            await _context.GemListings
+                .FirstOrDefaultAsync(
+                    g =>
+                        g.Id == id &&
+                        g.SellerId == sellerId);
 
         if (listing == null)
         {
             return false;
         }
 
-        // Seller can only edit Draft or ChangesRequested listings.
         if (listing.Status != GemListingStatuses.Draft &&
             listing.Status != GemListingStatuses.ChangesRequested)
         {
@@ -157,16 +272,65 @@ public class GemListingService : IGemListingService
                 "Only Draft or ChangesRequested listings can be edited.");
         }
 
-        listing.Title = dto.Title.Trim();
-        listing.GemType = dto.GemType.Trim();
-        listing.Description = dto.Description.Trim();
-        listing.CaratWeight = dto.CaratWeight;
-        listing.Color = dto.Color.Trim();
-        listing.Clarity = dto.Clarity.Trim();
-        listing.Cut = dto.Cut.Trim();
-        listing.Price = dto.Price;
-        listing.Currency = dto.Currency.Trim().ToUpperInvariant();
-        listing.UpdatedAt = DateTime.UtcNow;
+
+        // --------------------------------------------------------
+        // Basic information
+        // --------------------------------------------------------
+
+        listing.Title =
+            dto.Title.Trim();
+
+        listing.GemType =
+            dto.GemType.Trim();
+
+        listing.Description =
+            dto.Description.Trim();
+
+        listing.CaratWeight =
+            dto.CaratWeight;
+
+        listing.Color =
+            dto.Color.Trim();
+
+        listing.Clarity =
+            dto.Clarity.Trim();
+
+        listing.Cut =
+            dto.Cut.Trim();
+
+        listing.Price =
+            dto.Price;
+
+        listing.Currency =
+            dto.Currency
+                .Trim()
+                .ToUpperInvariant();
+
+
+        // --------------------------------------------------------
+        // Evidence
+        // --------------------------------------------------------
+
+        listing.PrimaryImageUrl =
+            CleanOptionalValue(dto.PrimaryImageUrl);
+
+        listing.CertificateNumber =
+            CleanOptionalValue(dto.CertificateNumber);
+
+        listing.CertificateAuthority =
+            CleanOptionalValue(dto.CertificateAuthority);
+
+        listing.CertificateUrl =
+            CleanOptionalValue(dto.CertificateUrl);
+
+
+        // --------------------------------------------------------
+        // Audit
+        // --------------------------------------------------------
+
+        listing.UpdatedAt =
+            DateTime.UtcNow;
+
 
         await _context.SaveChangesAsync();
 
@@ -175,24 +339,27 @@ public class GemListingService : IGemListingService
 
 
     // ============================================================
-    // DELETE GEM LISTING
+    // DELETE LISTING
+    //
+    // Only Draft listings can be deleted.
     // ============================================================
 
     public async Task<bool> DeleteAsync(
         int id,
         Guid sellerId)
     {
-        var listing = await _context.GemListings
-            .FirstOrDefaultAsync(g =>
-                g.Id == id &&
-                g.SellerId == sellerId);
+        var listing =
+            await _context.GemListings
+                .FirstOrDefaultAsync(
+                    g =>
+                        g.Id == id &&
+                        g.SellerId == sellerId);
 
         if (listing == null)
         {
             return false;
         }
 
-        // Only Draft listings can be deleted.
         if (listing.Status != GemListingStatuses.Draft)
         {
             throw new InvalidOperationException(
@@ -208,24 +375,33 @@ public class GemListingService : IGemListingService
 
 
     // ============================================================
-    // SUBMIT GEM LISTING FOR VERIFICATION
+    // SUBMIT LISTING FOR VERIFICATION
+    //
+    // Draft or ChangesRequested
+    //        ↓
+    // PendingVerification
+    //
+    // A NEW GemVerification record is created every time the
+    // listing is submitted/resubmitted.
     // ============================================================
 
-    public async Task<GemListingDto?> SubmitForVerificationAsync(
-        int id,
-        Guid sellerId)
+    public async Task<GemListingDto?>
+        SubmitForVerificationAsync(
+            int id,
+            Guid sellerId)
     {
-        var listing = await _context.GemListings
-            .FirstOrDefaultAsync(g =>
-                g.Id == id &&
-                g.SellerId == sellerId);
+        var listing =
+            await _context.GemListings
+                .FirstOrDefaultAsync(
+                    g =>
+                        g.Id == id &&
+                        g.SellerId == sellerId);
 
         if (listing == null)
         {
             return null;
         }
 
-        // Only Draft or ChangesRequested listings can be submitted.
         if (listing.Status != GemListingStatuses.Draft &&
             listing.Status != GemListingStatuses.ChangesRequested)
         {
@@ -233,9 +409,9 @@ public class GemListingService : IGemListingService
                 "Only Draft or ChangesRequested listings can be submitted for verification.");
         }
 
+
         // --------------------------------------------------------
-        // STEP 1:
-        // Change listing status to PendingVerification.
+        // Update listing workflow
         // --------------------------------------------------------
 
         listing.Status =
@@ -246,87 +422,83 @@ public class GemListingService : IGemListingService
 
 
         // --------------------------------------------------------
-        // STEP 2:
-        // Create a new verification record.
+        // Create a NEW verification attempt.
         //
-        // Every submission gets its own record. This means that
-        // if the Gemologist requests changes and the Seller
-        // resubmits, we preserve the previous verification history.
+        // This preserves previous verification history.
         // --------------------------------------------------------
 
-        var verification = new GemVerification
-        {
-            GemListingId = listing.Id,
+        var verification =
+            new GemVerification
+            {
+                GemListingId =
+                    listing.Id,
 
-            // No human Gemologist has reviewed it yet.
-            GemologistId = null,
+                GemologistId =
+                    null,
 
-            // Human decision has not been made yet.
-            Decision = "Pending",
+                Decision =
+                    "Pending",
 
-            ReviewNotes = null,
+                ReviewNotes =
+                    null,
 
-            // AI processing will be implemented later.
-            AiSuggestedGemType = null,
+                AiSuggestedGemType =
+                    null,
 
-            AiConfidenceScore = null,
+                AiConfidenceScore =
+                    null,
 
-            AiFindings = null,
+                AiFindings =
+                    null,
 
-            AiRiskFlags = null,
+                AiRiskFlags =
+                    null,
 
-            AiStatus = "NotStarted",
+                AiStatus =
+                    "NotStarted",
 
-            CreatedAt = DateTime.UtcNow,
+                CreatedAt =
+                    DateTime.UtcNow,
 
-            AiProcessedAt = null,
+                AiProcessedAt =
+                    null,
 
-            ReviewedAt = null
-        };
+                ReviewedAt =
+                    null
+            };
 
-        _context.GemVerifications.Add(verification);
-
-
-        // --------------------------------------------------------
-        // STEP 3:
-        // Save both:
-        //
-        // GemListing -> PendingVerification
-        // GemVerification -> Pending
-        //
-        // EF Core performs both changes in the same SaveChanges.
-        // --------------------------------------------------------
+        _context.GemVerifications.Add(
+            verification);
 
         await _context.SaveChangesAsync();
 
-
-        // --------------------------------------------------------
-        // STEP 4:
-        // Return updated listing.
-        // --------------------------------------------------------
-
-        return await GetListingDtoAsync(listing.Id);
+        return await GetListingDtoAsync(
+            listing.Id);
     }
 
 
     // ============================================================
-    // PRIVATE HELPER
-    // GET LISTING AND MAP ENTITY -> DTO
+    // INTERNAL DTO MAPPER
     // ============================================================
 
-    private async Task<GemListingDto> GetListingDtoAsync(
-        int listingId)
+    private async Task<GemListingDto>
+        GetListingDtoAsync(
+            int listingId)
     {
         return await _context.GemListings
             .AsNoTracking()
-            .Where(g => g.Id == listingId)
+
+            .Where(g =>
+                g.Id == listingId)
+
             .Select(g => new GemListingDto
             {
                 Id = g.Id,
 
                 SellerId = g.SellerId,
 
-                SellerName = g.Seller.FullName,
+                SellerName =
+                    g.Seller.FullName,
 
                 Title = g.Title,
 
@@ -346,12 +518,54 @@ public class GemListingService : IGemListingService
 
                 Currency = g.Currency,
 
+                // -----------------------------------------------
+                // Evidence
+                // -----------------------------------------------
+
+                PrimaryImageUrl =
+                    g.PrimaryImageUrl,
+
+                CertificateNumber =
+                    g.CertificateNumber,
+
+                CertificateAuthority =
+                    g.CertificateAuthority,
+
+                CertificateUrl =
+                    g.CertificateUrl,
+
+                // -----------------------------------------------
+                // Workflow
+                // -----------------------------------------------
+
                 Status = g.Status,
 
                 CreatedAt = g.CreatedAt,
 
                 UpdatedAt = g.UpdatedAt
             })
+
             .SingleAsync();
+    }
+
+
+    // ============================================================
+    // OPTIONAL STRING CLEANER
+    //
+    // Converts:
+    //
+    // ""       → null
+    // "   "    → null
+    // " value " → "value"
+    //
+    // This keeps optional evidence fields clean in PostgreSQL.
+    // ============================================================
+
+    private static string? CleanOptionalValue(
+        string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : value.Trim();
     }
 }

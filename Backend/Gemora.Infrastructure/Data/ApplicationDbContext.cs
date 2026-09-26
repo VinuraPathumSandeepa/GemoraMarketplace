@@ -19,21 +19,22 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<GemListing> GemListings => Set<GemListing>();
 
-    public DbSet<GemVerification> GemVerifications =>
-        Set<GemVerification>();
+    public DbSet<GemVerification> GemVerifications
+        => Set<GemVerification>();
 
 
     // ============================================================
     // MODEL CONFIGURATION
     // ============================================================
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreating(
+        ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
 
         // ========================================================
-        // USER CONFIGURATION
+        // USER
         // ========================================================
 
         modelBuilder.Entity<User>(entity =>
@@ -58,19 +59,23 @@ public class ApplicationDbContext : DbContext
             entity.Property(u => u.CreatedAt)
                 .IsRequired();
 
-            // Every user must have a unique email address.
             entity.HasIndex(u => u.Email)
                 .IsUnique();
         });
 
 
         // ========================================================
-        // GEM LISTING CONFIGURATION
+        // GEM LISTING
         // ========================================================
 
         modelBuilder.Entity<GemListing>(entity =>
         {
             entity.HasKey(g => g.Id);
+
+
+            // ----------------------------------------------------
+            // BASIC GEM INFORMATION
+            // ----------------------------------------------------
 
             entity.Property(g => g.Title)
                 .IsRequired()
@@ -85,7 +90,6 @@ public class ApplicationDbContext : DbContext
                 .HasMaxLength(2000);
 
             entity.Property(g => g.CaratWeight)
-                .IsRequired()
                 .HasPrecision(10, 2);
 
             entity.Property(g => g.Color)
@@ -100,13 +104,44 @@ public class ApplicationDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(100);
 
+
+            // ----------------------------------------------------
+            // PRICE
+            // ----------------------------------------------------
+
             entity.Property(g => g.Price)
-                .IsRequired()
                 .HasPrecision(18, 2);
 
             entity.Property(g => g.Currency)
                 .IsRequired()
                 .HasMaxLength(10);
+
+
+            // ----------------------------------------------------
+            // GEM IMAGE
+            // ----------------------------------------------------
+
+            entity.Property(g => g.PrimaryImageUrl)
+                .HasMaxLength(1000);
+
+
+            // ----------------------------------------------------
+            // CERTIFICATE / SUPPORTING EVIDENCE
+            // ----------------------------------------------------
+
+            entity.Property(g => g.CertificateNumber)
+                .HasMaxLength(200);
+
+            entity.Property(g => g.CertificateAuthority)
+                .HasMaxLength(200);
+
+            entity.Property(g => g.CertificateUrl)
+                .HasMaxLength(1000);
+
+
+            // ----------------------------------------------------
+            // WORKFLOW
+            // ----------------------------------------------------
 
             entity.Property(g => g.Status)
                 .IsRequired()
@@ -115,19 +150,21 @@ public class ApplicationDbContext : DbContext
             entity.Property(g => g.CreatedAt)
                 .IsRequired();
 
+
             // ----------------------------------------------------
             // INDEXES
             // ----------------------------------------------------
 
+            entity.HasIndex(g => g.SellerId);
+
             entity.HasIndex(g => g.Status);
 
-            entity.HasIndex(g => g.SellerId);
+            // New evidence index
+            entity.HasIndex(g => g.CertificateNumber);
 
 
             // ----------------------------------------------------
-            // SELLER RELATIONSHIP
-            //
-            // User (Seller) 1 -------- * GemListing
+            // SELLER -> GEM LISTINGS
             // ----------------------------------------------------
 
             entity.HasOne(g => g.Seller)
@@ -138,7 +175,7 @@ public class ApplicationDbContext : DbContext
 
 
         // ========================================================
-        // GEM VERIFICATION CONFIGURATION
+        // GEM VERIFICATION
         // ========================================================
 
         modelBuilder.Entity<GemVerification>(entity =>
@@ -147,7 +184,7 @@ public class ApplicationDbContext : DbContext
 
 
             // ----------------------------------------------------
-            // HUMAN VERIFICATION DATA
+            // HUMAN VERIFICATION
             // ----------------------------------------------------
 
             entity.Property(v => v.Decision)
@@ -159,7 +196,7 @@ public class ApplicationDbContext : DbContext
 
 
             // ----------------------------------------------------
-            // AI VERIFICATION DATA
+            // AI VERIFICATION
             // ----------------------------------------------------
 
             entity.Property(v => v.AiSuggestedGemType)
@@ -201,12 +238,7 @@ public class ApplicationDbContext : DbContext
 
 
             // ----------------------------------------------------
-            // GEM LISTING RELATIONSHIP
-            //
-            // GemListing 1 -------- * GemVerification
-            //
-            // If a GemListing is deleted, its verification
-            // history is also deleted.
+            // GEM LISTING -> VERIFICATIONS
             // ----------------------------------------------------
 
             entity.HasOne(v => v.GemListing)
@@ -216,12 +248,7 @@ public class ApplicationDbContext : DbContext
 
 
             // ----------------------------------------------------
-            // GEMOLOGIST RELATIONSHIP
-            //
-            // User (Gemologist) 1 -------- * GemVerification
-            //
-            // GemologistId is nullable because the verification
-            // record can exist before a human reviews it.
+            // GEMOLOGIST -> VERIFICATIONS
             // ----------------------------------------------------
 
             entity.HasOne(v => v.Gemologist)

@@ -26,6 +26,24 @@ public class GemListingDto
 
     public string Currency { get; set; } = string.Empty;
 
+
+    // ============================================================
+    // GEM IMAGE / CERTIFICATE EVIDENCE
+    // ============================================================
+
+    public string? PrimaryImageUrl { get; set; }
+
+    public string? CertificateNumber { get; set; }
+
+    public string? CertificateAuthority { get; set; }
+
+    public string? CertificateUrl { get; set; }
+
+
+    // ============================================================
+    // WORKFLOW / AUDIT
+    // ============================================================
+
     public string Status { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; }

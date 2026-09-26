@@ -4,9 +4,16 @@ public class GemListing
 {
     public int Id { get; set; }
 
-    // Seller who owns this listing.
-    // User.Id is Guid, so SellerId must also be Guid.
+    // ============================================================
+    // SELLER
+    // ============================================================
+
     public Guid SellerId { get; set; }
+
+
+    // ============================================================
+    // BASIC GEM INFORMATION
+    // ============================================================
 
     public string Title { get; set; } = string.Empty;
 
@@ -22,9 +29,44 @@ public class GemListing
 
     public string Cut { get; set; } = string.Empty;
 
+
+    // ============================================================
+    // PRICE
+    // ============================================================
+
     public decimal Price { get; set; }
 
     public string Currency { get; set; } = "LKR";
+
+
+    // ============================================================
+    // GEM IMAGE
+    // ============================================================
+
+    // URL/path of the primary gemstone image.
+    // Actual upload/storage support will be implemented separately.
+    public string? PrimaryImageUrl { get; set; }
+
+
+    // ============================================================
+    // CERTIFICATE / SUPPORTING EVIDENCE
+    // ============================================================
+
+    // Example:
+    // GIA-123456789
+    // NGJA-SL-2026-001
+    public string? CertificateNumber { get; set; }
+
+    // Name of the laboratory/authority shown on the certificate.
+    public string? CertificateAuthority { get; set; }
+
+    // URL/path of the uploaded certificate document.
+    public string? CertificateUrl { get; set; }
+
+
+    // ============================================================
+    // WORKFLOW STATUS
+    // ============================================================
 
     // Draft
     // PendingVerification
@@ -33,28 +75,22 @@ public class GemListing
     // Rejected
     public string Status { get; set; } = "Draft";
 
+
+    // ============================================================
+    // AUDIT INFORMATION
+    // ============================================================
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedAt { get; set; }
 
+
     // ============================================================
-    // NAVIGATION PROPERTY - SELLER
+    // NAVIGATION PROPERTIES
     // ============================================================
 
     public User Seller { get; set; } = null!;
 
-    // ============================================================
-    // NAVIGATION PROPERTY - VERIFICATION HISTORY
-    // ============================================================
-
-    // One listing can have multiple verification records.
-    //
-    // Example:
-    // First verification  -> ChangesRequested
-    // Seller edits
-    // Second verification -> Approved
-    //
-    // Keeping multiple records gives us verification history.
     public ICollection<GemVerification> Verifications { get; set; }
         = new List<GemVerification>();
 }

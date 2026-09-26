@@ -2,7 +2,10 @@ namespace Gemora.Application.DTOs.GemVerifications;
 
 public class GemVerificationDto
 {
-    // Verification information
+    // ============================================================
+    // VERIFICATION INFORMATION
+    // ============================================================
+
     public int VerificationId { get; set; }
 
     public string Decision { get; set; } = string.Empty;
@@ -42,6 +45,24 @@ public class GemVerificationDto
 
     public string Currency { get; set; } = string.Empty;
 
+
+    // ============================================================
+    // GEM IMAGE / CERTIFICATE EVIDENCE
+    // ============================================================
+
+    public string? PrimaryImageUrl { get; set; }
+
+    public string? CertificateNumber { get; set; }
+
+    public string? CertificateAuthority { get; set; }
+
+    public string? CertificateUrl { get; set; }
+
+
+    // ============================================================
+    // LISTING WORKFLOW
+    // ============================================================
+
     public string ListingStatus { get; set; } = string.Empty;
 
 
@@ -58,6 +79,8 @@ public class GemVerificationDto
     public string? AiFindings { get; set; }
 
     public string? AiRiskFlags { get; set; }
+
+    public DateTime? AiProcessedAt { get; set; }
 
 
     // ============================================================
