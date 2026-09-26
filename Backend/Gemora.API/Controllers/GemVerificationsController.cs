@@ -13,22 +13,37 @@ namespace Gemora.API.Controllers;
 public class GemVerificationsController : ControllerBase
 {
     private readonly IGemVerificationService _gemVerificationService;
+    private readonly IGemVerificationAgent _gemVerificationAgent;
+
+
+    // ============================================================
+    // CONSTRUCTOR
+    // ============================================================
 
     public GemVerificationsController(
-        IGemVerificationService gemVerificationService)
+        IGemVerificationService gemVerificationService,
+        IGemVerificationAgent gemVerificationAgent)
     {
-        _gemVerificationService = gemVerificationService;
+        _gemVerificationService =
+            gemVerificationService;
+
+        _gemVerificationAgent =
+            gemVerificationAgent;
     }
 
 
     // ============================================================
-    // GET PENDING VERIFICATION QUEUE
+    // GET PENDING VERIFICATIONS
     //
-    // GET /api/GemVerifications/pending
+    // GET:
+    // /api/GemVerifications/pending
+    //
+    // Gemologist only.
     // ============================================================
 
     [HttpGet("pending")]
-    public async Task<IActionResult> GetPendingVerifications()
+    public async Task<ActionResult<List<GemVerificationDto>>>
+        GetPendingVerifications()
     {
         var verifications =
             await _gemVerificationService
@@ -39,24 +54,33 @@ public class GemVerificationsController : ControllerBase
 
 
     // ============================================================
-    // GET ONE VERIFICATION
+    // GET VERIFICATION BY ID
     //
-    // GET /api/GemVerifications/{id}
+    // GET:
+    // /api/GemVerifications/{verificationId}
+    //
+    // Example:
+    // /api/GemVerifications/5
     // ============================================================
 
-    [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetVerificationById(int id)
+    [HttpGet("{verificationId:int}")]
+    public async Task<ActionResult<GemVerificationDto>>
+        GetVerificationById(
+            int verificationId)
     {
         var verification =
             await _gemVerificationService
-                .GetVerificationByIdAsync(id);
+                .GetVerificationByIdAsync(
+                    verificationId);
 
         if (verification == null)
         {
-            return NotFound(new
-            {
-                message = "Gem verification not found."
-            });
+            return NotFound(
+                new
+                {
+                    message =
+                        "Gem verification was not found."
+                });
         }
 
         return Ok(verification);
@@ -64,48 +88,123 @@ public class GemVerificationsController : ControllerBase
 
 
     // ============================================================
-    // REVIEW A GEM VERIFICATION
+    // RUN AI-ASSISTED GEM ANALYSIS
     //
-    // POST /api/GemVerifications/{id}/review
+    // POST:
+    // /api/GemVerifications/{verificationId}/ai-analysis
     //
-    // Allowed decisions:
+    // Example:
+    // /api/GemVerifications/5/ai-analysis
+    //
+    // Current agent workflow:
+    //
+    // NotStarted
+    //      ↓
+    // Processing
+    //      ↓
+    // Deterministic evidence validation
+    //      ↓
+    // ┌──────────────────────┬─────────────────────────┐
+    // │ Validation fails     │ Validation succeeds     │
+    // ↓                      ↓
+    // NeedsMoreEvidence      AwaitingModelAnalysis
+    //
+    // The actual external AI model will be connected in
+    // the next implementation stage.
+    //
+    // IMPORTANT:
+    // AI does not approve/reject the gemstone.
+    // Final authority remains with the Gemologist.
+    // ============================================================
+
+    [HttpPost("{verificationId:int}/ai-analysis")]
+    public async Task<IActionResult> RunAiAnalysis(
+        int verificationId)
+    {
+        var result =
+            await _gemVerificationAgent
+                .AnalyzeAsync(
+                    verificationId);
+
+        return Ok(result);
+    }
+
+
+    // ============================================================
+    // HUMAN GEMOLOGIST REVIEW
+    //
+    // PUT:
+    // /api/GemVerifications/{verificationId}/review
+    //
+    // Supported decisions:
+    //
     // Approved
     // ChangesRequested
     // Rejected
+    //
+    // The AI analysis is advisory only.
+    // This endpoint represents the human approval/review step.
     // ============================================================
 
-    [HttpPost("{id:int}/review")]
-    public async Task<IActionResult> ReviewVerification(
-        int id,
-        [FromBody] ReviewGemVerificationDto dto)
+    [HttpPut("{verificationId:int}/review")]
+    public async Task<ActionResult<GemVerificationDto>>
+        ReviewVerification(
+            int verificationId,
+            [FromBody] ReviewGemVerificationDto dto)
     {
-        // Get the logged-in Gemologist's Guid from the JWT.
-        var userIdValue =
-            User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        if (!Guid.TryParse(userIdValue, out var gemologistId))
-        {
-            return Unauthorized(new
-            {
-                message = "Invalid authenticated user."
-            });
-        }
+        var gemologistId =
+            GetCurrentUserId();
 
         var verification =
             await _gemVerificationService
                 .ReviewVerificationAsync(
-                    id,
+                    verificationId,
                     gemologistId,
                     dto);
 
         if (verification == null)
         {
-            return NotFound(new
-            {
-                message = "Gem verification not found."
-            });
+            return NotFound(
+                new
+                {
+                    message =
+                        "Gem verification was not found."
+                });
         }
 
         return Ok(verification);
+    }
+
+
+    // ============================================================
+    // CURRENT USER ID
+    //
+    // JWT NameIdentifier contains the Gemora User Guid.
+    // ============================================================
+
+    private Guid GetCurrentUserId()
+    {
+        var userIdValue =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(
+                userIdValue))
+        {
+            throw new UnauthorizedAccessException(
+                "The authenticated user identifier is missing.");
+        }
+
+
+        if (!Guid.TryParse(
+                userIdValue,
+                out var userId))
+        {
+            throw new UnauthorizedAccessException(
+                "The authenticated user identifier is invalid.");
+        }
+
+
+        return userId;
     }
 }
