@@ -43,6 +43,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(
 // ======================================================
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IShipmentService, ShipmentService>();
 
 builder.Services.AddScoped<TokenService>();
 
