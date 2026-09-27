@@ -19,4 +19,11 @@ public interface IExportOfficerService
         Guid officerUserId,
         Guid exportRequestId,
         ExportDecisionDto dto);
+
+    Task<ComplianceDocumentFileResult> GetDocumentFileForReviewAsync(
+        Guid officerUserId,
+        Guid exportRequestId,
+        Guid documentId,
+        CancellationToken cancellationToken = default);
 }
+

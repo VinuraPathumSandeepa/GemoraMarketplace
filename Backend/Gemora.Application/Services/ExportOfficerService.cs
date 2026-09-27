@@ -11,10 +11,14 @@ namespace Gemora.Application.Services;
 public class ExportOfficerService : IExportOfficerService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IFileStorageService _fileStorageService;
 
-    public ExportOfficerService(ApplicationDbContext context)
+    public ExportOfficerService(
+        ApplicationDbContext context,
+        IFileStorageService fileStorageService)
     {
         _context = context;
+        _fileStorageService = fileStorageService;
     }
 
     // ==========================================
@@ -310,6 +314,143 @@ public class ExportOfficerService : IExportOfficerService
             Success = true,
             Message = successMessage,
             Request = MapToOfficerExportRequestResponseDto(request)
+        };
+    }
+
+    // ==========================================
+    // 5. GET DOCUMENT FILE FOR REVIEW
+    // ==========================================
+    public async Task<ComplianceDocumentFileResult> GetDocumentFileForReviewAsync(
+        Guid officerUserId,
+        Guid exportRequestId,
+        Guid documentId,
+        CancellationToken cancellationToken = default)
+    {
+        var officerValidation = await ValidateOfficerAsync(officerUserId);
+        if (officerValidation != null)
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = officerValidation.ErrorCode,
+                Message = officerValidation.Message
+            };
+        }
+
+        if (exportRequestId == Guid.Empty)
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = "INVALID_REQUEST",
+                Message = "Export request ID is invalid."
+            };
+        }
+
+        if (documentId == Guid.Empty)
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = "INVALID_REQUEST",
+                Message = "Compliance document ID is invalid."
+            };
+        }
+
+        var request = await _context.ExportRequests
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Id == exportRequestId, cancellationToken);
+
+        if (request == null)
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = "REQUEST_NOT_FOUND",
+                Message = "Export request was not found."
+            };
+        }
+
+        if (request.Status == ExportRequestStatus.Draft ||
+            request.Status == ExportRequestStatus.Cancelled)
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = "INVALID_STATUS",
+                Message = "This export request is not available for officer review."
+            };
+        }
+
+        var document = await _context.ComplianceDocuments
+            .AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Id == documentId && d.ExportRequestId == exportRequestId, cancellationToken);
+
+        if (document == null)
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = "DOCUMENT_NOT_FOUND",
+                Message = "Compliance document was not found."
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(document.FileUrl))
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = "FILE_NOT_UPLOADED",
+                Message = "No file has been uploaded for this compliance document."
+            };
+        }
+
+        var stream = await _fileStorageService.OpenReadAsync(
+            document.FileUrl,
+            cancellationToken
+        );
+
+        if (stream == null)
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = "FILE_NOT_FOUND",
+                Message = "The stored compliance document file could not be found."
+            };
+        }
+
+        var extension = Path.GetExtension(document.FileUrl).ToLowerInvariant();
+
+        var contentType = extension switch
+        {
+            ".pdf" => "application/pdf",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            _ => null
+        };
+
+        if (contentType == null)
+        {
+            await stream.DisposeAsync();
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = "UNSUPPORTED_FILE_TYPE",
+                Message = "The stored compliance document file type is not supported."
+            };
+        }
+
+        var downloadFileName = $"compliance-document-{document.Id}{extension}";
+
+        return new ComplianceDocumentFileResult
+        {
+            Success = true,
+            Message = "Compliance document file retrieved successfully.",
+            Content = stream,
+            ContentType = contentType,
+            DownloadFileName = downloadFileName
         };
     }
 

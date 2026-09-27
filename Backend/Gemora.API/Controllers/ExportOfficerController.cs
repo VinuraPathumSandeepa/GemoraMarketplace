@@ -136,6 +136,74 @@ public class ExportOfficerController : ControllerBase
     }
 
     // ==========================================
+    // 5. DOWNLOAD COMPLIANCE DOCUMENT FILE
+    // GET: /api/export-officer/requests/{id}/documents/{documentId}/file
+    // ==========================================
+    [HttpGet("requests/{id}/documents/{documentId}/file")]
+    public async Task<IActionResult> DownloadComplianceDocumentFile(
+        Guid id,
+        Guid documentId,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetCurrentOfficerId(out var officerUserId))
+        {
+            return Unauthorized(new
+            {
+                message = "Authenticated user is invalid."
+            });
+        }
+
+        var result = await _exportOfficerService.GetDocumentFileForReviewAsync(
+            officerUserId,
+            id,
+            documentId,
+            cancellationToken
+        );
+
+        if (!result.Success)
+        {
+            return result.ErrorCode switch
+            {
+                "INVALID_USER" => Unauthorized(new { message = result.Message }),
+                "OFFICER_NOT_FOUND" => Unauthorized(new { message = result.Message }),
+                "FORBIDDEN" => StatusCode(StatusCodes.Status403Forbidden, new { message = result.Message }),
+                "INVALID_REQUEST" => BadRequest(new { message = result.Message }),
+                "REQUEST_NOT_FOUND" => NotFound(new { message = result.Message }),
+                "DOCUMENT_NOT_FOUND" => NotFound(new { message = result.Message }),
+                "FILE_NOT_UPLOADED" => NotFound(new { message = result.Message }),
+                "FILE_NOT_FOUND" => NotFound(new { message = result.Message }),
+                "INVALID_STATUS" => Conflict(new { message = result.Message }),
+                "UNSUPPORTED_FILE_TYPE" => BadRequest(new { message = result.Message }),
+                _ => BadRequest(new { message = result.Message })
+            };
+        }
+
+        if (result.Content == null ||
+            string.IsNullOrWhiteSpace(result.ContentType) ||
+            string.IsNullOrWhiteSpace(result.DownloadFileName))
+        {
+            if (result.Content != null)
+            {
+                await result.Content.DisposeAsync();
+            }
+
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new
+                {
+                    message = "The compliance document could not be prepared for download."
+                }
+            );
+        }
+
+        return File(
+            result.Content,
+            result.ContentType,
+            result.DownloadFileName
+        );
+    }
+
+    // ==========================================
     // PRIVATE USER ID HELPER
     // ==========================================
     private bool TryGetCurrentOfficerId(out Guid officerUserId)
