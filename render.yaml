@@ -1,0 +1,36 @@
+# ============================================================
+# Render Blueprint — Gemora Marketplace Backend
+# Docs: https://render.com/docs/blueprint-spec
+# ============================================================
+
+services:
+  - type: web
+    name: gemora-api
+    runtime: docker
+    # Path to the Dockerfile, relative to the repo root
+    dockerfilePath: ./Backend/Dockerfile
+    dockerContext: ./Backend
+    plan: free
+
+    # Health-check path — Render pings this after deploy
+    healthCheckPath: /swagger/index.html
+
+    # --------------------------------------------------------
+    # Environment Variables
+    # Set SECRET values in the Render Dashboard, NOT here.
+    # --------------------------------------------------------
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+
+      # Comma-separated list of allowed CORS origins.
+      # Update this once you know your frontend's URL.
+      - key: CorsOrigins
+        value: http://localhost:5173
+
+      # ---- Set these in Render Dashboard as secret values ----
+      # ConnectionStrings__DefaultConnection  (your PostgreSQL connection string)
+      # Jwt__Key                              (your JWT secret key)
+      # SeedUsers__AdminPassword
+      # SeedUsers__GemologistPassword
+      # SeedUsers__ExportOfficerPassword

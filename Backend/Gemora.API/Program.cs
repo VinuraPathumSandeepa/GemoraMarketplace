@@ -149,9 +149,19 @@ builder.Services.AddAuthorization();
 // React/Vite development application:
 // http://localhost:5173
 //
+// In production, set the CORS_ORIGINS environment variable
+// to a comma-separated list of allowed origins, e.g.:
+// https://your-app.onrender.com,https://yourdomain.com
+//
 // Flutter does not have browser CORS restrictions in
 // the same way, but it will use the same ASP.NET API.
 // ======================================================
+
+var corsOriginsEnv = builder.Configuration["CorsOrigins"]
+    ?? "http://localhost:5173";
+
+var corsOrigins = corsOriginsEnv
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 builder.Services.AddCors(options =>
 {
@@ -160,9 +170,7 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy
-                .WithOrigins(
-                    "http://localhost:5173"
-                )
+                .WithOrigins(corsOrigins)
                 .AllowAnyHeader()
                 .AllowAnyMethod();
         }
@@ -240,12 +248,12 @@ var app = builder.Build();
 // 10. SWAGGER
 // ======================================================
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
+// Always enable Swagger so the deployed API can be tested.
+// In a production-hardened app you would restrict this,
+// but for a campus project this is convenient.
+app.UseSwagger();
 
-    app.UseSwaggerUI();
-}
+app.UseSwaggerUI();
 
 
 // ======================================================
