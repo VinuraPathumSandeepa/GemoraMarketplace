@@ -42,5 +42,12 @@ public interface IExportComplianceService
         string contentType,
         long fileSize,
         CancellationToken cancellationToken = default);
+
+    Task<ComplianceDocumentFileResult> GetDocumentFileAsync(
+        Guid userId,
+        Guid exportRequestId,
+        Guid documentId,
+        CancellationToken cancellationToken = default);
 }
+
 

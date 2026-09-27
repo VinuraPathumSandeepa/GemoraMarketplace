@@ -878,6 +878,131 @@ public class ExportComplianceService : IExportComplianceService
     }
 
     // ==========================================
+    // GET DOCUMENT FILE
+    // ==========================================
+    public async Task<ComplianceDocumentFileResult> GetDocumentFileAsync(
+        Guid userId,
+        Guid exportRequestId,
+        Guid documentId,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId == Guid.Empty)
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = "INVALID_USER",
+                Message = "Authenticated user is invalid."
+            };
+        }
+
+        if (exportRequestId == Guid.Empty)
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = "INVALID_REQUEST",
+                Message = "Export request ID is invalid."
+            };
+        }
+
+        if (documentId == Guid.Empty)
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = "INVALID_REQUEST",
+                Message = "Compliance document ID is invalid."
+            };
+        }
+
+        var exportRequestExists = await _context.ExportRequests
+            .AsNoTracking()
+            .AnyAsync(r => r.Id == exportRequestId && r.RequestedByUserId == userId, cancellationToken);
+
+        if (!exportRequestExists)
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = "REQUEST_NOT_FOUND",
+                Message = "Export request was not found."
+            };
+        }
+
+        var document = await _context.ComplianceDocuments
+            .AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Id == documentId && d.ExportRequestId == exportRequestId, cancellationToken);
+
+        if (document == null)
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = "DOCUMENT_NOT_FOUND",
+                Message = "Compliance document was not found."
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(document.FileUrl))
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = "FILE_NOT_UPLOADED",
+                Message = "No file has been uploaded for this compliance document."
+            };
+        }
+
+        var stream = await _fileStorageService.OpenReadAsync(
+            document.FileUrl,
+            cancellationToken
+        );
+
+        if (stream == null)
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = "FILE_NOT_FOUND",
+                Message = "The stored compliance document file could not be found."
+            };
+        }
+
+        var extension = Path.GetExtension(document.FileUrl).ToLowerInvariant();
+
+        var contentType = extension switch
+        {
+            ".pdf" => "application/pdf",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            _ => null
+        };
+
+        if (contentType == null)
+        {
+            await stream.DisposeAsync();
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                ErrorCode = "UNSUPPORTED_FILE_TYPE",
+                Message = "The stored compliance document file type is not supported."
+            };
+        }
+
+        var downloadFileName = $"compliance-document-{document.Id}{extension}";
+
+        return new ComplianceDocumentFileResult
+        {
+            Success = true,
+            Message = "Compliance document file retrieved successfully.",
+            Content = stream,
+            ContentType = contentType,
+            DownloadFileName = downloadFileName
+        };
+    }
+
+    // ==========================================
     // MAPPING HELPERS
     // ==========================================
     private static ExportRequestResponseDto MapToResponseDto(ExportRequest entity)

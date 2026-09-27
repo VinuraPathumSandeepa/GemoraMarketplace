@@ -507,6 +507,71 @@ public class ExportRequestsController : ControllerBase
     }
 
     // ==========================================
+    // 10. DOWNLOAD COMPLIANCE DOCUMENT FILE
+    // GET: /api/ExportRequests/{id}/documents/{documentId}/file
+    // ==========================================
+    [HttpGet("{id}/documents/{documentId}/file")]
+    public async Task<IActionResult> DownloadComplianceDocumentFile(
+        Guid id,
+        Guid documentId,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Authenticated user is invalid."
+            });
+        }
+
+        var result = await _exportComplianceService.GetDocumentFileAsync(
+            userId,
+            id,
+            documentId,
+            cancellationToken
+        );
+
+        if (!result.Success)
+        {
+            return result.ErrorCode switch
+            {
+                "INVALID_USER" => Unauthorized(new { message = result.Message }),
+                "REQUEST_NOT_FOUND" => NotFound(new { message = result.Message }),
+                "DOCUMENT_NOT_FOUND" => NotFound(new { message = result.Message }),
+                "FILE_NOT_UPLOADED" => NotFound(new { message = result.Message }),
+                "FILE_NOT_FOUND" => NotFound(new { message = result.Message }),
+                "INVALID_REQUEST" => BadRequest(new { message = result.Message }),
+                "UNSUPPORTED_FILE_TYPE" => BadRequest(new { message = result.Message }),
+                _ => BadRequest(new { message = result.Message })
+            };
+        }
+
+        if (result.Content == null ||
+            string.IsNullOrWhiteSpace(result.ContentType) ||
+            string.IsNullOrWhiteSpace(result.DownloadFileName))
+        {
+            if (result.Content != null)
+            {
+                await result.Content.DisposeAsync();
+            }
+
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new
+                {
+                    message = "The compliance document could not be prepared for download."
+                }
+            );
+        }
+
+        return File(
+            result.Content,
+            result.ContentType,
+            result.DownloadFileName
+        );
+    }
+
+    // ==========================================
     // PRIVATE HELPER: AUTHENTICATED USER ID
     // ==========================================
     private bool TryGetCurrentUserId(out Guid userId)
@@ -521,4 +586,5 @@ public class ExportRequestsController : ControllerBase
         return false;
     }
 }
+
 
