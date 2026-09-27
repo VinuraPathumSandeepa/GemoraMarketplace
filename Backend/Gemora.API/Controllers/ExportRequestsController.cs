@@ -262,6 +262,120 @@ public class ExportRequestsController : ControllerBase
     }
 
     // ==========================================
+    // 6. ADD COMPLIANCE DOCUMENT
+    // POST: /api/ExportRequests/{id}/documents
+    // ==========================================
+    [HttpPost("{id}/documents")]
+    public async Task<IActionResult> AddComplianceDocument(Guid id, CreateComplianceDocumentDto dto)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Authenticated user is invalid."
+            });
+        }
+
+        var result = await _exportComplianceService.AddComplianceDocumentAsync(
+            userId,
+            id,
+            dto
+        );
+
+        if (!result.Success)
+        {
+            if (result.ErrorCode == "REQUEST_NOT_FOUND")
+            {
+                return NotFound(new
+                {
+                    message = result.Message
+                });
+            }
+
+            if (result.ErrorCode == "INVALID_STATUS")
+            {
+                return Conflict(new
+                {
+                    message = result.Message
+                });
+            }
+
+            if (result.ErrorCode == "INVALID_USER")
+            {
+                return Unauthorized(new
+                {
+                    message = result.Message
+                });
+            }
+
+            return BadRequest(new
+            {
+                message = result.Message
+            });
+        }
+
+        return StatusCode(
+            StatusCodes.Status201Created,
+            new
+            {
+                message = result.Message,
+                document = result.Document
+            }
+        );
+    }
+
+    // ==========================================
+    // 7. GET COMPLIANCE DOCUMENTS
+    // GET: /api/ExportRequests/{id}/documents
+    // ==========================================
+    [HttpGet("{id}/documents")]
+    public async Task<IActionResult> GetComplianceDocuments(Guid id)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Authenticated user is invalid."
+            });
+        }
+
+        var result = await _exportComplianceService.GetComplianceDocumentsAsync(
+            userId,
+            id
+        );
+
+        if (!result.Success)
+        {
+            if (result.ErrorCode == "REQUEST_NOT_FOUND")
+            {
+                return NotFound(new
+                {
+                    message = result.Message
+                });
+            }
+
+            if (result.ErrorCode == "INVALID_USER")
+            {
+                return Unauthorized(new
+                {
+                    message = result.Message
+                });
+            }
+
+            return BadRequest(new
+            {
+                message = result.Message
+            });
+        }
+
+        return Ok(new
+        {
+            message = result.Message,
+            documents = result.Documents
+        });
+    }
+
+    // ==========================================
     // PRIVATE HELPER: AUTHENTICATED USER ID
     // ==========================================
     private bool TryGetCurrentUserId(out Guid userId)

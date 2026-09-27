@@ -407,6 +407,161 @@ public class ExportComplianceService : IExportComplianceService
     }
 
     // ==========================================
+    // ADD COMPLIANCE DOCUMENT
+    // ==========================================
+    public async Task<ComplianceDocumentOperationResult> AddComplianceDocumentAsync(
+        Guid userId,
+        Guid exportRequestId,
+        CreateComplianceDocumentDto dto)
+    {
+        if (userId == Guid.Empty)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                Message = "Authenticated user is invalid.",
+                ErrorCode = "INVALID_USER"
+            };
+        }
+
+        if (exportRequestId == Guid.Empty)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                Message = "Export request ID is invalid.",
+                ErrorCode = "INVALID_REQUEST"
+            };
+        }
+
+        var exportRequest = await _context.ExportRequests
+            .FirstOrDefaultAsync(r => r.Id == exportRequestId && r.RequestedByUserId == userId);
+
+        if (exportRequest == null)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                Message = "Export request was not found.",
+                ErrorCode = "REQUEST_NOT_FOUND"
+            };
+        }
+
+        if (exportRequest.Status != ExportRequestStatus.Draft &&
+            exportRequest.Status != ExportRequestStatus.RevisionRequired)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                Message = "Documents can only be added to draft or revision-required export requests.",
+                ErrorCode = "INVALID_STATUS"
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.DocumentType))
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                Message = "Document type is required.",
+                ErrorCode = "INVALID_REQUEST"
+            };
+        }
+
+        if (dto.IssueDate.HasValue && dto.ExpiryDate.HasValue && dto.ExpiryDate.Value < dto.IssueDate.Value)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                Message = "Expiry date cannot be earlier than issue date.",
+                ErrorCode = "INVALID_DOCUMENT_DATE"
+            };
+        }
+
+        var document = new ComplianceDocument
+        {
+            Id = Guid.NewGuid(),
+            ExportRequestId = exportRequestId,
+            UploadedByUserId = userId,
+            DocumentType = dto.DocumentType.Trim(),
+            DocumentNumber = string.IsNullOrWhiteSpace(dto.DocumentNumber) ? null : dto.DocumentNumber.Trim(),
+            Issuer = string.IsNullOrWhiteSpace(dto.Issuer) ? null : dto.Issuer.Trim(),
+            IssueDate = dto.IssueDate,
+            ExpiryDate = dto.ExpiryDate,
+            FileUrl = null,
+            Status = ComplianceDocumentStatus.Pending,
+            UploadedAt = DateTime.UtcNow
+        };
+
+        _context.ComplianceDocuments.Add(document);
+        await _context.SaveChangesAsync();
+
+        return new ComplianceDocumentOperationResult
+        {
+            Success = true,
+            Message = "Compliance document added successfully.",
+            Document = MapToComplianceDocumentResponseDto(document)
+        };
+    }
+
+    // ==========================================
+    // GET COMPLIANCE DOCUMENTS
+    // ==========================================
+    public async Task<ComplianceDocumentOperationResult> GetComplianceDocumentsAsync(
+        Guid userId,
+        Guid exportRequestId)
+    {
+        if (userId == Guid.Empty)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                Message = "Authenticated user is invalid.",
+                ErrorCode = "INVALID_USER"
+            };
+        }
+
+        if (exportRequestId == Guid.Empty)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                Message = "Export request ID is invalid.",
+                ErrorCode = "INVALID_REQUEST"
+            };
+        }
+
+        var exportRequestExists = await _context.ExportRequests
+            .AsNoTracking()
+            .AnyAsync(r => r.Id == exportRequestId && r.RequestedByUserId == userId);
+
+        if (!exportRequestExists)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                Message = "Export request was not found.",
+                ErrorCode = "REQUEST_NOT_FOUND"
+            };
+        }
+
+        var documents = await _context.ComplianceDocuments
+            .AsNoTracking()
+            .Where(d => d.ExportRequestId == exportRequestId)
+            .OrderByDescending(d => d.UploadedAt)
+            .ToListAsync();
+
+        var mapped = documents.Select(MapToComplianceDocumentResponseDto).ToList();
+
+        return new ComplianceDocumentOperationResult
+        {
+            Success = true,
+            Message = "Compliance documents retrieved successfully.",
+            Documents = mapped
+        };
+    }
+
+    // ==========================================
     // MAPPING HELPERS
     // ==========================================
     private static ExportRequestResponseDto MapToResponseDto(ExportRequest entity)
@@ -442,6 +597,23 @@ public class ExportComplianceService : IExportComplianceService
             ReviewedAt = entity.ReviewedAt,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
+        };
+    }
+
+    private static ComplianceDocumentResponseDto MapToComplianceDocumentResponseDto(ComplianceDocument entity)
+    {
+        return new ComplianceDocumentResponseDto
+        {
+            Id = entity.Id,
+            ExportRequestId = entity.ExportRequestId,
+            DocumentType = entity.DocumentType,
+            DocumentNumber = entity.DocumentNumber,
+            Issuer = entity.Issuer,
+            IssueDate = entity.IssueDate,
+            ExpiryDate = entity.ExpiryDate,
+            FileUrl = entity.FileUrl,
+            Status = entity.Status.ToString(),
+            UploadedAt = entity.UploadedAt
         };
     }
 }

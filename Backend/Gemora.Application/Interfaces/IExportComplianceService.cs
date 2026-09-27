@@ -23,4 +23,13 @@ public interface IExportComplianceService
     Task<ExportRequestOperationResult> SubmitExportRequestAsync(
         Guid userId,
         Guid exportRequestId);
+
+    Task<ComplianceDocumentOperationResult> AddComplianceDocumentAsync(
+        Guid userId,
+        Guid exportRequestId,
+        CreateComplianceDocumentDto dto);
+
+    Task<ComplianceDocumentOperationResult> GetComplianceDocumentsAsync(
+        Guid userId,
+        Guid exportRequestId);
 }
