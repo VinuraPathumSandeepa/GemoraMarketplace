@@ -15,7 +15,6 @@ import Dashboard from "./pages/Dashboard";
 import BuyerDashboard from "./pages/BuyerDashboard";
 import SellerDashboard from "./pages/SellerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
-import ShippingDashboard from "./pages/ShippingDashboard";
 import GemologistDashboard from "./pages/GemologistDashboard";
 import ExportOfficerDashboard from "./pages/ExportOfficerDashboard";
 
@@ -54,32 +53,6 @@ function App() {
       <Route
         path="/register"
         element={<Register />}
-      />
-
-      {/* ==========================================
-          DEV ONLY ROUTES
-          Use these to preview the Admin/Shipping UI
-          while auth is still in place.
-      ========================================== */}
-
-      <Route
-        path="/dev-admin"
-        element={<AdminDashboard />}
-      />
-
-      <Route
-        path="/dev-shipping"
-        element={<ShippingDashboard />}
-      />
-
-      <Route
-        path="/dev-seller"
-        element={<SellerDashboard />}
-      />
-
-      <Route
-        path="/dev-buyer-tracking"
-        element={<BuyerDashboard />}
       />
 
 
@@ -145,17 +118,6 @@ function App() {
             allowedRoles={["Admin"]}
           >
             <AdminDashboard />
-          </RoleProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/admin/shipping"
-        element={
-          <RoleProtectedRoute
-            allowedRoles={["Admin"]}
-          >
-            <ShippingDashboard />
           </RoleProtectedRoute>
         }
       />
