@@ -32,4 +32,15 @@ public interface IExportComplianceService
     Task<ComplianceDocumentOperationResult> GetComplianceDocumentsAsync(
         Guid userId,
         Guid exportRequestId);
+
+    Task<ComplianceDocumentOperationResult> UploadDocumentFileAsync(
+        Guid userId,
+        Guid exportRequestId,
+        Guid documentId,
+        Stream content,
+        string extension,
+        string contentType,
+        long fileSize,
+        CancellationToken cancellationToken = default);
 }
+

@@ -9,11 +9,17 @@ namespace Gemora.Application.Services;
 
 public class ExportComplianceService : IExportComplianceService
 {
-    private readonly ApplicationDbContext _context;
+    private const long MaxComplianceFileSize = 10 * 1024 * 1024;
 
-    public ExportComplianceService(ApplicationDbContext context)
+    private readonly ApplicationDbContext _context;
+    private readonly IFileStorageService _fileStorageService;
+
+    public ExportComplianceService(
+        ApplicationDbContext context,
+        IFileStorageService fileStorageService)
     {
         _context = context;
+        _fileStorageService = fileStorageService;
     }
 
     // ==========================================
@@ -559,6 +565,316 @@ public class ExportComplianceService : IExportComplianceService
             Message = "Compliance documents retrieved successfully.",
             Documents = mapped
         };
+    }
+
+    // ==========================================
+    // UPLOAD DOCUMENT FILE
+    // ==========================================
+    public async Task<ComplianceDocumentOperationResult> UploadDocumentFileAsync(
+        Guid userId,
+        Guid exportRequestId,
+        Guid documentId,
+        Stream content,
+        string extension,
+        string contentType,
+        long fileSize,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId == Guid.Empty)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                ErrorCode = "INVALID_USER",
+                Message = "Authenticated user is invalid."
+            };
+        }
+
+        if (exportRequestId == Guid.Empty)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                ErrorCode = "INVALID_REQUEST",
+                Message = "Export request ID is invalid."
+            };
+        }
+
+        if (documentId == Guid.Empty)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                ErrorCode = "INVALID_REQUEST",
+                Message = "Compliance document ID is invalid."
+            };
+        }
+
+        var exportRequest = await _context.ExportRequests
+            .FirstOrDefaultAsync(r => r.Id == exportRequestId && r.RequestedByUserId == userId, cancellationToken);
+
+        if (exportRequest == null)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                ErrorCode = "REQUEST_NOT_FOUND",
+                Message = "Export request was not found."
+            };
+        }
+
+        if (exportRequest.Status != ExportRequestStatus.Draft &&
+            exportRequest.Status != ExportRequestStatus.RevisionRequired)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                ErrorCode = "INVALID_STATUS",
+                Message = "Files can only be uploaded to draft or revision-required export requests."
+            };
+        }
+
+        var document = await _context.ComplianceDocuments
+            .FirstOrDefaultAsync(d => d.Id == documentId && d.ExportRequestId == exportRequestId, cancellationToken);
+
+        if (document == null)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                ErrorCode = "DOCUMENT_NOT_FOUND",
+                Message = "Compliance document was not found."
+            };
+        }
+
+        if (!string.IsNullOrWhiteSpace(document.FileUrl))
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                ErrorCode = "FILE_ALREADY_EXISTS",
+                Message = "A file has already been uploaded for this compliance document."
+            };
+        }
+
+        if (content == null)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                ErrorCode = "INVALID_FILE",
+                Message = "A file is required."
+            };
+        }
+
+        if (fileSize <= 0)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                ErrorCode = "INVALID_FILE",
+                Message = "The uploaded file is empty."
+            };
+        }
+
+        if (fileSize > MaxComplianceFileSize)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                ErrorCode = "FILE_TOO_LARGE",
+                Message = "The uploaded file cannot exceed 10 MB."
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(extension) || string.IsNullOrWhiteSpace(contentType))
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                ErrorCode = "UNSUPPORTED_FILE_TYPE",
+                Message = "Only PDF, JPEG, and PNG compliance documents are allowed."
+            };
+        }
+
+        var normalizedExtension = extension.Trim().ToLowerInvariant();
+        if (!normalizedExtension.StartsWith("."))
+        {
+            normalizedExtension = "." + normalizedExtension;
+        }
+
+        var normalizedContentType = contentType.Trim().ToLowerInvariant();
+
+        var isValidPair = (normalizedExtension, normalizedContentType) switch
+        {
+            (".pdf", "application/pdf") => true,
+            (".jpg", "image/jpeg") => true,
+            (".jpeg", "image/jpeg") => true,
+            (".png", "image/png") => true,
+            _ => false
+        };
+
+        if (!isValidPair)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                ErrorCode = "UNSUPPORTED_FILE_TYPE",
+                Message = "Only PDF, JPEG, and PNG compliance documents are allowed."
+            };
+        }
+
+        if (content.CanSeek)
+        {
+            content.Position = 0;
+        }
+
+        using var memoryStream = new MemoryStream();
+        var buffer = new byte[81920];
+        long totalBytesRead = 0;
+
+        while (true)
+        {
+            var bytesRead = await content.ReadAsync(
+                buffer.AsMemory(0, buffer.Length),
+                cancellationToken);
+
+            if (bytesRead == 0)
+            {
+                break;
+            }
+
+            totalBytesRead += bytesRead;
+
+            if (totalBytesRead > MaxComplianceFileSize)
+            {
+                return new ComplianceDocumentOperationResult
+                {
+                    Success = false,
+                    ErrorCode = "FILE_TOO_LARGE",
+                    Message = "The uploaded file cannot exceed 10 MB."
+                };
+            }
+
+            await memoryStream.WriteAsync(
+                buffer.AsMemory(0, bytesRead),
+                cancellationToken);
+        }
+
+        if (totalBytesRead == 0)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                ErrorCode = "INVALID_FILE",
+                Message = "The uploaded file is empty."
+            };
+        }
+
+        memoryStream.Position = 0;
+
+        if (!HasValidFileSignature(memoryStream, normalizedExtension))
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                ErrorCode = "INVALID_FILE_CONTENT",
+                Message = "The uploaded file content does not match its declared file type."
+            };
+        }
+
+        memoryStream.Position = 0;
+
+        var storageKey = await _fileStorageService.SaveAsync(
+            memoryStream,
+            normalizedExtension,
+            cancellationToken
+        );
+
+        document.FileUrl = storageKey;
+        exportRequest.UpdatedAt = DateTime.UtcNow;
+
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            try
+            {
+                await _fileStorageService.DeleteAsync(storageKey, cancellationToken);
+            }
+            catch
+            {
+                // Preserve original DB exception
+            }
+
+            throw;
+        }
+
+        return new ComplianceDocumentOperationResult
+        {
+            Success = true,
+            Message = "Compliance document file uploaded successfully.",
+            Document = MapToComplianceDocumentResponseDto(document)
+        };
+    }
+
+    private static bool HasValidFileSignature(
+        Stream stream,
+        string extension)
+    {
+        if (stream == null || !stream.CanRead)
+        {
+            return false;
+        }
+
+        var originalPosition = stream.CanSeek ? stream.Position : 0;
+
+        try
+        {
+            if (stream.CanSeek)
+            {
+                stream.Position = 0;
+            }
+
+            byte[] headerBuffer = new byte[8];
+            int bytesRead = stream.Read(headerBuffer, 0, headerBuffer.Length);
+
+            return extension.ToLowerInvariant() switch
+            {
+                ".pdf" => bytesRead >= 5 &&
+                          headerBuffer[0] == 0x25 &&
+                          headerBuffer[1] == 0x50 &&
+                          headerBuffer[2] == 0x44 &&
+                          headerBuffer[3] == 0x46 &&
+                          headerBuffer[4] == 0x2D,
+
+                ".jpg" or ".jpeg" => bytesRead >= 3 &&
+                                    headerBuffer[0] == 0xFF &&
+                                    headerBuffer[1] == 0xD8 &&
+                                    headerBuffer[2] == 0xFF,
+
+                ".png" => bytesRead >= 8 &&
+                          headerBuffer[0] == 0x89 &&
+                          headerBuffer[1] == 0x50 &&
+                          headerBuffer[2] == 0x4E &&
+                          headerBuffer[3] == 0x47 &&
+                          headerBuffer[4] == 0x0D &&
+                          headerBuffer[5] == 0x0A &&
+                          headerBuffer[6] == 0x1A &&
+                          headerBuffer[7] == 0x0A,
+
+                _ => false
+            };
+        }
+        finally
+        {
+            if (stream.CanSeek)
+            {
+                stream.Position = originalPosition;
+            }
+        }
     }
 
     // ==========================================

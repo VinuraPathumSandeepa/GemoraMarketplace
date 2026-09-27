@@ -439,6 +439,74 @@ public class ExportRequestsController : ControllerBase
     }
 
     // ==========================================
+    // 9. UPLOAD COMPLIANCE DOCUMENT FILE
+    // POST: /api/ExportRequests/{id}/documents/{documentId}/file
+    // ==========================================
+    [HttpPost("{id}/documents/{documentId}/file")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(11 * 1024 * 1024)]
+    public async Task<IActionResult> UploadComplianceDocumentFile(
+        Guid id,
+        Guid documentId,
+        [FromForm] IFormFile? file,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Authenticated user is invalid."
+            });
+        }
+
+        if (file == null)
+        {
+            return BadRequest(new
+            {
+                message = "A file is required."
+            });
+        }
+
+        var extension = Path.GetExtension(file.FileName);
+        using var stream = file.OpenReadStream();
+
+        var result = await _exportComplianceService.UploadDocumentFileAsync(
+            userId,
+            id,
+            documentId,
+            stream,
+            extension,
+            file.ContentType,
+            file.Length,
+            cancellationToken
+        );
+
+        if (!result.Success)
+        {
+            return result.ErrorCode switch
+            {
+                "INVALID_USER" => Unauthorized(new { message = result.Message }),
+                "REQUEST_NOT_FOUND" => NotFound(new { message = result.Message }),
+                "DOCUMENT_NOT_FOUND" => NotFound(new { message = result.Message }),
+                "INVALID_STATUS" => Conflict(new { message = result.Message }),
+                "FILE_ALREADY_EXISTS" => Conflict(new { message = result.Message }),
+                "INVALID_REQUEST" => BadRequest(new { message = result.Message }),
+                "INVALID_FILE" => BadRequest(new { message = result.Message }),
+                "INVALID_FILE_CONTENT" => BadRequest(new { message = result.Message }),
+                "UNSUPPORTED_FILE_TYPE" => BadRequest(new { message = result.Message }),
+                "FILE_TOO_LARGE" => StatusCode(StatusCodes.Status413PayloadTooLarge, new { message = result.Message }),
+                _ => BadRequest(new { message = result.Message })
+            };
+        }
+
+        return Ok(new
+        {
+            message = result.Message,
+            document = result.Document
+        });
+    }
+
+    // ==========================================
     // PRIVATE HELPER: AUTHENTICATED USER ID
     // ==========================================
     private bool TryGetCurrentUserId(out Guid userId)
@@ -453,3 +521,4 @@ public class ExportRequestsController : ControllerBase
         return false;
     }
 }
+

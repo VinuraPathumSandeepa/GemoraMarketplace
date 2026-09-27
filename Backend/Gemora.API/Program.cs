@@ -1,4 +1,5 @@
 using Gemora.API.Middleware;
+using Gemora.API.Services;
 using Gemora.Application.Interfaces;
 using Gemora.Application.Services;
 using Gemora.Infrastructure.Data;
@@ -41,6 +42,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(
 // ======================================================
 // 2. DEPENDENCY INJECTION
 // ======================================================
+
+builder.Services.AddSingleton<IFileStorageService, LocalFileStorageService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 
