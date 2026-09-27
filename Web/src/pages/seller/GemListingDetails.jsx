@@ -1,52 +1,121 @@
 import { useEffect, useState } from "react";
-import {
-  Link,
-  useNavigate,
-  useParams,
-} from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
+import DashboardLayout from "../../layouts/DashboardLayout";
 import gemListingService from "../../services/gemVerification/gemListingService";
+import api from "../../services/api";
 
 const API_ORIGIN = "http://localhost:5198";
+
+const STATUS_CONFIG = {
+  Draft: {
+    label: "Draft",
+    className: "draft",
+    message:
+      "This listing is still being prepared. Review the gemstone information and evidence before submitting it.",
+  },
+
+  PendingVerification: {
+    label: "Pending Review",
+    className: "pending",
+    message:
+      "Your listing has entered the verification workflow and is waiting for Gemologist review.",
+  },
+
+  ChangesRequested: {
+    label: "Changes Requested",
+    className: "changes",
+    message:
+      "The Gemologist requested changes. Update the listing or evidence and resubmit it for review.",
+  },
+
+  Approved: {
+    label: "Approved",
+    className: "approved",
+    message:
+      "This listing has completed the Gemologist verification workflow and has been approved.",
+  },
+
+  Rejected: {
+    label: "Rejected",
+    className: "rejected",
+    message:
+      "This listing was rejected during Gemologist verification.",
+  },
+};
+
+function buildFileUrl(url) {
+  if (!url) {
+    return null;
+  }
+
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://")
+  ) {
+    return url;
+  }
+
+  return `${API_ORIGIN}${url.startsWith("/") ? "" : "/"}${url}`;
+}
+
+function EvidenceState({ available, children }) {
+  return (
+    <span
+      className={`gem-detail-evidence-chip ${
+        available ? "available" : "missing"
+      }`}
+    >
+      <span>{available ? "✓" : "○"}</span>
+      {children}
+    </span>
+  );
+}
 
 function GemListingDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [listing, setListing] = useState(null);
+
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [pageError, setPageError] = useState("");
 
   const [imageFile, setImageFile] = useState(null);
   const [certificateFile, setCertificateFile] = useState(null);
 
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [uploadingCertificate, setUploadingCertificate] =
+  const [imageUploading, setImageUploading] = useState(false);
+  const [certificateUploading, setCertificateUploading] =
     useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // ============================================================
-  // LOAD LISTING
-  // ============================================================
+  const [actionMessage, setActionMessage] = useState("");
+  const [actionError, setActionError] = useState("");
+
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [submitModalError, setSubmitModalError] = useState("");
+
+  /* =========================================================
+     LOAD LISTING
+     ========================================================= */
 
   const loadListing = async () => {
     try {
       setLoading(true);
-      setError("");
+      setPageError("");
 
-      const data =
-        await gemListingService.getListingById(id);
+      const data = await gemListingService.getListingById(id);
 
       setListing(data);
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error("Failed to load listing:", error);
 
-      setError(
-        err.response?.data?.message ||
-          "Unable to load this gemstone listing."
+      setPageError(
+        error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          "We couldn't load this gemstone listing."
       );
     } finally {
       setLoading(false);
@@ -57,147 +126,259 @@ function GemListingDetails() {
     loadListing();
   }, [id]);
 
-  // ============================================================
-  // WORKFLOW PERMISSIONS
-  // ============================================================
+  /* =========================================================
+     HELPERS
+     ========================================================= */
 
-  const canModify =
-    listing?.status === "Draft" ||
-    listing?.status === "ChangesRequested";
+  const clearMessages = () => {
+    setActionMessage("");
+    setActionError("");
+  };
 
-  // ============================================================
-  // IMAGE UPLOAD
-  // ============================================================
+  const getErrorMessage = (error, fallback) => {
+    return (
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      error?.message ||
+      fallback
+    );
+  };
+
+  /* =========================================================
+     FILE VALIDATION
+     ========================================================= */
+
+  const handleImageSelection = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      setActionError(
+        "Please choose a JPG, PNG, or WebP gemstone image."
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setActionError(
+        "The gemstone image must be 5 MB or smaller."
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    clearMessages();
+    setImageFile(file);
+  };
+
+  const handleCertificateSelection = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      setActionError(
+        "Please choose a PDF, JPG, or PNG certificate file."
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setActionError(
+        "The certificate file must be 10 MB or smaller."
+      );
+
+      event.target.value = "";
+      return;
+    }
+
+    clearMessages();
+    setCertificateFile(file);
+  };
+
+  /* =========================================================
+     IMAGE UPLOAD
+     ========================================================= */
 
   const handleImageUpload = async () => {
     if (!imageFile) {
-      setError(
-        "Please select a gemstone image first."
+      setActionError(
+        "Select a gemstone image before uploading."
       );
+
       return;
     }
 
     try {
-      setUploadingImage(true);
-      setError("");
-      setSuccess("");
+      clearMessages();
+      setImageUploading(true);
 
-      const updated =
-        await gemListingService.uploadImage(
-          id,
-          imageFile
-        );
+      await gemListingService.uploadImage(id, imageFile);
 
-      setListing(updated);
       setImageFile(null);
 
-      setSuccess(
+      setActionMessage(
         "Gemstone image uploaded successfully."
       );
-    } catch (err) {
-      console.error(err);
 
-      setError(
-        err.response?.data?.message ||
-          "Unable to upload the gemstone image."
+      await loadListing();
+    } catch (error) {
+      console.error("Image upload failed:", error);
+
+      setActionError(
+        getErrorMessage(
+          error,
+          "The gemstone image could not be uploaded."
+        )
       );
     } finally {
-      setUploadingImage(false);
+      setImageUploading(false);
     }
   };
 
-  // ============================================================
-  // CERTIFICATE UPLOAD
-  // ============================================================
+  /* =========================================================
+     CERTIFICATE UPLOAD
+     ========================================================= */
 
   const handleCertificateUpload = async () => {
     if (!certificateFile) {
-      setError(
-        "Please select a certificate file first."
+      setActionError(
+        "Select a certificate file before uploading."
       );
+
       return;
     }
 
     try {
-      setUploadingCertificate(true);
-      setError("");
-      setSuccess("");
+      clearMessages();
+      setCertificateUploading(true);
 
-      const updated =
-        await gemListingService.uploadCertificate(
-          id,
-          certificateFile
-        );
+      await gemListingService.uploadCertificate(
+        id,
+        certificateFile
+      );
 
-      setListing(updated);
       setCertificateFile(null);
 
-      setSuccess(
+      setActionMessage(
         "Certificate uploaded successfully."
       );
-    } catch (err) {
-      console.error(err);
 
-      setError(
-        err.response?.data?.message ||
-          "Unable to upload the certificate."
+      await loadListing();
+    } catch (error) {
+      console.error("Certificate upload failed:", error);
+
+      setActionError(
+        getErrorMessage(
+          error,
+          "The certificate could not be uploaded."
+        )
       );
     } finally {
-      setUploadingCertificate(false);
+      setCertificateUploading(false);
     }
   };
 
-  // ============================================================
-  // SUBMIT / RESUBMIT FOR VERIFICATION
-  // ============================================================
+  /* =========================================================
+     OPEN SUBMIT MODAL
+     ========================================================= */
 
-  const handleSubmitForVerification = async () => {
-    const message =
-      listing.status === "ChangesRequested"
-        ? "Resubmit this gemstone listing for Gemologist verification?"
-        : "Submit this gemstone listing for Gemologist verification? You will not be able to edit the listing while verification is pending.";
+  const handleSubmitForVerification = () => {
+    clearMessages();
 
-    const confirmed =
-      window.confirm(message);
+    setSubmitModalError("");
+    setShowSubmitModal(true);
+  };
 
-    if (!confirmed) {
+  const closeSubmitModal = () => {
+    if (submitting) {
       return;
     }
 
+    setShowSubmitModal(false);
+    setSubmitModalError("");
+  };
+
+  /* =========================================================
+     SUBMIT FOR VERIFICATION
+
+     IMPORTANT:
+     Correct ASP.NET route:
+     POST /api/GemListings/{id}/submit-verification
+     ========================================================= */
+
+  const confirmSubmitForVerification = async () => {
     try {
+      setSubmitModalError("");
+      clearMessages();
+
       setSubmitting(true);
-      setError("");
-      setSuccess("");
 
-      const updated =
-        await gemListingService.submitListing(id);
-
-      setListing(updated);
-
-      setSuccess(
-        listing.status === "ChangesRequested"
-          ? "Listing resubmitted for Gemologist verification."
-          : "Listing submitted for Gemologist verification."
+      const response = await api.post(
+        `/GemListings/${id}/submit-verification`
       );
-    } catch (err) {
-      console.error(err);
 
-      setError(
-        err.response?.data?.message ||
-          "Unable to submit the listing for verification."
+      console.log(
+        "Submit verification response:",
+        response.data
+      );
+
+      setShowSubmitModal(false);
+      setSubmitModalError("");
+
+      setActionMessage(
+        listing?.status === "ChangesRequested"
+          ? "Listing resubmitted successfully. It is now waiting for Gemologist review."
+          : "Listing submitted successfully. It is now waiting for Gemologist review."
+      );
+
+      await loadListing();
+    } catch (error) {
+      console.error(
+        "Submit verification failed:",
+        error
+      );
+
+      setSubmitModalError(
+        getErrorMessage(
+          error,
+          "The listing could not be submitted for verification."
+        )
       );
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ============================================================
-  // DELETE DRAFT
-  // ============================================================
+  /* =========================================================
+     DELETE DRAFT
+     ========================================================= */
 
   const handleDelete = async () => {
     const confirmed = window.confirm(
-      "Are you sure you want to permanently delete this draft listing?"
+      "Delete this Draft permanently? This action cannot be undone."
     );
 
     if (!confirmed) {
@@ -205,423 +386,875 @@ function GemListingDetails() {
     }
 
     try {
+      clearMessages();
       setDeleting(true);
-      setError("");
-      setSuccess("");
 
       await gemListingService.deleteListing(id);
 
       navigate("/seller/listings");
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error("Delete failed:", error);
 
-      setError(
-        err.response?.data?.message ||
-          "Unable to delete this listing."
+      setActionError(
+        getErrorMessage(
+          error,
+          "The Draft could not be deleted."
+        )
       );
-    } finally {
+
       setDeleting(false);
     }
   };
 
-  // ============================================================
-  // STATUS DISPLAY
-  // ============================================================
-
-  const formatStatus = (status) => {
-    switch (status) {
-      case "PendingVerification":
-        return "Pending Verification";
-
-      case "ChangesRequested":
-        return "Changes Requested";
-
-      case "Approved":
-        return "Approved";
-
-      case "Rejected":
-        return "Rejected";
-
-      case "Draft":
-        return "Draft";
-
-      default:
-        return status || "Unknown";
-    }
-  };
-
-  const getStatusClass = (status) => {
-    switch (status) {
-      case "Approved":
-        return "approved";
-
-      case "PendingVerification":
-        return "pending";
-
-      case "ChangesRequested":
-        return "changes";
-
-      case "Rejected":
-        return "rejected";
-
-      default:
-        return "draft";
-    }
-  };
-
-  // ============================================================
-  // LOADING
-  // ============================================================
+  /* =========================================================
+     LOADING
+     ========================================================= */
 
   if (loading) {
     return (
-      <div className="gem-details-page">
-        <p>Loading gemstone listing...</p>
-      </div>
+      <DashboardLayout>
+        <main className="gem-detail-page">
+          <div className="gem-detail-state-card">
+            <div className="gem-detail-loader" />
+
+            <p className="gem-detail-eyebrow">
+              GEMORA
+            </p>
+
+            <h2>
+              Loading gemstone listing
+            </h2>
+
+            <p>
+              Retrieving listing information and verification evidence.
+            </p>
+          </div>
+        </main>
+      </DashboardLayout>
     );
   }
 
-  // ============================================================
-  // LOAD ERROR
-  // ============================================================
+  /* =========================================================
+     ERROR
+     ========================================================= */
 
-  if (error && !listing) {
+  if (pageError || !listing) {
     return (
-      <div className="gem-details-page">
-        <div className="error-message">
-          {error}
-        </div>
+      <DashboardLayout>
+        <main className="gem-detail-page">
+          <div className="gem-detail-state-card">
+            <div className="gem-detail-state-icon">
+              !
+            </div>
 
-        <Link
-          to="/seller/listings"
-          className="secondary-button"
-        >
-          Back to Listings
-        </Link>
-      </div>
+            <p className="gem-detail-eyebrow">
+              LISTING UNAVAILABLE
+            </p>
+
+            <h2>
+              We couldn't open this listing
+            </h2>
+
+            <p>
+              {pageError ||
+                "The requested listing was not found."}
+            </p>
+
+            <button
+              type="button"
+              className="gem-detail-primary-button"
+              onClick={() =>
+                navigate("/seller/listings")
+              }
+            >
+              Back to My Listings →
+            </button>
+          </div>
+        </main>
+      </DashboardLayout>
     );
   }
 
-  if (!listing) {
-    return null;
+  /* =========================================================
+     DERIVED VALUES
+     ========================================================= */
+
+  const status = listing.status || "Draft";
+
+  const statusConfig =
+    STATUS_CONFIG[status] || STATUS_CONFIG.Draft;
+
+  const canModify =
+    status === "Draft" ||
+    status === "ChangesRequested";
+
+  const canDelete = status === "Draft";
+
+  const canSubmit =
+    status === "Draft" ||
+    status === "ChangesRequested";
+
+  const imageUrl = buildFileUrl(
+    listing.primaryImageUrl
+  );
+
+  const certificateUrl = buildFileUrl(
+    listing.certificateUrl
+  );
+
+  const hasImage = Boolean(imageUrl);
+  const hasCertificate = Boolean(certificateUrl);
+
+  /* =========================================================
+     PREPARATION STAGE
+     ========================================================= */
+
+  let preparationStage;
+
+  if (status === "Draft") {
+    if (!hasImage) {
+      preparationStage = {
+        label: "Evidence Needed",
+        className: "needs-evidence",
+        description:
+          "Your listing information is saved, but a gemstone image should be added before sending it for verification.",
+      };
+    } else {
+      preparationStage = {
+        label: "Ready to Submit",
+        className: "ready",
+        description:
+          "The required gemstone image is available. Review the listing and submit this Draft when you are ready to begin Gemologist verification.",
+      };
+    }
+  } else if (status === "ChangesRequested") {
+    preparationStage = {
+      label: "Changes Required",
+      className: "attention",
+      description:
+        "A Gemologist requested corrections. Update the listing information or evidence and resubmit it for verification.",
+    };
+  } else if (status === "PendingVerification") {
+    preparationStage = {
+      label: "Pending Review",
+      className: "pending",
+      description:
+        "The listing has left Draft preparation and is now waiting for Gemologist review.",
+    };
+  } else if (status === "Approved") {
+    preparationStage = {
+      label: "Verification Complete",
+      className: "complete",
+      description:
+        "The Gemologist has completed the verification workflow and approved this listing.",
+    };
+  } else {
+    preparationStage = {
+      label: statusConfig.label,
+      className: "attention",
+      description: statusConfig.message,
+    };
   }
+
+  /* =========================================================
+     PAGE
+     ========================================================= */
 
   return (
-    <div className="gem-details-page">
-      <div className="gem-details-container">
+    <DashboardLayout>
+      <main className="gem-detail-page">
 
-        {/* ====================================================
-            HEADER
-            ==================================================== */}
+        {/* BACK */}
 
-        <div className="gem-details-header">
+        <button
+          type="button"
+          className="gem-detail-back"
+          onClick={() =>
+            navigate("/seller/listings")
+          }
+        >
+          ← My Gem Listings
+        </button>
+
+        {/* HEADER */}
+
+        <section className="gem-detail-header">
           <div>
-            <Link
-              to="/seller/listings"
-              className="details-back-link"
-            >
-              ← My Gem Listings
-            </Link>
+            <p className="gem-detail-eyebrow">
+              GEMSTONE LISTING #{listing.id}
+            </p>
 
-            <h1>{listing.title}</h1>
+            <h1>
+              {listing.title}
+            </h1>
 
-            <span
-              className={`status ${getStatusClass(
-                listing.status
-              )}`}
-            >
-              {formatStatus(listing.status)}
-            </span>
+            <div className="gem-detail-header-meta">
+              <span
+                className={`gem-detail-status ${statusConfig.className}`}
+              >
+                <span className="gem-detail-status-dot" />
+                {statusConfig.label}
+              </span>
+
+              <span>
+                {listing.gemType || "Gemstone"}
+              </span>
+
+              <span>
+                {listing.caratWeight
+                  ? `${listing.caratWeight} ct`
+                  : "Weight not specified"}
+              </span>
+            </div>
           </div>
 
           {canModify && (
-            <Link
-              to={`/seller/listings/${listing.id}/edit`}
-              className="secondary-button"
+            <button
+              type="button"
+              className="gem-detail-secondary-button"
+              onClick={() =>
+                navigate(
+                  `/seller/listings/${listing.id}/edit`
+                )
+              }
             >
               Edit Listing
-            </Link>
+              <span>↗</span>
+            </button>
           )}
-        </div>
+        </section>
 
-        {/* ====================================================
-            MESSAGES
-            ==================================================== */}
+        {/* SUCCESS / ERROR */}
 
-        {error && (
-          <div className="error-message">
-            {error}
+        {actionMessage && (
+          <div className="gem-detail-message success">
+            <span>✓</span>
+            <p>{actionMessage}</p>
           </div>
         )}
 
-        {success && (
-          <div className="success-message">
-            {success}
+        {actionError && (
+          <div className="gem-detail-message error">
+            <span>!</span>
+            <p>{actionError}</p>
           </div>
         )}
 
-        <div className="gem-details-grid">
+        {/* HERO */}
 
-          {/* ==================================================
-              GEMSTONE IMAGE
-              ================================================== */}
+        <section className="gem-detail-hero-grid">
 
-          <section className="details-card">
-            <h2>Gemstone Image</h2>
+          {/* IMAGE */}
 
-            {listing.primaryImageUrl ? (
-              <img
-                src={`${API_ORIGIN}${listing.primaryImageUrl}`}
-                alt={listing.title}
-                className="details-gem-image"
-                onError={(event) => {
-                  event.currentTarget.style.display =
-                    "none";
-                }}
-              />
-            ) : (
-              <div className="details-image-placeholder">
-                No gemstone image uploaded
-              </div>
-            )}
+          <article className="gem-detail-image-card">
+            <div className="gem-detail-image-stage">
 
-            {canModify && (
-              <div className="upload-area">
-                <label>
-                  Upload gemstone photograph
-                </label>
+              <span
+                className={`gem-detail-floating-status ${statusConfig.className}`}
+              >
+                <span className="gem-detail-status-dot" />
+                {statusConfig.label}
+              </span>
 
-                <input
-                  type="file"
-                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                  onChange={(event) =>
-                    setImageFile(
-                      event.target.files?.[0] ||
-                        null
-                    )
-                  }
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={listing.title}
+                  className="gem-detail-main-image"
                 />
+              ) : (
+                <div className="gem-detail-image-placeholder">
+                  <div className="gem-detail-gem-mark">
+                    G
+                  </div>
 
-                <small>
-                  JPG, JPEG, PNG or WEBP.
-                  Maximum 5 MB.
-                </small>
+                  <p>
+                    No gemstone photograph
+                  </p>
 
-                <button
-                  type="button"
-                  className="primary-button"
-                  disabled={
-                    !imageFile ||
-                    uploadingImage
-                  }
-                  onClick={handleImageUpload}
-                >
-                  {uploadingImage
-                    ? "Uploading..."
-                    : listing.primaryImageUrl
+                  <span>
+                    Add a clear image before verification.
+                  </span>
+                </div>
+              )}
+
+              {listing.caratWeight && (
+                <div className="gem-detail-weight-badge">
+                  {listing.caratWeight} ct
+                </div>
+              )}
+            </div>
+
+            <div className="gem-detail-image-footer">
+              <div>
+                <p className="gem-detail-small-label">
+                  GEMSTONE EVIDENCE
+                </p>
+
+                <h3>
+                  {hasImage
+                    ? "Gemstone photograph"
+                    : "Image required"}
+                </h3>
+
+                <p>
+                  {hasImage
+                    ? "This photograph is included in the verification evidence."
+                    : "Upload a clear gemstone photograph before verification."}
+                </p>
+              </div>
+
+              {canModify && (
+                <div className="gem-detail-upload-control">
+                  <label className="gem-detail-file-picker">
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                      onChange={handleImageSelection}
+                    />
+
+                    <span>
+                      {imageFile
+                        ? imageFile.name
+                        : hasImage
+                        ? "Choose replacement image"
+                        : "Choose gemstone image"}
+                    </span>
+                  </label>
+
+                  <button
+                    type="button"
+                    className="gem-detail-upload-button"
+                    disabled={
+                      !imageFile ||
+                      imageUploading
+                    }
+                    onClick={handleImageUpload}
+                  >
+                    {imageUploading
+                      ? "Uploading..."
+                      : hasImage
                       ? "Replace Image"
                       : "Upload Image"}
-                </button>
+                  </button>
+                </div>
+              )}
+            </div>
+          </article>
+
+          {/* GEM INFO */}
+
+          <article className="gem-detail-info-card">
+            <div className="gem-detail-card-heading">
+              <div>
+                <p className="gem-detail-eyebrow">
+                  GEMSTONE PROFILE
+                </p>
+
+                <h2>
+                  Gem Information
+                </h2>
               </div>
-            )}
-          </section>
 
-          {/* ==================================================
-              GEM INFORMATION
-              ================================================== */}
+              <span className="gem-detail-id">
+                #{listing.id}
+              </span>
+            </div>
 
-          <section className="details-card">
-            <h2>Gem Information</h2>
+            <div className="gem-detail-profile-grid">
+              <div>
+                <span>Gem Type</span>
+                <strong>
+                  {listing.gemType || "—"}
+                </strong>
+              </div>
 
-            <div className="details-information">
-              <p>
-                <strong>Gem Type:</strong>{" "}
-                {listing.gemType || "—"}
+              <div>
+                <span>Carat Weight</span>
+                <strong>
+                  {listing.caratWeight
+                    ? `${listing.caratWeight} ct`
+                    : "—"}
+                </strong>
+              </div>
+
+              <div>
+                <span>Color</span>
+                <strong>
+                  {listing.color || "—"}
+                </strong>
+              </div>
+
+              <div>
+                <span>Clarity</span>
+                <strong>
+                  {listing.clarity || "—"}
+                </strong>
+              </div>
+
+              <div>
+                <span>Cut</span>
+                <strong>
+                  {listing.cut || "—"}
+                </strong>
+              </div>
+
+              <div>
+                <span>Status</span>
+                <strong>
+                  {statusConfig.label}
+                </strong>
+              </div>
+            </div>
+
+            <div className="gem-detail-description">
+              <p className="gem-detail-small-label">
+                DESCRIPTION
               </p>
 
               <p>
-                <strong>Carat Weight:</strong>{" "}
-                {listing.caratWeight ?? "—"}
+                {listing.description ||
+                  "No description has been provided."}
               </p>
+            </div>
 
-              <p>
-                <strong>Color:</strong>{" "}
-                {listing.color || "—"}
-              </p>
+            <div className="gem-detail-price">
+              <span>
+                LISTING PRICE
+              </span>
 
-              <p>
-                <strong>Clarity:</strong>{" "}
-                {listing.clarity || "—"}
-              </p>
-
-              <p>
-                <strong>Cut:</strong>{" "}
-                {listing.cut || "—"}
-              </p>
-
-              <p>
-                <strong>Price:</strong>{" "}
-                {listing.currency || "LKR"}{" "}
+              <strong>
+                LKR{" "}
                 {Number(
                   listing.price || 0
-                ).toLocaleString()}
+                ).toLocaleString("en-LK")}
+              </strong>
+            </div>
+          </article>
+
+        </section>
+
+        {/* SUPPORTING EVIDENCE */}
+
+        <section className="gem-detail-section">
+          <div className="gem-detail-section-heading">
+            <div>
+              <p className="gem-detail-eyebrow">
+                VERIFICATION EVIDENCE
+              </p>
+
+              <h2>
+                Supporting evidence
+              </h2>
+
+              <p>
+                Evidence supports AI-assisted analysis
+                and the Gemologist's final human
+                verification decision.
               </p>
             </div>
 
-            {listing.description && (
-              <>
-                <h3>Description</h3>
+            <div className="gem-detail-evidence-summary">
+              <EvidenceState available={hasImage}>
+                Gem image
+              </EvidenceState>
 
-                <p className="details-description">
-                  {listing.description}
+              <EvidenceState available={hasCertificate}>
+                Certificate
+              </EvidenceState>
+            </div>
+          </div>
+
+          <div className="gem-detail-evidence-grid">
+
+            <article className="gem-detail-evidence-card">
+              <div className="gem-detail-evidence-icon">
+                ◇
+              </div>
+
+              <div className="gem-detail-evidence-content">
+                <p className="gem-detail-small-label">
+                  GEMSTONE IMAGE
                 </p>
-              </>
-            )}
-          </section>
 
-          {/* ==================================================
-              CERTIFICATE
-              ================================================== */}
+                <h3>
+                  {hasImage
+                    ? "Image evidence attached"
+                    : "No image evidence"}
+                </h3>
 
-          <section className="details-card">
-            <h2>Certificate Evidence</h2>
+                <p>
+                  {hasImage
+                    ? "The uploaded gemstone photograph is available for verification review."
+                    : "A gemstone image should be provided before verification."}
+                </p>
+              </div>
 
-            <div className="details-information">
-              <p>
-                <strong>
-                  Certificate Number:
-                </strong>{" "}
-                {listing.certificateNumber ||
-                  "Not provided"}
-              </p>
+              <EvidenceState available={hasImage}>
+                {hasImage ? "Available" : "Missing"}
+              </EvidenceState>
+            </article>
 
-              <p>
-                <strong>
-                  Certificate Authority:
-                </strong>{" "}
-                {listing.certificateAuthority ||
-                  "Not provided"}
-              </p>
-            </div>
+            <article className="gem-detail-evidence-card">
+              <div className="gem-detail-evidence-icon">
+                ▤
+              </div>
 
-            {listing.certificateUrl ? (
-              <a
-                href={`${API_ORIGIN}${listing.certificateUrl}`}
-                target="_blank"
-                rel="noreferrer"
-                className="secondary-button"
-              >
-                View Uploaded Certificate
-              </a>
-            ) : (
-              <p>
-                No certificate file uploaded.
-              </p>
-            )}
+              <div className="gem-detail-evidence-content">
+                <p className="gem-detail-small-label">
+                  CERTIFICATE
+                </p>
 
-            {canModify && (
-              <div className="upload-area">
-                <label>
-                  Upload certificate
+                <h3>
+                  {listing.certificateNumber ||
+                    "No certificate number"}
+                </h3>
+
+                <p>
+                  {listing.certificateAuthority ||
+                    "Certificate authority has not been provided."}
+                </p>
+
+                {certificateUrl && (
+                  <a
+                    href={certificateUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="gem-detail-text-link"
+                  >
+                    View uploaded certificate ↗
+                  </a>
+                )}
+              </div>
+
+              <EvidenceState available={hasCertificate}>
+                {hasCertificate
+                  ? "Available"
+                  : "Missing"}
+              </EvidenceState>
+            </article>
+
+          </div>
+
+          {canModify && (
+            <div className="gem-detail-certificate-upload">
+              <div>
+                <p className="gem-detail-small-label">
+                  {hasCertificate
+                    ? "REPLACE CERTIFICATE"
+                    : "ADD CERTIFICATE"}
+                </p>
+
+                <p>
+                  PDF, JPG, JPEG or PNG. Maximum 10 MB.
+                </p>
+              </div>
+
+              <div className="gem-detail-upload-control horizontal">
+                <label className="gem-detail-file-picker">
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                    onChange={
+                      handleCertificateSelection
+                    }
+                  />
+
+                  <span>
+                    {certificateFile
+                      ? certificateFile.name
+                      : "Choose certificate"}
+                  </span>
                 </label>
-
-                <input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                  onChange={(event) =>
-                    setCertificateFile(
-                      event.target.files?.[0] ||
-                        null
-                    )
-                  }
-                />
-
-                <small>
-                  PDF, JPG, JPEG or PNG.
-                  Maximum 10 MB.
-                </small>
 
                 <button
                   type="button"
-                  className="primary-button"
+                  className="gem-detail-upload-button"
                   disabled={
                     !certificateFile ||
-                    uploadingCertificate
+                    certificateUploading
                   }
                   onClick={
                     handleCertificateUpload
                   }
                 >
-                  {uploadingCertificate
+                  {certificateUploading
                     ? "Uploading..."
-                    : listing.certificateUrl
-                      ? "Replace Certificate"
-                      : "Upload Certificate"}
+                    : hasCertificate
+                    ? "Replace Certificate"
+                    : "Upload Certificate"}
                 </button>
               </div>
-            )}
-          </section>
+            </div>
+          )}
+        </section>
 
-          {/* ==================================================
-              VERIFICATION
-              ================================================== */}
+        {/* SELLER PREPARATION */}
 
-          <section className="details-card">
-            <h2>Verification</h2>
+        <section className="gem-detail-preparation">
+          <div className="gem-detail-preparation-heading">
+            <div>
+              <p className="gem-detail-eyebrow">
+                SELLER PREPARATION
+              </p>
 
-            <p>
-              Current status:{" "}
-              <strong>
-                {formatStatus(listing.status)}
-              </strong>
+              <h2>
+                Current stage:{" "}
+                {preparationStage.label}
+              </h2>
+
+              <p>
+                {preparationStage.description}
+              </p>
+            </div>
+
+            <span
+              className={`gem-detail-preparation-badge ${preparationStage.className}`}
+            >
+              {preparationStage.label}
+            </span>
+          </div>
+
+          <div className="gem-detail-preparation-steps">
+
+            <div className="gem-preparation-step completed">
+              <span>✓</span>
+
+              <div>
+                <strong>
+                  1. Listing Information
+                </strong>
+
+                <small>
+                  Gemstone details are saved.
+                </small>
+              </div>
+            </div>
+
+            <div
+              className={
+                hasImage
+                  ? "gem-preparation-step completed"
+                  : "gem-preparation-step current"
+              }
+            >
+              <span>
+                {hasImage ? "✓" : "2"}
+              </span>
+
+              <div>
+                <strong>
+                  2. Gemstone Image
+                </strong>
+
+                <small>
+                  {hasImage
+                    ? "Required image evidence is available."
+                    : "Add a gemstone image before review."}
+                </small>
+              </div>
+            </div>
+
+            <div
+              className={
+                hasCertificate
+                  ? "gem-preparation-step completed"
+                  : "gem-preparation-step optional"
+              }
+            >
+              <span>
+                {hasCertificate ? "✓" : "3"}
+              </span>
+
+              <div>
+                <strong>
+                  3. Certificate Evidence
+                </strong>
+
+                <small>
+                  {hasCertificate
+                    ? "Supporting certificate is attached."
+                    : "Optional supporting evidence."}
+                </small>
+              </div>
+            </div>
+
+            <div
+              className={
+                status === "Draft" && hasImage
+                  ? "gem-preparation-step current"
+                  : status !== "Draft"
+                  ? "gem-preparation-step completed"
+                  : "gem-preparation-step locked"
+              }
+            >
+              <span>
+                {status !== "Draft" ? "✓" : "4"}
+              </span>
+
+              <div>
+                <strong>
+                  4. Submit for Review
+                </strong>
+
+                <small>
+                  {status === "Draft" && hasImage
+                    ? "You are ready to send this listing to the Gemologist."
+                    : status === "Draft"
+                    ? "Complete the required evidence first."
+                    : "Listing has entered the verification workflow."}
+                </small>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        {/* VERIFICATION WORKFLOW */}
+
+        <section className="gem-detail-workflow">
+          <div className="gem-detail-section-heading">
+            <div>
+              <p className="gem-detail-eyebrow">
+                VERIFICATION WORKFLOW
+              </p>
+
+              <h2>
+                From evidence to human decision
+              </h2>
+
+              <p>
+                Gemora combines deterministic validation,
+                AI-assisted observations, and final
+                Gemologist review.
+              </p>
+            </div>
+          </div>
+
+          <div className="gem-detail-workflow-grid">
+
+            <div
+              className={`gem-detail-workflow-step ${
+                status !== "Draft"
+                  ? "completed"
+                  : "active"
+              }`}
+            >
+              <span>01</span>
+              <div>◇</div>
+
+              <h3>Listing</h3>
+
+              <p>
+                Gemstone information is prepared.
+              </p>
+            </div>
+
+            <div
+              className={`gem-detail-workflow-step ${
+                hasImage ? "completed" : ""
+              }`}
+            >
+              <span>02</span>
+              <div>▤</div>
+
+              <h3>Evidence</h3>
+
+              <p>
+                Image and supporting certificate evidence
+                are prepared.
+              </p>
+            </div>
+
+            <div
+              className={`gem-detail-workflow-step ${
+                status === "PendingVerification" ||
+                status === "Approved" ||
+                status === "ChangesRequested" ||
+                status === "Rejected"
+                  ? "active"
+                  : ""
+              }`}
+            >
+              <span>03</span>
+              <div>✦</div>
+
+              <h3>
+                AI Assistance
+              </h3>
+
+              <p>
+                Evidence may be analyzed to assist the review.
+              </p>
+            </div>
+
+            <div
+              className={`gem-detail-workflow-step ${
+                status === "Approved"
+                  ? "completed"
+                  : status === "ChangesRequested" ||
+                    status === "Rejected"
+                  ? "attention"
+                  : ""
+              }`}
+            >
+              <span>04</span>
+              <div>✓</div>
+
+              <h3>
+                Gemologist
+              </h3>
+
+              <p>
+                A human Gemologist makes the final decision.
+              </p>
+            </div>
+
+          </div>
+        </section>
+
+        {/* CURRENT STATUS */}
+
+        <section
+          className={`gem-detail-verification-panel ${statusConfig.className}`}
+        >
+          <div>
+            <p className="gem-detail-panel-label">
+              CURRENT LISTING STATUS
             </p>
 
-            {listing.status === "Draft" && (
-              <div className="verification-info">
-                This listing is currently a draft.
-                Upload the gemstone evidence and
-                submit it when it is ready for
-                Gemologist review.
-              </div>
-            )}
+            <div className="gem-detail-panel-title">
+              <span className="gem-detail-status-dot" />
 
-            {listing.status ===
-              "PendingVerification" && (
-              <div className="verification-info">
-                This listing is currently waiting
-                for Gemologist review. Editing and
-                evidence replacement are locked.
-              </div>
-            )}
+              <h2>
+                {statusConfig.label}
+              </h2>
+            </div>
 
-            {listing.status ===
-              "ChangesRequested" && (
-              <div className="verification-warning">
-                The Gemologist requested changes.
-                Update the listing information or
-                evidence and resubmit it for
-                verification.
-              </div>
-            )}
+            <p>
+              {statusConfig.message}
+            </p>
+          </div>
 
-            {listing.status === "Approved" && (
-              <div className="verification-success">
-                This gemstone listing has been
-                approved by a Gemologist.
-              </div>
-            )}
-
-            {listing.status === "Rejected" && (
-              <div className="verification-warning">
-                This gemstone listing was rejected
-                during Gemologist review.
-              </div>
-            )}
-
+          <div className="gem-detail-panel-actions">
             {canModify && (
               <button
                 type="button"
-                className="primary-button submit-verification-button"
+                className="gem-detail-dark-outline-button"
+                onClick={() =>
+                  navigate(
+                    `/seller/listings/${listing.id}/edit`
+                  )
+                }
+              >
+                Edit Listing
+              </button>
+            )}
+
+            {canSubmit && (
+              <button
+                type="button"
+                className="gem-detail-gold-button"
                 disabled={submitting}
                 onClick={
                   handleSubmitForVerification
@@ -629,45 +1262,250 @@ function GemListingDetails() {
               >
                 {submitting
                   ? "Submitting..."
-                  : listing.status ===
-                      "ChangesRequested"
-                    ? "Resubmit for Verification"
-                    : "Submit for Verification"}
+                  : status === "ChangesRequested"
+                  ? "Resubmit for Verification →"
+                  : "Submit for Verification →"}
               </button>
             )}
-          </section>
-        </div>
+          </div>
+        </section>
 
-        {/* ====================================================
-            DELETE DRAFT
-            ==================================================== */}
+        {/* AI NOTICE */}
 
-        {listing.status === "Draft" && (
-          <div className="details-danger-zone">
+        <section className="gem-detail-ai-notice">
+          <div className="gem-detail-ai-icon">
+            ✦
+          </div>
+
+          <div>
+            <p className="gem-detail-eyebrow">
+              HUMAN-REVIEWED AI
+            </p>
+
+            <h3>
+              AI assists. Gemologists decide.
+            </h3>
+
+            <p>
+              AI-generated observations are advisory and do
+              not independently certify gemstone authenticity,
+              treatment, origin, or value. Final verification
+              remains a human Gemologist decision.
+            </p>
+          </div>
+        </section>
+
+        {/* DELETE */}
+
+        {canDelete && (
+          <section className="gem-detail-danger-zone">
             <div>
-              <h3>Delete Draft</h3>
+              <p className="gem-detail-small-label">
+                DRAFT MANAGEMENT
+              </p>
+
+              <h3>
+                Delete this Draft
+              </h3>
 
               <p>
-                Permanently remove this draft
-                listing and its locally stored
-                evidence.
+                Permanently remove this listing.
+                This action cannot be undone.
               </p>
             </div>
 
             <button
               type="button"
-              className="danger-button"
+              className="gem-detail-delete-button"
               disabled={deleting}
               onClick={handleDelete}
             >
               {deleting
                 ? "Deleting..."
-                : "Delete Listing"}
+                : "Delete Draft"}
             </button>
+          </section>
+        )}
+
+        {/* SUBMIT MODAL */}
+
+        {showSubmitModal && (
+          <div
+            className="gem-submit-modal-backdrop"
+            onClick={closeSubmitModal}
+          >
+            <div
+              className="gem-submit-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="submit-verification-title"
+              onClick={(event) =>
+                event.stopPropagation()
+              }
+            >
+              <div className="gem-submit-modal-icon">
+                ✓
+              </div>
+
+              <p className="gem-detail-eyebrow">
+                VERIFICATION WORKFLOW
+              </p>
+
+              <h2 id="submit-verification-title">
+                Submit for Gemologist review?
+              </h2>
+
+              <p className="gem-submit-modal-description">
+                Your listing will move from seller
+                preparation into the verification workflow.
+                Editing will be locked while the listing is
+                pending review.
+              </p>
+
+              <div className="gem-submit-transition">
+                <div>
+                  <span>
+                    CURRENT STAGE
+                  </span>
+
+                  <strong>
+                    {status === "ChangesRequested"
+                      ? "Changes Requested"
+                      : preparationStage.label}
+                  </strong>
+                </div>
+
+                <span className="gem-submit-transition-arrow">
+                  →
+                </span>
+
+                <div>
+                  <span>
+                    NEXT STAGE
+                  </span>
+
+                  <strong>
+                    Pending Review
+                  </strong>
+                </div>
+              </div>
+
+              <div className="gem-submit-modal-checklist">
+
+                <div>
+                  <span
+                    className={
+                      hasImage
+                        ? "done"
+                        : "missing"
+                    }
+                  >
+                    {hasImage ? "✓" : "!"}
+                  </span>
+
+                  <p>
+                    <strong>
+                      Gemstone image
+                    </strong>
+
+                    <small>
+                      {hasImage
+                        ? "Required evidence attached"
+                        : "Required image evidence missing"}
+                    </small>
+                  </p>
+                </div>
+
+                <div>
+                  <span
+                    className={
+                      hasCertificate
+                        ? "done"
+                        : "optional"
+                    }
+                  >
+                    {hasCertificate
+                      ? "✓"
+                      : "○"}
+                  </span>
+
+                  <p>
+                    <strong>
+                      Certificate
+                    </strong>
+
+                    <small>
+                      {hasCertificate
+                        ? "Supporting evidence attached"
+                        : "Optional evidence not attached"}
+                    </small>
+                  </p>
+                </div>
+
+              </div>
+
+              <div className="gem-submit-modal-note">
+                <span>✦</span>
+
+                <p>
+                  After submission, AI-assisted analysis may
+                  support the review, but the final
+                  verification decision remains with a human
+                  Gemologist.
+                </p>
+              </div>
+
+              {submitModalError && (
+                <div className="gem-submit-modal-error">
+                  <span>!</span>
+
+                  <div>
+                    <strong>
+                      Submission failed
+                    </strong>
+
+                    <p>
+                      {submitModalError}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="gem-submit-modal-actions">
+                <button
+                  type="button"
+                  className="gem-submit-modal-cancel"
+                  disabled={submitting}
+                  onClick={closeSubmitModal}
+                >
+                  Keep Editing
+                </button>
+
+                <button
+                  type="button"
+                  className="gem-submit-modal-confirm"
+                  disabled={
+                    !hasImage ||
+                    submitting
+                  }
+                  onClick={
+                    confirmSubmitForVerification
+                  }
+                >
+                  {submitting
+                    ? "Submitting to Gemologist..."
+                    : status === "ChangesRequested"
+                    ? "Resubmit Listing →"
+                    : "Submit Listing →"}
+                </button>
+              </div>
+
+            </div>
           </div>
         )}
-      </div>
-    </div>
+
+      </main>
+    </DashboardLayout>
   );
 }
 
