@@ -22,29 +22,70 @@ public class GlobalExceptionHandler
         {
             await _next(context);
         }
+        catch (InvalidOperationException ex)
+        {
+            // Expected business-rule violation
+            _logger.LogWarning(
+                ex,
+                "Business rule violation: {Message}",
+                ex.Message);
+
+            await WriteErrorResponse(
+                context,
+                HttpStatusCode.Conflict,
+                ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Unauthorized operation: {Message}",
+                ex.Message);
+
+            await WriteErrorResponse(
+                context,
+                HttpStatusCode.Forbidden,
+                ex.Message);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Resource not found: {Message}",
+                ex.Message);
+
+            await WriteErrorResponse(
+                context,
+                HttpStatusCode.NotFound,
+                ex.Message);
+        }
         catch (Exception ex)
         {
+            // Real unexpected server error
             _logger.LogError(
                 ex,
-                "An unhandled exception occurred while processing the request."
-            );
+                "Unhandled exception occurred.");
 
-            await HandleExceptionAsync(context);
+            await WriteErrorResponse(
+                context,
+                HttpStatusCode.InternalServerError,
+                "An unexpected server error occurred.");
         }
     }
 
-    private static async Task HandleExceptionAsync(
-        HttpContext context)
+    private static async Task WriteErrorResponse(
+        HttpContext context,
+        HttpStatusCode statusCode,
+        string message)
     {
-        context.Response.StatusCode =
-            (int)HttpStatusCode.InternalServerError;
-
+        context.Response.StatusCode = (int)statusCode;
         context.Response.ContentType = "application/json";
 
         var response = new
         {
-            statusCode = 500,
-            message = "An unexpected server error occurred."
+            status = (int)statusCode,
+            error = statusCode.ToString(),
+            message
         };
 
         var json = JsonSerializer.Serialize(response);
