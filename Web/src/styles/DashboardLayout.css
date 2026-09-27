@@ -1,0 +1,110 @@
+.dashboard-layout {
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+.dashboard-layout header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-layout header h1 {
+  font-size: 28px;
+  margin: 0;
+  color: white;
+  font-weight: bold;
+}
+
+.dashboard-layout header div {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.dashboard-layout header span {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.dashboard-layout header button {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid white;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.dashboard-layout header button:hover {
+  background: white;
+  color: #667eea;
+}
+
+.dashboard-layout main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px;
+}
+
+.dashboard-layout main h2 {
+  font-size: 32px;
+  color: #333;
+  margin: 0 0 8px 0;
+  font-weight: 600;
+}
+
+.dashboard-layout main > p {
+  color: #666;
+  margin: 0 0 4px 0;
+  font-size: 16px;
+}
+
+.loading-state,
+.error-state {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 18px;
+  color: #666;
+}
+
+.error-state {
+  color: #c33;
+}
+
+.error-state button {
+  margin-top: 20px;
+  padding: 10px 24px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.error-state button:hover {
+  background: #5568d3;
+}
+
+@media (max-width: 768px) {
+  .dashboard-layout header {
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .dashboard-layout main {
+    padding: 20px;
+  }
+
+  .dashboard-layout main h2 {
+    font-size: 24px;
+  }
+}
