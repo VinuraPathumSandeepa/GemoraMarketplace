@@ -53,6 +53,8 @@ builder.Services.AddScoped<IComplianceRulesService, ComplianceRulesService>();
 
 builder.Services.AddScoped<IExportOfficerService, ExportOfficerService>();
 
+builder.Services.AddScoped<IComplianceAgentToolService, ComplianceAgentToolService>();
+
 builder.Services.AddScoped<TokenService>();
 
 
