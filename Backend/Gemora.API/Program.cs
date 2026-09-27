@@ -46,6 +46,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddScoped<IExportComplianceService, ExportComplianceService>();
 
+builder.Services.AddScoped<IComplianceRulesService, ComplianceRulesService>();
+
 builder.Services.AddScoped<TokenService>();
 
 

@@ -12,10 +12,14 @@ namespace Gemora.API.Controllers;
 public class ExportRequestsController : ControllerBase
 {
     private readonly IExportComplianceService _exportComplianceService;
+    private readonly IComplianceRulesService _complianceRulesService;
 
-    public ExportRequestsController(IExportComplianceService exportComplianceService)
+    public ExportRequestsController(
+        IExportComplianceService exportComplianceService,
+        IComplianceRulesService complianceRulesService)
     {
         _exportComplianceService = exportComplianceService;
+        _complianceRulesService = complianceRulesService;
     }
 
     // ==========================================
@@ -372,6 +376,65 @@ public class ExportRequestsController : ControllerBase
         {
             message = result.Message,
             documents = result.Documents
+        });
+    }
+
+    // ==========================================
+    // 8. EVALUATE COMPLIANCE
+    // GET: /api/ExportRequests/{id}/compliance-check
+    // ==========================================
+    [HttpGet("{id}/compliance-check")]
+    public async Task<IActionResult> EvaluateCompliance(Guid id)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Authenticated user is invalid."
+            });
+        }
+
+        var result = await _complianceRulesService.EvaluateAsync(
+            userId,
+            id
+        );
+
+        if (!result.Success)
+        {
+            if (result.ErrorCode == "INVALID_USER")
+            {
+                return Unauthorized(new
+                {
+                    message = result.Message
+                });
+            }
+
+            if (result.ErrorCode == "REQUEST_NOT_FOUND")
+            {
+                return NotFound(new
+                {
+                    message = result.Message
+                });
+            }
+
+            if (result.ErrorCode == "INVALID_REQUEST")
+            {
+                return BadRequest(new
+                {
+                    message = result.Message
+                });
+            }
+
+            return BadRequest(new
+            {
+                message = result.Message
+            });
+        }
+
+        return Ok(new
+        {
+            message = result.Message,
+            check = result.Check
         });
     }
 
