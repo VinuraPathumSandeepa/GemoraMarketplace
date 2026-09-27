@@ -17,6 +17,12 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<ComplianceDocument> ComplianceDocuments { get; set; }
 
+    public DbSet<AgentWorkflow> AgentWorkflows { get; set; }
+
+    public DbSet<AgentWorkflowStep> AgentWorkflowSteps { get; set; }
+
+    public DbSet<AgentToolCall> AgentToolCalls { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -150,6 +156,167 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(c => c.ExportRequestId);
             entity.HasIndex(c => c.DocumentType);
             entity.HasIndex(c => c.UploadedByUserId);
+        });
+
+        // ==========================================
+        // AGENT WORKFLOW CONFIGURATION
+        // ==========================================
+
+        modelBuilder.Entity<AgentWorkflow>(entity =>
+        {
+            entity.HasKey(w => w.Id);
+
+            entity.Property(w => w.Objective)
+                .IsRequired()
+                .HasMaxLength(2000);
+
+            entity.Property(w => w.WorkflowType)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(w => w.PlanJson)
+                .HasColumnType("jsonb");
+
+            entity.Property(w => w.FinalSummary)
+                .HasMaxLength(4000);
+
+            entity.Property(w => w.RootEntityType)
+                .HasMaxLength(100);
+
+            entity.Property(w => w.ErrorCode)
+                .HasMaxLength(100);
+
+            entity.Property(w => w.ErrorMessage)
+                .HasMaxLength(2000);
+
+            entity.Property(w => w.Status)
+                .IsRequired();
+
+            entity.Property(w => w.ApprovalStatus)
+                .IsRequired();
+
+            entity.Property(w => w.CreatedAt)
+                .IsRequired();
+
+            entity.Property(w => w.UpdatedAt)
+                .IsRequired();
+
+            // Relationships
+            entity.HasOne(w => w.TriggeredByUser)
+                .WithMany()
+                .HasForeignKey(w => w.TriggeredByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasMany(w => w.Steps)
+                .WithOne(s => s.Workflow)
+                .HasForeignKey(s => s.WorkflowId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Indexes
+            entity.HasIndex(w => w.TriggeredByUserId);
+            entity.HasIndex(w => w.Status);
+            entity.HasIndex(w => w.WorkflowType);
+            entity.HasIndex(w => new { w.RootEntityType, w.RootEntityId });
+        });
+
+        // ==========================================
+        // AGENT WORKFLOW STEP CONFIGURATION
+        // ==========================================
+
+        modelBuilder.Entity<AgentWorkflowStep>(entity =>
+        {
+            entity.HasKey(s => s.Id);
+
+            entity.Property(s => s.AgentName)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(s => s.Action)
+                .IsRequired()
+                .HasMaxLength(250);
+
+            entity.Property(s => s.Status)
+                .IsRequired();
+
+            entity.Property(s => s.InputSummaryJson)
+                .HasColumnType("jsonb");
+
+            entity.Property(s => s.OutputSummaryJson)
+                .HasColumnType("jsonb");
+
+            entity.Property(s => s.ValidationResultJson)
+                .HasColumnType("jsonb");
+
+            entity.Property(s => s.ErrorCode)
+                .HasMaxLength(100);
+
+            entity.Property(s => s.ErrorMessage)
+                .HasMaxLength(2000);
+
+            // Relationships
+            entity.HasOne(s => s.Workflow)
+                .WithMany(w => w.Steps)
+                .HasForeignKey(s => s.WorkflowId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(s => s.ToolCalls)
+                .WithOne(t => t.WorkflowStep)
+                .HasForeignKey(t => t.WorkflowStepId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Indexes
+            entity.HasIndex(s => s.WorkflowId);
+            entity.HasIndex(s => s.Status);
+            entity.HasIndex(s => new { s.WorkflowId, s.StepNumber })
+                .IsUnique();
+        });
+
+        // ==========================================
+        // AGENT TOOL CALL CONFIGURATION
+        // ==========================================
+
+        modelBuilder.Entity<AgentToolCall>(entity =>
+        {
+            entity.HasKey(t => t.Id);
+
+            entity.Property(t => t.ToolName)
+                .IsRequired()
+                .HasMaxLength(150);
+
+            entity.Property(t => t.AttemptNumber)
+                .IsRequired();
+
+            entity.Property(t => t.Succeeded)
+                .IsRequired();
+
+            entity.Property(t => t.DurationMs)
+                .IsRequired();
+
+            entity.Property(t => t.InputSummaryJson)
+                .HasColumnType("jsonb");
+
+            entity.Property(t => t.OutputSummaryJson)
+                .HasColumnType("jsonb");
+
+            entity.Property(t => t.ErrorCode)
+                .HasMaxLength(100);
+
+            entity.Property(t => t.ErrorMessage)
+                .HasMaxLength(2000);
+
+            entity.Property(t => t.CreatedAt)
+                .IsRequired();
+
+            // Relationships
+            entity.HasOne(t => t.WorkflowStep)
+                .WithMany(s => s.ToolCalls)
+                .HasForeignKey(t => t.WorkflowStepId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Indexes
+            entity.HasIndex(t => t.WorkflowStepId);
+            entity.HasIndex(t => t.ToolName);
+            entity.HasIndex(t => new { t.WorkflowStepId, t.ToolName, t.AttemptNumber });
         });
     }
 }
