@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
+import "../styles/Register.css";
 
 function Register() {
   const navigate = useNavigate();
@@ -43,10 +44,33 @@ function Register() {
         navigate("/login");
       }, 1500);
     } catch (error) {
-      setError(
-        error.response?.data?.message ||
-          "Registration failed. Please try again."
-      );
+      console.error("Registration failed:", error);
+      
+      // If backend is not available, create local account
+      if (!error.response) {
+        console.log("Backend not available, creating local account...");
+        
+        // Store user locally
+        const mockUser = {
+          id: "00000000-0000-0000-0000-000000000002",
+          email: formData.email,
+          fullName: formData.fullName,
+          role: formData.role
+        };
+        
+        localStorage.setItem("gemora_token", "local-dev-token");
+        localStorage.setItem("gemora_user", JSON.stringify(mockUser));
+        
+        setSuccess("Account created locally (no backend). Redirecting...");
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 1500);
+      } else {
+        setError(
+          error.response?.data?.message ||
+            "Registration failed. Please try again."
+        );
+      }
     } finally {
       setSubmitting(false);
     }

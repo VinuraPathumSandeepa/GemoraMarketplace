@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import "../styles/DashboardLayout.css";
 
 function DashboardLayout({ title, children }) {
   const { user, logout } = useAuth();
