@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Gemora.Application.DTOs.ExportCompliance;
 using Gemora.Application.Interfaces;
 using Gemora.Domain.Constants;
@@ -156,6 +157,7 @@ public class ExportOfficerService : IExportOfficerService
 
         if (request.Status == ExportRequestStatus.UnderOfficerReview)
         {
+            await SynchronizeStartReviewStep4Async(exportRequestId);
             return new ExportOfficerOperationResult
             {
                 Success = true,
@@ -177,6 +179,8 @@ public class ExportOfficerService : IExportOfficerService
 
         request.Status = ExportRequestStatus.UnderOfficerReview;
         request.UpdatedAt = DateTime.UtcNow;
+
+        await SynchronizeStartReviewStep4Async(exportRequestId);
 
         await _context.SaveChangesAsync();
 
@@ -306,6 +310,8 @@ public class ExportOfficerService : IExportOfficerService
         request.ReviewedAt = now;
         request.UpdatedAt = now;
         request.ReviewNotes = normalizedReviewNotes;
+
+        await SynchronizeDecisionWorkflowAsync(exportRequestId, newStatus, !string.IsNullOrWhiteSpace(normalizedReviewNotes), now);
 
         await _context.SaveChangesAsync();
 
@@ -536,5 +542,138 @@ public class ExportOfficerService : IExportOfficerService
             UpdatedAt = entity.UpdatedAt,
             Documents = mappedDocuments
         };
+    }
+
+    // ==========================================
+    // WORKFLOW SYNCHRONIZATION HELPERS
+    // ==========================================
+    private async Task SynchronizeStartReviewStep4Async(Guid exportRequestId)
+    {
+        var activeWorkflow = await _context.AgentWorkflows
+            .Include(w => w.Steps)
+            .FirstOrDefaultAsync(w =>
+                w.WorkflowType == "ExportCompliance" &&
+                w.RootEntityType == "ExportRequest" &&
+                w.RootEntityId == exportRequestId &&
+                w.Status == AgentWorkflowStatus.WaitingForApproval &&
+                w.ApprovalStatus == AgentApprovalStatus.Pending);
+
+        if (activeWorkflow == null)
+        {
+            return;
+        }
+
+        var existingStep4 = activeWorkflow.Steps.FirstOrDefault(s => s.StepNumber == 4);
+        if (existingStep4 == null)
+        {
+            var step4 = new AgentWorkflowStep
+            {
+                Id = Guid.NewGuid(),
+                WorkflowId = activeWorkflow.Id,
+                StepNumber = 4,
+                AgentName = "ExportOfficer",
+                Action = "HumanReviewAndDecision",
+                Status = AgentWorkflowStepStatus.Running,
+                InputSummaryJson = JsonSerializer.Serialize(new
+                {
+                    humanReviewStarted = true,
+                    exportRequestId = exportRequestId.ToString()
+                }),
+                StartedAt = DateTime.UtcNow
+            };
+
+            activeWorkflow.CurrentStep = 4;
+            activeWorkflow.UpdatedAt = DateTime.UtcNow;
+            _context.AgentWorkflowSteps.Add(step4);
+        }
+    }
+
+    private async Task SynchronizeDecisionWorkflowAsync(
+        Guid exportRequestId,
+        ExportRequestStatus newStatus,
+        bool notesPresent,
+        DateTime now)
+    {
+        var activeWorkflow = await _context.AgentWorkflows
+            .Include(w => w.Steps)
+            .FirstOrDefaultAsync(w =>
+                w.WorkflowType == "ExportCompliance" &&
+                w.RootEntityType == "ExportRequest" &&
+                w.RootEntityId == exportRequestId &&
+                w.Status == AgentWorkflowStatus.WaitingForApproval &&
+                w.ApprovalStatus == AgentApprovalStatus.Pending);
+
+        if (activeWorkflow == null)
+        {
+            return;
+        }
+
+        var step4 = activeWorkflow.Steps.FirstOrDefault(s => s.StepNumber == 4);
+        if (step4 == null)
+        {
+            step4 = new AgentWorkflowStep
+            {
+                Id = Guid.NewGuid(),
+                WorkflowId = activeWorkflow.Id,
+                StepNumber = 4,
+                AgentName = "ExportOfficer",
+                Action = "HumanReviewAndDecision",
+                Status = AgentWorkflowStepStatus.Running,
+                InputSummaryJson = JsonSerializer.Serialize(new
+                {
+                    humanReviewStarted = true,
+                    exportRequestId = exportRequestId.ToString()
+                }),
+                StartedAt = now
+            };
+
+            _context.AgentWorkflowSteps.Add(step4);
+        }
+
+        step4.Status = AgentWorkflowStepStatus.Succeeded;
+        step4.CompletedAt = now;
+
+        string decisionStr;
+        AgentApprovalStatus approvalStatus;
+        string finalSummary;
+
+        if (newStatus == ExportRequestStatus.Approved)
+        {
+            decisionStr = "Approved";
+            approvalStatus = AgentApprovalStatus.Approved;
+            finalSummary = "Export compliance workflow completed with human approval.";
+        }
+        else if (newStatus == ExportRequestStatus.Rejected)
+        {
+            decisionStr = "Rejected";
+            approvalStatus = AgentApprovalStatus.Rejected;
+            finalSummary = "Export compliance workflow completed with human rejection.";
+        }
+        else // RevisionRequired
+        {
+            decisionStr = "RevisionRequested";
+            approvalStatus = AgentApprovalStatus.RevisionRequested;
+            finalSummary = "Export compliance workflow completed with a human revision request.";
+        }
+
+        step4.OutputSummaryJson = JsonSerializer.Serialize(new
+        {
+            decision = decisionStr,
+            notesPresent = notesPresent
+        });
+
+        step4.ValidationResultJson = JsonSerializer.Serialize(new
+        {
+            authorizedHumanDecision = true,
+            finalDecisionRecorded = true,
+            businessStateUpdated = true
+        });
+
+        activeWorkflow.Status = AgentWorkflowStatus.Completed;
+        activeWorkflow.ApprovalStatus = approvalStatus;
+        activeWorkflow.FinalSummary = finalSummary;
+        activeWorkflow.CurrentStep = 4;
+        activeWorkflow.CompletedAt = now;
+        activeWorkflow.UpdatedAt = now;
     }
 }
