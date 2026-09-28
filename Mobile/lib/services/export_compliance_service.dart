@@ -438,5 +438,72 @@ class ExportComplianceService {
       'The automated compliance service could not complete the analysis. Your request status has been refreshed.',
     );
   }
+
+  // ==========================================
+  // UPDATE EXPORT REQUEST
+  // ==========================================
+  Future<ExportRequestModel> updateExportRequest(
+    String requestId, {
+    required String originCountry,
+    required String destinationCountry,
+    required double declaredValue,
+    String currency = 'USD',
+    String? purpose,
+  }) async {
+    final headers = await _getHeaders();
+
+    final bodyPayload = <String, dynamic>{
+      'originCountry': originCountry.trim(),
+      'destinationCountry': destinationCountry.trim(),
+      'declaredValue': declaredValue,
+      'currency': currency.trim(),
+    };
+
+    if (purpose != null && purpose.trim().isNotEmpty) {
+      bodyPayload['purpose'] = purpose.trim();
+    }
+
+    final response = await http.put(
+      Uri.parse('${ApiConfig.exportRequests}/$requestId'),
+      headers: headers,
+      body: jsonEncode(bodyPayload),
+    );
+
+    if (response.statusCode != 200) {
+      if (response.statusCode == 401) {
+        throw Exception('Your session has expired. Please sign in again.');
+      }
+      if (response.statusCode == 403) {
+        throw Exception("You don't have permission to update this export request.");
+      }
+      if (response.statusCode == 404) {
+        throw Exception("This export request could not be found.");
+      }
+      if (response.statusCode == 409) {
+        throw Exception("This request can't be edited in its current state.");
+      }
+
+      try {
+        if (response.body.isNotEmpty) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          if (data.containsKey('message') && data['message'] != null) {
+            throw Exception(data['message'].toString());
+          }
+        }
+      } catch (e) {
+        if (e is Exception && !e.toString().contains('FormatException')) {
+          rethrow;
+        }
+      }
+
+      throw Exception("We couldn't save your changes. Please try again.");
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final rawRequest = data['request'] as Map<String, dynamic>;
+
+    return ExportRequestModel.fromJson(rawRequest);
+  }
 }
+
 

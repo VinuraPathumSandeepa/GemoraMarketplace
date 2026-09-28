@@ -6,6 +6,7 @@ import '../../models/compliance_document_model.dart';
 import '../../models/export_request_model.dart';
 import '../../services/export_compliance_service.dart';
 import 'add_compliance_document_dialog.dart';
+import 'edit_export_request_screen.dart';
 
 class ExportRequestDetailScreen extends StatefulWidget {
   final String requestId;
@@ -98,7 +99,7 @@ class _ExportRequestDetailScreenState
       case 'underofficerreview':
         return 'An Export Officer is reviewing your request.';
       case 'revisionrequired':
-        return 'Changes are required before the request can be resubmitted.';
+        return 'The Export Officer requested changes before this request can continue.';
       case 'approved':
         return 'Your export compliance request was approved by an Export Officer.';
       case 'rejected':
@@ -125,6 +126,21 @@ class _ExportRequestDetailScreenState
     );
 
     if (result == true) {
+      _loadData();
+    }
+  }
+
+  Future<void> _openEditRequestScreen(ExportRequestModel req) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => EditExportRequestScreen(request: req),
+      ),
+    );
+
+    if (result == true) {
+      setState(() {
+        _recentAnalysisResult = null;
+      });
       _loadData();
     }
   }
@@ -215,6 +231,7 @@ class _ExportRequestDetailScreenState
 
     setState(() {
       _isSubmitting = true;
+      _recentAnalysisResult = null;
     });
 
     try {
@@ -224,6 +241,60 @@ class _ExportRequestDetailScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Export request submitted successfully.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      _loadData();
+    } catch (err) {
+      if (!mounted) return;
+      _showErrorSnackBar(err.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _confirmAndResubmit() async {
+    if (_isSubmitting || _isRunningAnalysis) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Resubmit export request?'),
+        content: const Text(
+          'This will send your revised request back into compliance processing.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Resubmit Request'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isSubmitting = true;
+      _recentAnalysisResult = null;
+    });
+
+    try {
+      await _exportService.submitExportRequest(widget.requestId);
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Export request resubmitted successfully.'),
           backgroundColor: Colors.green,
         ),
       );
@@ -572,44 +643,148 @@ class _ExportRequestDetailScreenState
   }
 
   Widget _buildRevisionRequiredSection(ExportRequestModel req) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Card(
+          elevation: 2,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.edit_note_rounded, color: Colors.amber.shade900, size: 28),
-                const SizedBox(width: 14),
-                const Expanded(
-                  child: Text(
-                    'Revision Required',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    Icon(Icons.edit_note_rounded,
+                        color: Colors.amber.shade900, size: 28),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Revision Required',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'The Export Officer requested changes before this request can continue.',
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade800),
+                ),
+                if (req.reviewNotes != null && req.reviewNotes!.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.shade300),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Officer Revision Instructions',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber.shade900,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          req.reviewNotes!,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.amber.shade900,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _isSubmitting || _isUploadingFile
+                        ? null
+                        : () => _openEditRequestScreen(req),
+                    icon: const Icon(Icons.edit),
+                    label: const Text('Edit Request Details'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            if (req.reviewNotes != null && req.reviewNotes!.isNotEmpty) ...[
-              Text(
-                'Notes from Officer: ${req.reviewNotes}',
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.amber.shade900),
-              ),
-              const SizedBox(height: 8),
-            ],
-            Text(
-              'Revision handling will be available in the next step.',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-            ),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(height: 20),
+        Card(
+          elevation: 2,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ready to Resubmit',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'After making the requested corrections, resubmit the request for another compliance review.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _isSubmitting || _isUploadingFile
+                        ? null
+                        : _confirmAndResubmit,
+                    icon: _isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.send),
+                    label: Text(
+                      _isSubmitting
+                          ? 'Resubmitting request...'
+                          : 'Resubmit Export Request',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      backgroundColor: Colors.amber.shade900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -793,7 +968,7 @@ class _ExportRequestDetailScreenState
                 ),
                 const SizedBox(height: 20),
 
-                // PHASE 3 ACTION SECTIONS BASED ON STATUS
+                // PHASE 3 & PHASE 4 ACTION SECTIONS BASED ON STATUS
                 if (statusLower == 'draft') ...[
                   _buildDraftActionSection(canEdit),
                   const SizedBox(height: 20),
@@ -907,6 +1082,17 @@ class _ExportRequestDetailScreenState
                               ),
                           ],
                         ),
+                        if (statusLower == 'revisionrequired') ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            'Update the requested information or provide corrected documents before resubmitting.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.amber.shade900,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                         const Divider(height: 24),
                         FutureBuilder<List<ComplianceDocumentModel>>(
                           future: _documentsFuture,
