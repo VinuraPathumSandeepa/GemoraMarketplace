@@ -47,19 +47,250 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<TokenService>();
 
 
+<<<<<<< Updated upstream
 // ======================================================
 // 3. CONTROLLERS
 // ======================================================
+=======
+// ------------------------------------------------------------
+// Gem listing management
+// ------------------------------------------------------------
+
+builder.Services.AddScoped<
+    IGemListingService,
+    GemListingService>();
+
+
+// ------------------------------------------------------------
+// Human Gemologist verification workflow
+// ------------------------------------------------------------
+
+builder.Services.AddScoped<
+    IGemVerificationService,
+    GemVerificationService>();
+
+
+// ============================================================
+// DETERMINISTIC GEM EVIDENCE VALIDATOR
+//
+// Runs before the generative AI model.
+// ============================================================
+
+builder.Services.AddScoped<
+    IGemEvidenceValidator,
+    GemEvidenceValidator>();
+
+
+// ============================================================
+// GEM VERIFICATION AGENT
+//
+// Verification
+//      ↓
+// Deterministic validation
+//      ↓
+// Image evidence reader
+//      ↓
+// Gemini multimodal analysis
+//      ↓
+// Persistent AI result
+//      ↓
+// Human Gemologist decision
+// ============================================================
+
+builder.Services.AddScoped<
+    IGemVerificationAgent,
+    GemVerificationAgent>();
+
+
+// ============================================================
+// SHIPPING & INSURANCE SERVICES
+// ============================================================
+
+builder.Services.AddScoped<
+    IShipmentService,
+    ShipmentService>();
+
+builder.Services.AddScoped<
+    IShippingAgentService,
+    ShippingAgentService>();
+
+
+// ============================================================
+// GEMINI CONFIGURATION
+//
+// User Secrets:
+// Gemini:ApiKey
+// Gemini:Model
+//
+// Never put the real API key in appsettings.json.
+// ============================================================
+
+builder.Services.Configure<GeminiOptions>(
+    builder.Configuration.GetSection(
+        GeminiOptions.SectionName));
+
+
+// ============================================================
+// GEMINI MODEL CLIENT
+// ============================================================
+
+builder.Services.AddHttpClient<
+    IGemAiModelClient,
+    GeminiGemAnalysisClient>(
+        client =>
+        {
+            client.BaseAddress =
+                new Uri(
+                    "https://generativelanguage.googleapis.com/");
+
+            client.Timeout =
+                TimeSpan.FromSeconds(60);
+        });
+
+
+// ============================================================
+// LOCAL FILE STORAGE SERVICE
+//
+// Gemora.API
+//   └── wwwroot
+//       └── uploads
+//           ├── gem-images
+//           └── certificates
+// ============================================================
+
+builder.Services.AddScoped<IFileStorageService>(
+    serviceProvider =>
+    {
+        var environment =
+            serviceProvider
+                .GetRequiredService<
+                    IWebHostEnvironment>();
+
+        var webRootPath =
+            environment.WebRootPath;
+
+        if (string.IsNullOrWhiteSpace(
+                webRootPath))
+        {
+            webRootPath =
+                Path.Combine(
+                    environment.ContentRootPath,
+                    "wwwroot");
+        }
+
+        Directory.CreateDirectory(
+            webRootPath);
+
+        var uploadRoot =
+            Path.Combine(
+                webRootPath,
+                "uploads");
+
+        Directory.CreateDirectory(
+            uploadRoot);
+
+        return new LocalFileStorageService(
+            uploadRoot);
+    });
+
+
+// ============================================================
+// GEM IMAGE READER
+//
+// Application layer sees:
+// IGemImageReader
+//
+// Infrastructure handles:
+// - wwwroot
+// - physical file paths
+// - streams
+// - MIME types
+// - path safety
+// ============================================================
+
+builder.Services.AddScoped<IGemImageReader>(
+    serviceProvider =>
+    {
+        var environment =
+            serviceProvider
+                .GetRequiredService<
+                    IWebHostEnvironment>();
+
+        var webRootPath =
+            environment.WebRootPath;
+
+        if (string.IsNullOrWhiteSpace(
+                webRootPath))
+        {
+            webRootPath =
+                Path.Combine(
+                    environment.ContentRootPath,
+                    "wwwroot");
+        }
+
+        Directory.CreateDirectory(
+            webRootPath);
+
+        var uploadRoot =
+            Path.Combine(
+                webRootPath,
+                "uploads");
+
+        Directory.CreateDirectory(
+            uploadRoot);
+
+        return new LocalGemImageReader(
+            uploadRoot);
+    });
+
+
+// ============================================================
+// CONTROLLERS
+// ============================================================
+>>>>>>> Stashed changes
 
 builder.Services.AddControllers();
 
 
+<<<<<<< Updated upstream
 // ======================================================
 // 4. JWT CONFIGURATION
 // ======================================================
 // JWT Key comes from .NET User Secrets.
 // Issuer and Audience come from appsettings.json.
 // ======================================================
+=======
+// ============================================================
+// CORS
+//
+// React development frontend:
+// http://localhost:5173
+// ============================================================
+
+builder.Services.AddCors(
+    options =>
+    {
+        options.AddPolicy(
+            "GemoraCorsPolicy",
+            policy =>
+            {
+                policy
+                    .WithOrigins(
+                        "http://localhost:5173",
+                        "https://localhost:5173",
+                        "http://localhost:5174",
+                        "http://localhost:5175",
+                        "http://localhost:5176")
+                    .AllowAnyHeader()
+                    .AllowAnyMethod();
+            });
+    });
+
+
+// ============================================================
+// JWT AUTHENTICATION
+// ============================================================
+>>>>>>> Stashed changes
 
 var jwtKey =
     builder.Configuration["Jwt:Key"];
