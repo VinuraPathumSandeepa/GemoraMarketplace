@@ -1,11 +1,7 @@
 using Gemora.API.Middleware;
 using Gemora.Application.Interfaces;
 using Gemora.Application.Services;
-using Gemora.Domain.Interfaces;
-using Gemora.Domain.Repositories;
-using Gemora.Infrastructure.Adapters;
 using Gemora.Infrastructure.Data;
-using Gemora.Infrastructure.Repositories;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -49,24 +45,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddScoped<TokenService>();
-
-// Shipping and Insurance Repositories
-builder.Services.AddScoped<IOrderRepository, OrderRepository>();
-builder.Services.AddScoped<IShipmentRepository, ShipmentRepository>();
-builder.Services.AddScoped<IShippingPlanRepository, ShippingPlanRepository>();
-builder.Services.AddScoped<IInsuranceRepository, InsuranceRepository>();
-builder.Services.AddScoped<IShipmentTrackingRepository, ShipmentTrackingRepository>();
-
-// Shipping Provider Adapter (Mock)
-builder.Services.AddScoped<IShippingProviderAdapter, MockShippingProviderAdapter>();
-
-// Shipping Agent Service (Four-Agent AI Subsystem)
-builder.Services.AddScoped<IOrderToolService, OrderToolService>();
-builder.Services.AddScoped<IShippingRulesToolService, ShippingRulesToolService>();
-builder.Services.AddScoped<IShippingAgentService, ShippingAgentService>();
-
-// Shipment Business Service
-builder.Services.AddScoped<IShipmentService, ShipmentService>();
 
 
 // ======================================================
@@ -183,14 +161,10 @@ builder.Services.AddCors(options =>
         {
             policy
                 .WithOrigins(
-                    "http://localhost:5173",
-                    "http://localhost:5174",
-                    "http://localhost:5175",
-                    "http://localhost:5176"
+                    "http://localhost:5173"
                 )
                 .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials();
+                .AllowAnyMethod();
         }
     );
 });
@@ -324,9 +298,6 @@ using (var scope = app.Services.CreateScope())
     var dbContext =
         scope.ServiceProvider
             .GetRequiredService<ApplicationDbContext>();
-
-    // Create/update the schema before the seeder queries any tables.
-    await dbContext.Database.MigrateAsync();
 
     await DbSeeder.SeedAsync(
         dbContext,

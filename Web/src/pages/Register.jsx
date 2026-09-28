@@ -11,6 +11,9 @@ function Register() {
     email: "",
     password: "",
     role: "Buyer",
+    region: "",
+    countryCode: "",
+    phoneNumber: "",
   });
 
   const [error, setError] = useState("");
@@ -46,29 +49,18 @@ function Register() {
     } catch (error) {
       console.error("Registration failed:", error);
       
-      // If backend is not available, create local account
-      if (!error.response) {
-        console.log("Backend not available, creating local account...");
-        
-        // Store user locally
-        const mockUser = {
-          id: "00000000-0000-0000-0000-000000000002",
-          email: formData.email,
-          fullName: formData.fullName,
-          role: formData.role
-        };
-        
-        localStorage.setItem("gemora_token", "local-dev-token");
-        localStorage.setItem("gemora_user", JSON.stringify(mockUser));
-        
-        setSuccess("Account created locally (no backend). Redirecting...");
-        setTimeout(() => {
-          navigate("/dashboard");
-        }, 1500);
+      // Show detailed validation errors from backend
+      if (error.response?.status === 409) {
+        setError("An account with this email already exists. Please use a different email or try logging in.");
+      } else if (error.response?.data?.errors) {
+        const errorMessages = Object.entries(error.response.data.errors)
+          .map(([field, messages]) => `${field}: ${messages.join(", ")}`)
+          .join("\n");
+        setError(errorMessages);
       } else {
         setError(
           error.response?.data?.message ||
-            "Registration failed. Please try again."
+            "Registration failed. Please check your input and try again."
         );
       }
     } finally {
@@ -156,6 +148,53 @@ function Register() {
                 Seller
               </option>
             </select>
+          </div>
+
+          <div className="form-group">
+            <label>Region</label>
+
+            <input
+              type="text"
+              name="region"
+              value={formData.region}
+              onChange={handleChange}
+              placeholder="Enter your region/state"
+              required
+              minLength={2}
+              maxLength={100}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Country Code</label>
+
+            <input
+              type="text"
+              name="countryCode"
+              value={formData.countryCode}
+              onChange={handleChange}
+              placeholder="2-letter country code (e.g., US, LK)"
+              required
+              minLength={2}
+              maxLength={2}
+              pattern="[A-Za-z]{2}"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Phone Number</label>
+
+            <input
+              type="tel"
+              name="phoneNumber"
+              value={formData.phoneNumber}
+              onChange={handleChange}
+              placeholder="+94771234567 (international format)"
+              required
+              minLength={7}
+              maxLength={20}
+              pattern="\+[1-9]\d{6,14}"
+            />
           </div>
 
           <button
