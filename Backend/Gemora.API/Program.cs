@@ -1,5 +1,6 @@
 using Gemora.API.Middleware;
 using Gemora.API.Services;
+using Gemora.Application.Configuration;
 using Gemora.Application.Interfaces;
 using Gemora.Application.Services;
 using Gemora.Infrastructure.Data;
@@ -56,6 +57,11 @@ builder.Services.AddScoped<IExportOfficerService, ExportOfficerService>();
 builder.Services.AddScoped<IComplianceAgentToolService, ComplianceAgentToolService>();
 
 builder.Services.AddScoped<IComplianceWorkflowService, ComplianceWorkflowService>();
+
+builder.Services.Configure<GeminiComplianceOptions>(
+    builder.Configuration.GetSection(GeminiComplianceOptions.SectionName));
+
+builder.Services.AddHttpClient<IComplianceAiClient, GeminiComplianceAiClient>();
 
 builder.Services.AddScoped<TokenService>();
 
