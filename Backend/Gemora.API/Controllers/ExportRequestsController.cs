@@ -13,13 +13,16 @@ public class ExportRequestsController : ControllerBase
 {
     private readonly IExportComplianceService _exportComplianceService;
     private readonly IComplianceRulesService _complianceRulesService;
+    private readonly IComplianceWorkflowService _complianceWorkflowService;
 
     public ExportRequestsController(
         IExportComplianceService exportComplianceService,
-        IComplianceRulesService complianceRulesService)
+        IComplianceRulesService complianceRulesService,
+        IComplianceWorkflowService complianceWorkflowService)
     {
         _exportComplianceService = exportComplianceService;
         _complianceRulesService = complianceRulesService;
+        _complianceWorkflowService = complianceWorkflowService;
     }
 
     // ==========================================
@@ -569,6 +572,55 @@ public class ExportRequestsController : ControllerBase
             result.ContentType,
             result.DownloadFileName
         );
+    }
+
+    // ==========================================
+    // 11. RUN COMPLIANCE ANALYSIS
+    // POST: /api/ExportRequests/{id}/compliance-analysis
+    // ==========================================
+    [HttpPost("{id}/compliance-analysis")]
+    public async Task<IActionResult> RunComplianceAnalysis(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Authenticated user is invalid."
+            });
+        }
+
+        var result = await _complianceWorkflowService.RunComplianceAnalysisAsync(
+            userId,
+            id,
+            cancellationToken
+        );
+
+        if (!result.Success)
+        {
+            return result.ErrorCode switch
+            {
+                "INVALID_USER" => Unauthorized(new { message = result.Message }),
+                "INVALID_REQUEST" => BadRequest(new { message = result.Message }),
+                "REQUEST_NOT_FOUND" => NotFound(new { message = result.Message }),
+                "INVALID_EXPORT_STATUS" => Conflict(new { message = result.Message }),
+                "WORKFLOW_ALREADY_ACTIVE" => Conflict(new { message = result.Message }),
+                "WORKFLOW_STATE_INVALID" => Conflict(new { message = result.Message }),
+                "AI_NOT_CONFIGURED" => StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = result.Message }),
+                "AI_TIMEOUT" => StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = result.Message }),
+                "AI_RATE_LIMITED" => StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = result.Message }),
+                "AI_PROVIDER_ERROR" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
+                "AI_INVALID_RESPONSE" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
+                "AI_VALIDATION_FAILED" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
+                "AI_WORKFLOW_VALIDATION_FAILED" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
+                "AI_ANALYSIS_FAILED" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
+                "WORKFLOW_EXECUTION_FAILED" => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.Message }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.Message })
+            };
+        }
+
+        return Ok(result);
     }
 
     // ==========================================

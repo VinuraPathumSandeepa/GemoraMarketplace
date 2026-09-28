@@ -458,9 +458,29 @@ public class ComplianceWorkflowService : IComplianceWorkflowService
         Guid exportRequestId,
         CancellationToken cancellationToken = default)
     {
-        // 1. Business Status Precondition check
+        if (triggeredByUserId == Guid.Empty)
+        {
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = "INVALID_USER",
+                Message = "Authenticated user is invalid."
+            };
+        }
+
+        if (exportRequestId == Guid.Empty)
+        {
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = "INVALID_REQUEST",
+                Message = "Export request ID is invalid."
+            };
+        }
+
+        // 1. Ownership & Existence Precondition check (IDOR Protection)
         var exportRequest = await _context.ExportRequests
-            .FirstOrDefaultAsync(r => r.Id == exportRequestId, cancellationToken);
+            .FirstOrDefaultAsync(r => r.Id == exportRequestId && r.RequestedByUserId == triggeredByUserId, cancellationToken);
 
         if (exportRequest == null)
         {
@@ -498,7 +518,7 @@ public class ComplianceWorkflowService : IComplianceWorkflowService
 
         // 3. Update ExportRequest Status to UnderComplianceReview
         var trackedRequest = await _context.ExportRequests
-            .FirstOrDefaultAsync(r => r.Id == exportRequestId, cancellationToken);
+            .FirstOrDefaultAsync(r => r.Id == exportRequestId && r.RequestedByUserId == triggeredByUserId, cancellationToken);
 
         if (trackedRequest == null || trackedRequest.Status != ExportRequestStatus.Submitted)
         {
