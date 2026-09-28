@@ -459,12 +459,12 @@ app.UseMiddleware<
 // SWAGGER
 // ============================================================
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
+// Always enable Swagger so the deployed API can be tested.
+// In a production-hardened app you would restrict this,
+// but for a campus project this is convenient.
+app.UseSwagger();
 
-    app.UseSwaggerUI();
-}
+app.UseSwaggerUI();
 
 
 // ============================================================
