@@ -13,6 +13,7 @@ public class ApplicationDbContext : DbContext
     }
 
     public DbSet<User> Users { get; set; }
+    public DbSet<Order> Orders { get; set; }
     public DbSet<Shipment> Shipments { get; set; }
     public DbSet<ShippingPlan> ShippingPlans { get; set; }
     public DbSet<InsuranceRecord> InsuranceRecords { get; set; }
@@ -51,6 +52,38 @@ public class ApplicationDbContext : DbContext
 
             entity.Property(u => u.CreatedAt)
                 .IsRequired();
+        });
+
+        // ==========================================
+        // ORDER CONFIGURATION
+        // ==========================================
+
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.HasKey(o => o.Id);
+
+            entity.Property(o => o.Currency)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            entity.Property(o => o.Status)
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
+            entity.HasIndex(o => o.BuyerUserId);
+            entity.HasIndex(o => o.SellerUserId);
+            entity.HasIndex(o => o.Status);
+            entity.HasIndex(o => o.CreatedAt);
+
+            entity.HasOne(o => o.BuyerUser)
+                .WithMany()
+                .HasForeignKey(o => o.BuyerUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(o => o.SellerUser)
+                .WithMany()
+                .HasForeignKey(o => o.SellerUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // ==========================================

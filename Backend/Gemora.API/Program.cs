@@ -51,6 +51,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<TokenService>();
 
 // Shipping and Insurance Repositories
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IShipmentRepository, ShipmentRepository>();
 builder.Services.AddScoped<IShippingPlanRepository, ShippingPlanRepository>();
 builder.Services.AddScoped<IInsuranceRepository, InsuranceRepository>();

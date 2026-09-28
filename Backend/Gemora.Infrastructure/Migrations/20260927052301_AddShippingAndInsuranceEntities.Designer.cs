@@ -3,6 +3,7 @@ using System;
 using Gemora.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Gemora.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260927052301_AddShippingAndInsuranceEntities")]
+    partial class AddShippingAndInsuranceEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -79,50 +82,6 @@ namespace Gemora.Infrastructure.Migrations
                     b.HasIndex("ShipmentId");
 
                     b.ToTable("InsuranceRecords");
-                });
-
-            modelBuilder.Entity("Gemora.Domain.Entities.Order", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("BuyerUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<Guid>("SellerUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasColumnType("numeric");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BuyerUserId");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("SellerUserId");
-
-                    b.HasIndex("Status");
-
-                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("Gemora.Domain.Entities.Shipment", b =>
@@ -260,12 +219,6 @@ namespace Gemora.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("ApprovedByUserId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime>("GeneratedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -280,10 +233,6 @@ namespace Gemora.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("RejectionReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
                     b.Property<string>("Requirements")
                         .IsRequired()
                         .HasColumnType("jsonb");
@@ -295,11 +244,6 @@ namespace Gemora.Infrastructure.Migrations
 
                     b.Property<Guid>("ShipmentId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("Warnings")
                         .IsRequired()
@@ -358,25 +302,6 @@ namespace Gemora.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Shipment");
-                });
-
-            modelBuilder.Entity("Gemora.Domain.Entities.Order", b =>
-                {
-                    b.HasOne("Gemora.Domain.Entities.User", "BuyerUser")
-                        .WithMany()
-                        .HasForeignKey("BuyerUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Gemora.Domain.Entities.User", "SellerUser")
-                        .WithMany()
-                        .HasForeignKey("SellerUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("BuyerUser");
-
-                    b.Navigation("SellerUser");
                 });
 
             modelBuilder.Entity("Gemora.Domain.Entities.ShipmentTrackingEvent", b =>

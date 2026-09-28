@@ -211,27 +211,84 @@ public static class DbSeeder
 
 
         // ==========================================
+        // SEED SAMPLE ORDERS (Component 3)
+        // Only seed if no orders exist yet
+        // ==========================================
+
+        var seller = await context.Users.FirstAsync(u => u.Email == sellerEmail);
+        var buyer = await context.Users.FirstAsync(u => u.Email == buyerEmail);
+
+        if (!await context.Orders.AnyAsync())
+        {
+            // Paid order 1 - eligible for shipment
+            var order1 = new Domain.Entities.Order
+            {
+                Id = Guid.NewGuid(),
+                BuyerUserId = buyer.Id,
+                SellerUserId = seller.Id,
+                TotalAmount = 5000.00m,
+                Currency = "USD",
+                Status = Domain.Enums.OrderStatus.Paid,
+                CreatedAt = DateTime.UtcNow.AddDays(-7),
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            // Paid order 2 - eligible for shipment
+            var order2 = new Domain.Entities.Order
+            {
+                Id = Guid.NewGuid(),
+                BuyerUserId = buyer.Id,
+                SellerUserId = seller.Id,
+                TotalAmount = 3000.00m,
+                Currency = "USD",
+                Status = Domain.Enums.OrderStatus.Paid,
+                CreatedAt = DateTime.UtcNow.AddDays(-6),
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            // Pending order - NOT eligible for shipment
+            var order3 = new Domain.Entities.Order
+            {
+                Id = Guid.NewGuid(),
+                BuyerUserId = buyer.Id,
+                SellerUserId = seller.Id,
+                TotalAmount = 2000.00m,
+                Currency = "USD",
+                Status = Domain.Enums.OrderStatus.Pending,
+                CreatedAt = DateTime.UtcNow.AddDays(-1),
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            context.Orders.AddRange(order1, order2, order3);
+            await context.SaveChangesAsync();
+        }
+
+
+        // ==========================================
         // SEED SAMPLE SHIPMENTS (Component 3)
         // Only seed if no shipments exist yet
         // ==========================================
 
         if (!await context.Shipments.AnyAsync())
         {
-            var seller = await context.Users.FirstAsync(u => u.Email == sellerEmail);
-            var buyer = await context.Users.FirstAsync(u => u.Email == buyerEmail);
+            // Get the first paid order for shipment 1
+            var paidOrder1 = await context.Orders
+                .Where(o => o.Status == Domain.Enums.OrderStatus.Paid)
+                .OrderBy(o => o.CreatedAt)
+                .FirstOrDefaultAsync();
 
-            // Sample shipment 1
+            // Sample shipment 1 (linked to real order)
             var shipment1 = new Shipment
             {
                 Id = Guid.NewGuid(),
-                OrderId = Guid.NewGuid(),
+                OrderId = paidOrder1?.Id ?? Guid.NewGuid(),
                 ShipmentNumber = "SHP-2026-001",
                 SellerUserId = seller.Id,
                 BuyerUserId = buyer.Id,
                 Origin = "Colombo, Sri Lanka",
                 Destination = "Kandy, Sri Lanka",
-                DeclaredValue = 5000.00m,
-                Currency = "USD",
+                DeclaredValue = paidOrder1?.TotalAmount ?? 5000.00m,
+                Currency = paidOrder1?.Currency ?? "USD",
                 PackageDescription = "2.5 carat blue sapphire with certificate",
                 SelectedService = "Express Courier",
                 CourierName = "DHL Express",
