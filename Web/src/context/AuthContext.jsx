@@ -85,30 +85,7 @@ export function AuthProvider({ children }) {
   // ==========================================
 
   useEffect(() => {
-    const initAuth = async () => {
-      // Development mode: Auto-login as admin if no token exists
-      const existingToken = localStorage.getItem("gemora_token");
-      
-      if (!existingToken) {
-        try {
-          console.log("Development mode: Auto-logging in as admin...");
-          const response = await api.post("/Auth/login", {
-            email: "admin@gemora.com",
-            password: "123456789"
-          });
-          
-          const token = response.data.token;
-          localStorage.setItem("gemora_token", token);
-          console.log("Auto-login successful");
-        } catch (error) {
-          console.warn("Auto-login failed, will try loading from token:", error.message);
-        }
-      }
-      
-      await loadCurrentUser();
-    };
-    
-    initAuth();
+    loadCurrentUser();
   }, []);
 
   // ==========================================

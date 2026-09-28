@@ -40,29 +40,10 @@ function Login() {
     } catch (error) {
       console.error("Login failed:", error);
       
-      // If backend is not available, use local demo login
-      if (!error.response) {
-        console.log("Backend not available, using local login...");
-        
-        // Simple local authentication for development
-        const mockUser = {
-          id: "00000000-0000-0000-0000-000000000001",
-          email: email,
-          fullName: email.split('@')[0] || "User",
-          role: email.toLowerCase().includes('admin') ? "Admin" : 
-                email.toLowerCase().includes('seller') ? "Seller" : "Buyer"
-        };
-        
-        localStorage.setItem("gemora_token", "local-dev-token");
-        localStorage.setItem("gemora_user", JSON.stringify(mockUser));
-        
-        navigate("/dashboard");
-      } else {
-        setError(
-          error.response?.data?.message ||
-            "Invalid email or password."
-        );
-      }
+      setError(
+        error.response?.data?.message ||
+          "Unable to connect to the server. Please ensure the backend is running."
+      );
     } finally {
       setSubmitting(false);
     }

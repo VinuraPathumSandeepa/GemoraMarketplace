@@ -176,7 +176,7 @@ public class ShippingAgentService : IShippingAgentService
     /// Uses logistics tools to retrieve operational facts.
     /// Does NOT execute the plan - only generates recommendations.
     /// </summary>
-    private async Task<PreliminaryPlan> GeneratePreliminaryPlanAsync(
+    private Task<PreliminaryPlan> GeneratePreliminaryPlanAsync(
         Shipment shipment,
         OrderInfo orderInfo,
         List<string> approvedServices,
@@ -222,7 +222,7 @@ public class ShippingAgentService : IShippingAgentService
         // Calculate recommended coverage (typically 110% of declared value for comprehensive coverage)
         var recommendedCoverage = Math.Round(shipment.DeclaredValue * 1.1m, 2);
 
-        return new PreliminaryPlan
+        var result = new PreliminaryPlan
         {
             RecommendedServiceType = recommendedService,
             InsuranceRecommended = riskAssessment.RiskLevel != RiskLevel.Low || shipment.DeclaredValue > 5000,
@@ -230,6 +230,8 @@ public class ShippingAgentService : IShippingAgentService
             Requirements = requirements,
             Warnings = warnings
         };
+
+        return Task.FromResult(result);
     }
 
     #endregion
@@ -241,7 +243,7 @@ public class ShippingAgentService : IShippingAgentService
     /// Assesses shipping risks associated with valuable gemstones.
     /// Evaluates weight, value, route complexity, and handling requirements.
     /// </summary>
-    private async Task<RiskAssessmentResult> AssessGemRiskAsync(
+    private Task<RiskAssessmentResult> AssessGemRiskAsync(
         OrderInfo orderInfo,
         Shipment shipment,
         List<string> approvedServices,
@@ -332,13 +334,15 @@ public class ShippingAgentService : IShippingAgentService
             riskLevel = RiskLevel.Low;
         }
 
-        return new RiskAssessmentResult
+        var result = new RiskAssessmentResult
         {
             RiskLevel = riskLevel,
             RiskReasons = riskReasons,
             HandlingWarnings = handlingWarnings,
             RecommendedPrecautions = precautions
         };
+
+        return Task.FromResult(result);
     }
 
     #endregion
@@ -362,7 +366,7 @@ public class ShippingAgentService : IShippingAgentService
     /// Uses ordinary C# validation - does NOT rely solely on LLM for compliance.
     /// Rejects or flags invalid plans instead of silently correcting critical values.
     /// </summary>
-    private async Task<ComplianceValidationResult> ValidateComplianceAsync(
+    private Task<ComplianceValidationResult> ValidateComplianceAsync(
         PreliminaryPlan plan,
         Shipment shipment,
         OrderInfo orderInfo,
@@ -444,11 +448,13 @@ public class ShippingAgentService : IShippingAgentService
             validationErrors.Add("Package description contains suspicious content that may indicate prompt injection");
         }
 
-        return new ComplianceValidationResult
+        var result = new ComplianceValidationResult
         {
             IsValid = !validationErrors.Any(),
             ValidationErrors = validationErrors
         };
+
+        return Task.FromResult(result);
     }
 
     #endregion
