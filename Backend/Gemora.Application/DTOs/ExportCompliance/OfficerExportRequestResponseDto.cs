@@ -34,4 +34,8 @@ public class OfficerExportRequestResponseDto
 
     public IReadOnlyList<ComplianceDocumentResponseDto> Documents { get; set; }
         = new List<ComplianceDocumentResponseDto>();
+
+    public ComplianceCheckResultDto? DeterministicCompliance { get; set; }
+
+    public ComplianceWorkflowReviewDto? AgentWorkflow { get; set; }
 }

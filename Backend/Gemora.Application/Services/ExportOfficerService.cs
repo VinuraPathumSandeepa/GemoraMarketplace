@@ -13,13 +13,16 @@ public class ExportOfficerService : IExportOfficerService
 {
     private readonly ApplicationDbContext _context;
     private readonly IFileStorageService _fileStorageService;
+    private readonly IComplianceRulesService _complianceRulesService;
 
     public ExportOfficerService(
         ApplicationDbContext context,
-        IFileStorageService fileStorageService)
+        IFileStorageService fileStorageService,
+        IComplianceRulesService complianceRulesService)
     {
         _context = context;
         _fileStorageService = fileStorageService;
+        _complianceRulesService = complianceRulesService;
     }
 
     // ==========================================
@@ -113,7 +116,7 @@ public class ExportOfficerService : IExportOfficerService
         {
             Success = true,
             Message = "Export request retrieved successfully.",
-            Request = MapToOfficerExportRequestResponseDto(request)
+            Request = await MapToOfficerExportRequestResponseDtoAsync(request)
         };
     }
 
@@ -162,7 +165,7 @@ public class ExportOfficerService : IExportOfficerService
             {
                 Success = true,
                 Message = "Export request is already under officer review.",
-                Request = MapToOfficerExportRequestResponseDto(request)
+                Request = await MapToOfficerExportRequestResponseDtoAsync(request)
             };
         }
 
@@ -188,7 +191,7 @@ public class ExportOfficerService : IExportOfficerService
         {
             Success = true,
             Message = "Export request review started successfully.",
-            Request = MapToOfficerExportRequestResponseDto(request)
+            Request = await MapToOfficerExportRequestResponseDtoAsync(request)
         };
     }
 
@@ -319,7 +322,7 @@ public class ExportOfficerService : IExportOfficerService
         {
             Success = true,
             Message = successMessage,
-            Request = MapToOfficerExportRequestResponseDto(request)
+            Request = await MapToOfficerExportRequestResponseDtoAsync(request)
         };
     }
 
@@ -541,6 +544,139 @@ public class ExportOfficerService : IExportOfficerService
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
             Documents = mappedDocuments
+        };
+    }
+
+    private async Task<OfficerExportRequestResponseDto> MapToOfficerExportRequestResponseDtoAsync(ExportRequest entity)
+    {
+        var dto = MapToOfficerExportRequestResponseDto(entity);
+
+        try
+        {
+            var evalResult = await _complianceRulesService.EvaluateAsync(entity.RequestedByUserId, entity.Id);
+            dto.DeterministicCompliance = evalResult?.Check;
+        }
+        catch
+        {
+            dto.DeterministicCompliance = null;
+        }
+
+        dto.AgentWorkflow = await BuildWorkflowReviewDtoAsync(entity.Id);
+
+        return dto;
+    }
+
+    private async Task<ComplianceWorkflowReviewDto?> BuildWorkflowReviewDtoAsync(Guid exportRequestId)
+    {
+        var workflow = await _context.AgentWorkflows
+            .AsNoTracking()
+            .Include(w => w.Steps)
+                .ThenInclude(s => s.ToolCalls)
+            .Where(w => w.WorkflowType == "ExportCompliance" &&
+                        w.RootEntityType == "ExportRequest" &&
+                        w.RootEntityId == exportRequestId)
+            .OrderByDescending(w => w.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (workflow == null)
+        {
+            return null;
+        }
+
+        ComplianceAgentResultDto? assessment = null;
+        var step2 = workflow.Steps?.FirstOrDefault(s => s.StepNumber == 2);
+        if (step2 != null && !string.IsNullOrWhiteSpace(step2.OutputSummaryJson))
+        {
+            try
+            {
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                assessment = JsonSerializer.Deserialize<ComplianceAgentResultDto>(step2.OutputSummaryJson, options);
+            }
+            catch
+            {
+                assessment = null;
+            }
+        }
+
+        var mappedSteps = new List<ComplianceWorkflowStepDto>();
+        if (workflow.Steps != null)
+        {
+            foreach (var step in workflow.Steps.OrderBy(s => s.StepNumber))
+            {
+                var toolCalls = new List<ComplianceWorkflowToolCallDto>();
+                if (step.ToolCalls != null)
+                {
+                    foreach (var tc in step.ToolCalls.OrderBy(t => t.CreatedAt).ThenBy(t => t.AttemptNumber))
+                    {
+                        toolCalls.Add(new ComplianceWorkflowToolCallDto
+                        {
+                            ToolName = tc.ToolName ?? string.Empty,
+                            AttemptNumber = tc.AttemptNumber,
+                            Succeeded = tc.Succeeded,
+                            DurationMs = tc.DurationMs,
+                            ErrorCode = tc.ErrorCode,
+                            CreatedAt = tc.CreatedAt
+                        });
+                    }
+                }
+
+                string actorType;
+                string actor;
+
+                switch (step.StepNumber)
+                {
+                    case 1:
+                        actorType = "Agent";
+                        actor = "ComplianceRequirementsAgent";
+                        break;
+                    case 2:
+                        actorType = "Agent";
+                        actor = "ComplianceRequirementsAgent";
+                        break;
+                    case 3:
+                        actorType = "System";
+                        actor = "ComplianceOutputValidator";
+                        break;
+                    case 4:
+                        actorType = "Human";
+                        actor = "ExportOfficer";
+                        break;
+                    default:
+                        actorType = "System";
+                        actor = !string.IsNullOrWhiteSpace(step.AgentName) ? step.AgentName : "System";
+                        break;
+                }
+
+                mappedSteps.Add(new ComplianceWorkflowStepDto
+                {
+                    StepNumber = step.StepNumber,
+                    ActorType = actorType,
+                    Actor = actor,
+                    Action = step.Action ?? string.Empty,
+                    Status = step.Status.ToString(),
+                    StartedAt = step.StartedAt,
+                    CompletedAt = step.CompletedAt,
+                    ErrorCode = step.ErrorCode,
+                    ToolCalls = toolCalls
+                });
+            }
+        }
+
+        return new ComplianceWorkflowReviewDto
+        {
+            WorkflowId = workflow.Id,
+            WorkflowStatus = workflow.Status.ToString(),
+            ApprovalStatus = workflow.ApprovalStatus.ToString(),
+            CurrentStep = workflow.CurrentStep,
+            CreatedAt = workflow.CreatedAt,
+            UpdatedAt = workflow.UpdatedAt,
+            CompletedAt = workflow.CompletedAt,
+            FinalSummary = workflow.FinalSummary,
+            Assessment = assessment,
+            Steps = mappedSteps
         };
     }
 
