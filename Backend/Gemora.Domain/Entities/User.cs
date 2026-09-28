@@ -45,4 +45,16 @@ public class User
 
     public ICollection<EmailVerificationCode> EmailVerificationCodes { get; set; }
         = new List<EmailVerificationCode>();
+    
+    public ICollection<Order> PurchasedOrders { get; set; }
+        = new List<Order>();
+    
+    public ICollection<Order> SoldOrders { get; set; }
+        = new List<Order>();
+    
+    public ICollection<Shipment> SellerShipments { get; set; }
+        = new List<Shipment>();
+    
+    public ICollection<Shipment> BuyerShipments { get; set; }
+        = new List<Shipment>();
 }

@@ -71,4 +71,8 @@ public class GemListing
     // Verification history for this listing.
     public ICollection<GemVerification> Verifications { get; set; }
         = new List<GemVerification>();
+    
+    // Orders created from this listing
+    public ICollection<Order> Orders { get; set; }
+        = new List<Order>();
 }

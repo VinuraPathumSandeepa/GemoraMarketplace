@@ -1,10 +1,14 @@
+<<<<<<< Updated upstream
 using System.ComponentModel.DataAnnotations;
 using Gemora.Domain.Enums;
 
+=======
+>>>>>>> Stashed changes
 namespace Gemora.Domain.Entities;
 
 public class InsuranceRecord
 {
+<<<<<<< Updated upstream
     [Key]
     public Guid Id { get; set; }
 
@@ -48,4 +52,29 @@ public class InsuranceRecord
 
     // Navigation property
     public virtual Shipment Shipment { get; set; } = null!;
+=======
+    public Guid Id { get; set; }
+    public Guid ShipmentId { get; set; }
+    
+    // Coverage Details
+    public decimal CoverageAmount { get; set; }
+    public string Currency { get; set; } = "USD";
+    public string CoverageType { get; set; } = "Standard"; // Standard, Premium, Comprehensive
+    
+    // Policy Information
+    public string? PolicyNumber { get; set; }
+    public string? ProviderName { get; set; }
+    public DateTime? PolicyStartDate { get; set; }
+    public DateTime? PolicyEndDate { get; set; }
+    
+    // Status
+    public string Status { get; set; } = "Pending"; // Pending, Active, Claimed, Cancelled
+    
+    // Timestamps
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
+    
+    // Navigation
+    public Shipment? Shipment { get; set; }
+>>>>>>> Stashed changes
 }

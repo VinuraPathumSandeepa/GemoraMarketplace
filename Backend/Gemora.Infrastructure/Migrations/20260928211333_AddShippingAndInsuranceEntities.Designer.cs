@@ -3,6 +3,7 @@ using System;
 using Gemora.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Gemora.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260928211333_AddShippingAndInsuranceEntities")]
+    partial class AddShippingAndInsuranceEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,8 +25,6 @@ namespace Gemora.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-<<<<<<< Updated upstream
-=======
             modelBuilder.Entity("Gemora.Domain.Entities.EmailVerificationCode", b =>
                 {
                     b.Property<Guid>("Id")
@@ -589,12 +590,16 @@ namespace Gemora.Infrastructure.Migrations
                     b.ToTable("ShippingPlans", (string)null);
                 });
 
->>>>>>> Stashed changes
             modelBuilder.Entity("Gemora.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -604,14 +609,30 @@ namespace Gemora.Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<DateTime?>("EmailVerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<bool>("IsEmailVerified")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Region")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Role")
                         .IsRequired()
@@ -623,9 +644,6 @@ namespace Gemora.Infrastructure.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-<<<<<<< Updated upstream
-                    b.ToTable("Users");
-=======
                     b.HasIndex("PhoneNumber");
 
                     b.ToTable("Users", (string)null);
@@ -780,7 +798,6 @@ namespace Gemora.Infrastructure.Migrations
                     b.Navigation("SellerShipments");
 
                     b.Navigation("SoldOrders");
->>>>>>> Stashed changes
                 });
 #pragma warning restore 612, 618
         }
