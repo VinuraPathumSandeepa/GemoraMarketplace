@@ -3,6 +3,8 @@ import DashboardLayout from "../layouts/DashboardLayout";
 import {
   getReviewQueue,
   getRequestDetail,
+  startReview,
+  makeDecision,
   downloadComplianceDocument,
 } from "../services/exportOfficerService";
 import "./ExportOfficerDashboard.css";
@@ -19,6 +21,15 @@ function ExportOfficerDashboard() {
   const [requestDetail, setRequestDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState("");
+
+  // Action / Decision state
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionType, setActionType] = useState(null); // 'start', 'approve', 'reject', 'revision'
+  const [activeConfirmation, setActiveConfirmation] = useState(null); // 'approve', 'reject', 'revision'
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [notesValidationError, setNotesValidationError] = useState("");
+  const [actionSuccessMessage, setActionSuccessMessage] = useState("");
+  const [actionErrorMessage, setActionErrorMessage] = useState("");
 
   // Expandable state for tool calls
   const [showToolCalls, setShowToolCalls] = useState(false);
@@ -65,6 +76,11 @@ function ExportOfficerDashboard() {
     setDetailError("");
     setRequestDetail(null);
     setShowToolCalls(false);
+    setActiveConfirmation(null);
+    setReviewNotes("");
+    setNotesValidationError("");
+    setActionSuccessMessage("");
+    setActionErrorMessage("");
 
     try {
       const data = await getRequestDetail(requestId);
@@ -90,6 +106,110 @@ function ExportOfficerDashboard() {
     setSelectedRequestId(null);
     setRequestDetail(null);
     setDetailError("");
+    setActiveConfirmation(null);
+    setReviewNotes("");
+    setNotesValidationError("");
+    setActionSuccessMessage("");
+    setActionErrorMessage("");
+  };
+
+  // ==========================================
+  // START REVIEW ACTION
+  // ==========================================
+  const handleStartReview = async () => {
+    if (!selectedRequestId || actionLoading) return;
+
+    setActionLoading(true);
+    setActionType("start");
+    setActionSuccessMessage("");
+    setActionErrorMessage("");
+
+    try {
+      await startReview(selectedRequestId);
+      setActionSuccessMessage("Human review started successfully.");
+      
+      // Refresh request detail and queue
+      const updated = await getRequestDetail(selectedRequestId);
+      setRequestDetail(updated.request);
+      fetchQueue();
+    } catch (err) {
+      console.error("Failed to start review:", err);
+      handleActionError(err);
+    } finally {
+      setActionLoading(false);
+      setActionType(null);
+    }
+  };
+
+  // ==========================================
+  // MAKE DECISION ACTION (Approve, Reject, Revision)
+  // ==========================================
+  const handleConfirmDecision = async (decisionStr) => {
+    if (!selectedRequestId || actionLoading) return;
+
+    // Validate required notes for Reject and RequestRevision
+    const trimmedNotes = reviewNotes.trim();
+    if (decisionStr === "Reject" && !trimmedNotes) {
+      setNotesValidationError("Please provide a reason for rejection.");
+      return;
+    }
+
+    if (decisionStr === "RequestRevision" && !trimmedNotes) {
+      setNotesValidationError("Please describe the required revisions.");
+      return;
+    }
+
+    setNotesValidationError("");
+    setActionLoading(true);
+    setActionType(decisionStr.toLowerCase());
+    setActionSuccessMessage("");
+    setActionErrorMessage("");
+
+    try {
+      await makeDecision(selectedRequestId, decisionStr, trimmedNotes);
+
+      let successMsg = "Decision submitted successfully.";
+      if (decisionStr === "Approve") successMsg = "Export request approved successfully.";
+      if (decisionStr === "Reject") successMsg = "Export request rejected successfully.";
+      if (decisionStr === "RequestRevision") successMsg = "Revision requested successfully.";
+
+      setActionSuccessMessage(successMsg);
+      setActiveConfirmation(null);
+      setReviewNotes("");
+
+      // Refresh request detail and queue
+      const updated = await getRequestDetail(selectedRequestId);
+      setRequestDetail(updated.request);
+      fetchQueue();
+    } catch (err) {
+      console.error(`Failed to submit decision (${decisionStr}):`, err);
+      handleActionError(err);
+    } finally {
+      setActionLoading(false);
+      setActionType(null);
+    }
+  };
+
+  // ==========================================
+  // ERROR HANDLING HELPER
+  // ==========================================
+  const handleActionError = (err) => {
+    const status = err.response?.status;
+    if (status === 401) {
+      setActionErrorMessage("Your session has expired. Please sign in again.");
+    } else if (status === 403) {
+      setActionErrorMessage("You don't have permission to perform this export review action.");
+    } else if (status === 404) {
+      setActionErrorMessage("This export request could not be found.");
+    } else if (status === 409) {
+      setActionErrorMessage("The request state has changed. Refreshing the latest information.");
+      // Refresh request detail on conflict
+      getRequestDetail(selectedRequestId).then((res) => setRequestDetail(res.request)).catch(() => {});
+    } else if (status === 400 && err.response?.data?.message) {
+      setActionErrorMessage(err.response.data.message);
+    } else {
+      setActionErrorMessage("We couldn't complete the review action. Please try again.");
+    }
   };
 
   // ==========================================
@@ -142,7 +262,7 @@ function ExportOfficerDashboard() {
 
         {/* FORBIDDEN ACCESS STATE */}
         {forbiddenError && (
-          <div className="alert-box alert-error">
+          <div className="alert-box alert-error" role="alert" aria-live="assertive">
             <strong>Access Denied:</strong> {queueError}
           </div>
         )}
@@ -159,7 +279,7 @@ function ExportOfficerDashboard() {
             )}
 
             {queueError && !loadingQueue && (
-              <div className="alert-box alert-error">
+              <div className="alert-box alert-error" role="alert" aria-live="assertive">
                 <p>{queueError}</p>
                 <button className="btn-retry" onClick={fetchQueue}>
                   Retry
@@ -242,7 +362,7 @@ function ExportOfficerDashboard() {
             )}
 
             {detailError && !loadingDetail && (
-              <div className="alert-box alert-error">
+              <div className="alert-box alert-error" role="alert" aria-live="assertive">
                 <p>{detailError}</p>
                 <button
                   className="btn-retry"
@@ -255,6 +375,259 @@ function ExportOfficerDashboard() {
 
             {!loadingDetail && !detailError && requestDetail && (
               <div className="detail-grid">
+                {/* GLOBAL ACTION SUCCESS / ERROR FEEDBACK */}
+                {actionSuccessMessage && (
+                  <div className="alert-box alert-success" role="status" aria-live="polite">
+                    {actionSuccessMessage}
+                  </div>
+                )}
+                {actionErrorMessage && (
+                  <div className="alert-box alert-error" role="alert" aria-live="assertive">
+                    {actionErrorMessage}
+                  </div>
+                )}
+
+                {/* ==========================================
+                    AUTHORITATIVE EXPORT OFFICER DECISION CONTROL SECTION
+                ========================================== */}
+                <div className="section-card decision-card">
+                  <h3>Export Officer Decision</h3>
+
+                  {/* CASE 1: REVIEW NOT STARTED YET (Submitted or UnderComplianceReview) */}
+                  {(requestDetail.status === "Submitted" || requestDetail.status === "UnderComplianceReview") && (
+                    <div>
+                      <p className="subtitle" style={{ marginBottom: "12px" }}>
+                        Begin the human review before making a final export decision.
+                      </p>
+                      <button
+                        className="btn-action btn-start-review"
+                        disabled={actionLoading}
+                        onClick={handleStartReview}
+                      >
+                        {actionLoading && actionType === "start" ? "Starting review..." : "Start Review"}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* CASE 2: UNDER OFFICER REVIEW (Active Decision Buttons) */}
+                  {requestDetail.status === "UnderOfficerReview" && (
+                    <div>
+                      <p className="subtitle" style={{ marginBottom: "14px" }}>
+                        AI findings are advisory. The final decision is made by the authorized Export Officer.
+                      </p>
+
+                      {/* BUTTON ROW */}
+                      {!activeConfirmation && (
+                        <div className="decision-actions">
+                          <button
+                            className="btn-action btn-approve"
+                            disabled={actionLoading}
+                            onClick={() => {
+                              setActiveConfirmation("approve");
+                              setNotesValidationError("");
+                            }}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            className="btn-action btn-reject"
+                            disabled={actionLoading}
+                            onClick={() => {
+                              setActiveConfirmation("reject");
+                              setNotesValidationError("");
+                            }}
+                          >
+                            Reject
+                          </button>
+                          <button
+                            className="btn-action btn-revision"
+                            disabled={actionLoading}
+                            onClick={() => {
+                              setActiveConfirmation("revision");
+                              setNotesValidationError("");
+                            }}
+                          >
+                            Request Revision
+                          </button>
+                        </div>
+                      )}
+
+                      {/* CONFIRMATION UI — APPROVE */}
+                      {activeConfirmation === "approve" && (
+                        <div className="confirmation-box">
+                          <h4>Approve this export request?</h4>
+                          <p className="subtitle">
+                            This records your final human approval for this compliance review.
+                          </p>
+
+                          <div className="form-group">
+                            <label htmlFor="approve-notes">Approval Notes (Optional)</label>
+                            <textarea
+                              id="approve-notes"
+                              placeholder="Add optional notes for the approval decision..."
+                              value={reviewNotes}
+                              onChange={(e) => setReviewNotes(e.target.value)}
+                              disabled={actionLoading}
+                            />
+                          </div>
+
+                          <div className="decision-actions">
+                            <button
+                              className="btn-action btn-approve"
+                              disabled={actionLoading}
+                              onClick={() => handleConfirmDecision("Approve")}
+                            >
+                              {actionLoading && actionType === "approve"
+                                ? "Approving..."
+                                : "Approve Request"}
+                            </button>
+                            <button
+                              className="btn-action btn-cancel"
+                              disabled={actionLoading}
+                              onClick={() => setActiveConfirmation(null)}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* CONFIRMATION UI — REJECT */}
+                      {activeConfirmation === "reject" && (
+                        <div className="confirmation-box">
+                          <h4>Reject this export request?</h4>
+
+                          <div className="form-group">
+                            <label htmlFor="reject-notes">
+                              Reason for rejection <span style={{ color: "#ef4444" }}>*</span>
+                            </label>
+                            <textarea
+                              id="reject-notes"
+                              placeholder="Explain why this export request cannot proceed."
+                              value={reviewNotes}
+                              onChange={(e) => {
+                                setReviewNotes(e.target.value);
+                                if (e.target.value.trim()) setNotesValidationError("");
+                              }}
+                              disabled={actionLoading}
+                              required
+                            />
+                            {notesValidationError && (
+                              <span style={{ color: "#ef4444", fontSize: "13px" }}>
+                                {notesValidationError}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="decision-actions">
+                            <button
+                              className="btn-action btn-reject"
+                              disabled={actionLoading}
+                              onClick={() => handleConfirmDecision("Reject")}
+                            >
+                              {actionLoading && actionType === "reject"
+                                ? "Rejecting..."
+                                : "Reject Request"}
+                            </button>
+                            <button
+                              className="btn-action btn-cancel"
+                              disabled={actionLoading}
+                              onClick={() => setActiveConfirmation(null)}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* CONFIRMATION UI — REQUEST REVISION */}
+                      {activeConfirmation === "revision" && (
+                        <div className="confirmation-box">
+                          <h4>Request Revision for this export request?</h4>
+
+                          <div className="form-group">
+                            <label htmlFor="revision-notes">
+                              Revision instructions <span style={{ color: "#ef4444" }}>*</span>
+                            </label>
+                            <textarea
+                              id="revision-notes"
+                              placeholder="Explain what information or documents must be corrected or provided."
+                              value={reviewNotes}
+                              onChange={(e) => {
+                                setReviewNotes(e.target.value);
+                                if (e.target.value.trim()) setNotesValidationError("");
+                              }}
+                              disabled={actionLoading}
+                              required
+                            />
+                            {notesValidationError && (
+                              <span style={{ color: "#ef4444", fontSize: "13px" }}>
+                                {notesValidationError}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="decision-actions">
+                            <button
+                              className="btn-action btn-revision"
+                              disabled={actionLoading}
+                              onClick={() => handleConfirmDecision("RequestRevision")}
+                            >
+                              {actionLoading && actionType === "requestrevision"
+                                ? "Requesting revision..."
+                                : "Send Revision Request"}
+                            </button>
+                            <button
+                              className="btn-action btn-cancel"
+                              disabled={actionLoading}
+                              onClick={() => setActiveConfirmation(null)}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* CASE 3: COMPLETED DECISION STATE (Approved, Rejected, RevisionRequired) */}
+                  {(requestDetail.status === "Approved" ||
+                    requestDetail.status === "Rejected" ||
+                    requestDetail.status === "RevisionRequired") && (
+                    <div>
+                      <div style={{ marginBottom: "14px", display: "flex", alignItems: "center", gap: "10px" }}>
+                        <span className="info-label">Final Outcome:</span>
+                        {requestDetail.status === "Approved" && (
+                          <span className="badge badge-approved">Decision: Approved</span>
+                        )}
+                        {requestDetail.status === "Rejected" && (
+                          <span className="badge badge-rejected">Decision: Rejected</span>
+                        )}
+                        {requestDetail.status === "RevisionRequired" && (
+                          <span className="badge badge-revisionrequired">Decision: Revision Requested</span>
+                        )}
+                      </div>
+
+                      <div className="info-grid">
+                        <div className="info-item">
+                          <span className="info-label">Reviewed At</span>
+                          <span className="info-value">
+                            {requestDetail.reviewedAt
+                              ? new Date(requestDetail.reviewedAt).toLocaleString()
+                              : "N/A"}
+                          </span>
+                        </div>
+                        {requestDetail.reviewNotes && (
+                          <div className="info-item" style={{ gridColumn: "1 / -1" }}>
+                            <span className="info-label">Officer Review Notes</span>
+                            <span className="info-value">{requestDetail.reviewNotes}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* SECTION A: EXPORT REQUEST BASIC INFORMATION */}
                 <div className="section-card">
                   <h3>Export Request Details</h3>
@@ -303,12 +676,6 @@ function ExportOfficerDashboard() {
                           : "N/A"}
                       </span>
                     </div>
-                    {requestDetail.reviewNotes && (
-                      <div className="info-item" style={{ gridColumn: "1 / -1" }}>
-                        <span className="info-label">Review Notes</span>
-                        <span className="info-value">{requestDetail.reviewNotes}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
 

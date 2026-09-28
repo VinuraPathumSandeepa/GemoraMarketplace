@@ -213,6 +213,11 @@
   margin-bottom: 20px;
 }
 
+.section-card.decision-card {
+  border: 2px solid var(--accent);
+  background: var(--bg);
+}
+
 .section-card h3 {
   font-size: 18px;
   color: var(--text-h);
@@ -366,4 +371,129 @@
 .tool-calls-table th {
   background: var(--bg);
   font-weight: 600;
+}
+
+/* ==========================================
+   DECISION CONTROLS & CONFIRMATION UX
+========================================== */
+
+.decision-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.btn-action {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s, background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-start-review {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.btn-start-review:hover:not(:disabled) {
+  background-color: #1d4ed8;
+}
+
+.btn-approve {
+  background-color: #059669;
+  color: #ffffff;
+}
+
+.btn-approve:hover:not(:disabled) {
+  background-color: #047857;
+}
+
+.btn-reject {
+  background-color: #dc2626;
+  color: #ffffff;
+}
+
+.btn-reject:hover:not(:disabled) {
+  background-color: #b91c1c;
+}
+
+.btn-revision {
+  background-color: #d97706;
+  color: #ffffff;
+}
+
+.btn-revision:hover:not(:disabled) {
+  background-color: #b45309;
+}
+
+.btn-cancel {
+  background-color: var(--code-bg);
+  color: var(--text-h);
+  border: 1px solid var(--border);
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background-color: var(--border);
+}
+
+/* Confirmation Area / Inline Card */
+.confirmation-box {
+  margin-top: 16px;
+  padding: 18px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.confirmation-box h4 {
+  font-size: 16px;
+  color: var(--text-h);
+  margin: 0;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.form-group textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font-family: var(--sans);
+  font-size: 14px;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.form-group textarea:focus {
+  outline: 2px solid var(--accent);
+  border-color: transparent;
 }
