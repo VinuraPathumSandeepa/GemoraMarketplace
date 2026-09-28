@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../../models/compliance_analysis_result_model.dart';
 import '../../models/compliance_document_model.dart';
 import '../../models/export_request_model.dart';
 import '../../services/export_compliance_service.dart';
@@ -29,6 +30,10 @@ class _ExportRequestDetailScreenState
   bool _isUploadingFile = false;
   String? _uploadingDocId;
 
+  bool _isSubmitting = false;
+  bool _isRunningAnalysis = false;
+  ComplianceWorkflowAnalysisResultModel? _recentAnalysisResult;
+
   @override
   void initState() {
     super.initState();
@@ -38,7 +43,8 @@ class _ExportRequestDetailScreenState
   void _loadData() {
     setState(() {
       _requestFuture = _exportService.getExportRequestById(widget.requestId);
-      _documentsFuture = _exportService.getComplianceDocuments(widget.requestId);
+      _documentsFuture =
+          _exportService.getComplianceDocuments(widget.requestId);
     });
   }
 
@@ -124,7 +130,7 @@ class _ExportRequestDetailScreenState
   }
 
   Future<void> _uploadFileForExistingDoc(ComplianceDocumentModel doc) async {
-    if (_isUploadingFile) return;
+    if (_isUploadingFile || _isSubmitting || _isRunningAnalysis) return;
 
     try {
       final files = await FilePicker.pickFiles(
@@ -142,7 +148,8 @@ class _ExportRequestDetailScreenState
         }
 
         if (bytes.length > 10 * 1024 * 1024) {
-          _showErrorSnackBar('The selected file is too large. Maximum file size is 10 MB.');
+          _showErrorSnackBar(
+              'The selected file is too large. Maximum file size is 10 MB.');
           return;
         }
 
@@ -176,6 +183,138 @@ class _ExportRequestDetailScreenState
         setState(() {
           _isUploadingFile = false;
           _uploadingDocId = null;
+        });
+      }
+    }
+  }
+
+  Future<void> _confirmAndSubmit() async {
+    if (_isSubmitting || _isRunningAnalysis) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Submit export request?'),
+        content: const Text(
+          'After submission, the request will move into compliance processing and editing may be restricted.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Submit Request'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      await _exportService.submitExportRequest(widget.requestId);
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Export request submitted successfully.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      _loadData();
+    } catch (err) {
+      if (!mounted) return;
+      _showErrorSnackBar(err.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _confirmAndRunComplianceAnalysis() async {
+    if (_isSubmitting || _isRunningAnalysis) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Start compliance analysis?'),
+        content: const Text(
+          'The system will check your request and document metadata, run an AI-assisted compliance assessment, and prepare the request for Export Officer review.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Start Analysis'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isRunningAnalysis = true;
+      _recentAnalysisResult = null;
+    });
+
+    try {
+      final result =
+          await _exportService.runComplianceAnalysis(widget.requestId);
+
+      if (!mounted) return;
+
+      if (result.success) {
+        setState(() {
+          _recentAnalysisResult = result;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Compliance analysis completed. Your request is ready for Export Officer review.',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      _loadData();
+    } catch (err) {
+      if (!mounted) return;
+      final errorMessage = err.toString().replaceAll('Exception: ', '');
+
+      _loadData();
+
+      try {
+        final refreshedReq =
+            await _exportService.getExportRequestById(widget.requestId);
+        if (refreshedReq.status.toLowerCase() == 'undercompliancereview') {
+          _showErrorSnackBar(
+            'Automated compliance analysis could not be completed. Your request remains in compliance review and can continue to Export Officer review.',
+          );
+          return;
+        }
+      } catch (_) {}
+
+      _showErrorSnackBar(errorMessage);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRunningAnalysis = false;
         });
       }
     }
@@ -217,6 +356,331 @@ class _ExportRequestDetailScreenState
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDraftActionSection(bool canEdit) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Ready to Submit',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Review your request and compliance documents before submitting.',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade800,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _isSubmitting || _isUploadingFile
+                    ? null
+                    : _confirmAndSubmit,
+                icon: _isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.send),
+                label: Text(
+                  _isSubmitting ? 'Submitting request...' : 'Submit Export Request',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubmittedActionSection() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Compliance Analysis',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Start the automated compliance assessment before Export Officer review.',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade800,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.amber.shade900, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'The automated assessment supports the Export Officer. It does not make the final export decision.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.amber.shade900,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _isRunningAnalysis ? null : _confirmAndRunComplianceAnalysis,
+                icon: _isRunningAnalysis
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.analytics_outlined),
+                label: Text(
+                  _isRunningAnalysis
+                      ? 'Running compliance analysis...'
+                      : 'Start Compliance Analysis',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: Colors.purple.shade700,
+                ),
+              ),
+            ),
+            if (_isRunningAnalysis) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: Text(
+                  'This may take a few moments.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnderComplianceReviewSection() {
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.hourglass_top_rounded, color: Colors.purple.shade700, size: 28),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Compliance Review in Progress',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Your request is in compliance review and is ready for Export Officer evaluation.',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnderOfficerReviewSection() {
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.assignment_ind, color: Colors.orange.shade800, size: 28),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Officer Review',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'An Export Officer is reviewing your request.',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRevisionRequiredSection(ExportRequestModel req) {
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.edit_note_rounded, color: Colors.amber.shade900, size: 28),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Text(
+                    'Revision Required',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (req.reviewNotes != null && req.reviewNotes!.isNotEmpty) ...[
+              Text(
+                'Notes from Officer: ${req.reviewNotes}',
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.amber.shade900),
+              ),
+              const SizedBox(height: 8),
+            ],
+            Text(
+              'Revision handling will be available in the next step.',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAssessmentSummaryCard(ComplianceAgentResultModel assessment) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Automated Compliance Assessment',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                Chip(
+                  label: const Text(
+                    'Advisory only',
+                    style: TextStyle(fontSize: 11, color: Colors.white),
+                  ),
+                  backgroundColor: Colors.purple.shade600,
+                  padding: EdgeInsets.zero,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ],
+            ),
+            const Divider(height: 20),
+            Text(
+              assessment.summary,
+              style: const TextStyle(fontSize: 14, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Chip(
+                  avatar: const Icon(Icons.speed, size: 16),
+                  label: Text(
+                    'Confidence: ${(assessment.confidence * 100).toStringAsFixed(0)}%',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  backgroundColor: Colors.grey.shade200,
+                ),
+                const SizedBox(width: 8),
+                if (assessment.requiresOfficerAttention)
+                  Chip(
+                    avatar: const Icon(Icons.warning, size: 16, color: Colors.orange),
+                    label: const Text(
+                      'Officer Attention Needed',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    backgroundColor: Colors.orange.shade50,
+                  ),
+              ],
+            ),
+            if (assessment.disclaimer.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                assessment.disclaimer,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -273,6 +737,7 @@ class _ExportRequestDetailScreenState
           final statusColor = _getStatusColor(req.status);
           final explanation = _getStatusExplanation(req.status);
           final canEdit = _isEditableStatus(req.status);
+          final statusLower = req.status.toLowerCase();
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -327,6 +792,30 @@ class _ExportRequestDetailScreenState
                   ),
                 ),
                 const SizedBox(height: 20),
+
+                // PHASE 3 ACTION SECTIONS BASED ON STATUS
+                if (statusLower == 'draft') ...[
+                  _buildDraftActionSection(canEdit),
+                  const SizedBox(height: 20),
+                ] else if (statusLower == 'submitted') ...[
+                  _buildSubmittedActionSection(),
+                  const SizedBox(height: 20),
+                ] else if (statusLower == 'undercompliancereview') ...[
+                  _buildUnderComplianceReviewSection(),
+                  const SizedBox(height: 20),
+                ] else if (statusLower == 'underofficerreview') ...[
+                  _buildUnderOfficerReviewSection(),
+                  const SizedBox(height: 20),
+                ] else if (statusLower == 'revisionrequired') ...[
+                  _buildRevisionRequiredSection(req),
+                  const SizedBox(height: 20),
+                ],
+
+                // ADVISORY ASSESSMENT SUMMARY (Current session if available)
+                if (_recentAnalysisResult?.assessment != null) ...[
+                  _buildAssessmentSummaryCard(_recentAnalysisResult!.assessment!),
+                  const SizedBox(height: 20),
+                ],
 
                 // DETAILS CARD
                 Card(
@@ -410,7 +899,9 @@ class _ExportRequestDetailScreenState
                             ),
                             if (canEdit)
                               OutlinedButton.icon(
-                                onPressed: _openAddDocumentDialog,
+                                onPressed: _isSubmitting || _isUploadingFile
+                                    ? null
+                                    : _openAddDocumentDialog,
                                 icon: const Icon(Icons.add, size: 18),
                                 label: const Text('Add Document'),
                               ),
@@ -461,7 +952,9 @@ class _ExportRequestDetailScreenState
                                       const SizedBox(height: 12),
                                       Center(
                                         child: FilledButton.icon(
-                                          onPressed: _openAddDocumentDialog,
+                                          onPressed: _isSubmitting || _isUploadingFile
+                                              ? null
+                                              : _openAddDocumentDialog,
                                           icon: const Icon(Icons.add),
                                           label: const Text(
                                               'Add Compliance Document'),
@@ -613,7 +1106,7 @@ class _ExportRequestDetailScreenState
                                           ),
                                           if (!doc.hasUploadedFile && canEdit)
                                             ElevatedButton.icon(
-                                              onPressed: isThisDocUploading
+                                              onPressed: isThisDocUploading || _isSubmitting || _isRunningAnalysis
                                                   ? null
                                                   : () =>
                                                       _uploadFileForExistingDoc(
@@ -652,33 +1145,6 @@ class _ExportRequestDetailScreenState
                         ),
                       ],
                     ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // PHASE 2 INFORMATIONAL NOTICE
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.blue.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, color: Colors.blue.shade700),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Review your request and documents before submission.',
-                          style: TextStyle(
-                            color: Colors.blue.shade900,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ],

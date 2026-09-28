@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
 import '../config/api_config.dart';
+import '../models/compliance_analysis_result_model.dart';
 import '../models/compliance_document_model.dart';
 import '../models/export_request_model.dart';
 import 'token_storage_service.dart';
@@ -305,4 +306,137 @@ class ExportComplianceService {
 
     return ComplianceDocumentModel.fromJson(rawDocument);
   }
+
+  // ==========================================
+  // SUBMIT EXPORT REQUEST
+  // ==========================================
+  Future<ExportRequestModel> submitExportRequest(String requestId) async {
+    final headers = await _getHeaders();
+
+    final response = await http.post(
+      Uri.parse('${ApiConfig.exportRequests}/$requestId/submit'),
+      headers: headers,
+    );
+
+    if (response.statusCode != 200) {
+      if (response.statusCode == 401) {
+        throw Exception('Your session has expired. Please sign in again.');
+      }
+      if (response.statusCode == 403) {
+        throw Exception("You don't have permission to submit this export request.");
+      }
+      if (response.statusCode == 404) {
+        throw Exception("This export request could not be found.");
+      }
+      if (response.statusCode == 409) {
+        throw Exception("This request can't be submitted in its current state.");
+      }
+
+      try {
+        if (response.body.isNotEmpty) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          if (data.containsKey('message') && data['message'] != null) {
+            throw Exception(data['message'].toString());
+          }
+        }
+      } catch (e) {
+        if (e is Exception && !e.toString().contains('FormatException')) {
+          rethrow;
+        }
+      }
+
+      throw Exception("We couldn't submit your export request. Please try again.");
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final rawRequest = data['request'] as Map<String, dynamic>;
+
+    return ExportRequestModel.fromJson(rawRequest);
+  }
+
+  // ==========================================
+  // RUN COMPLIANCE ANALYSIS
+  // ==========================================
+  Future<ComplianceWorkflowAnalysisResultModel> runComplianceAnalysis(
+    String requestId,
+  ) async {
+    final headers = await _getHeaders();
+
+    final response = await http.post(
+      Uri.parse('${ApiConfig.exportRequests}/$requestId/compliance-analysis'),
+      headers: headers,
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return ComplianceWorkflowAnalysisResultModel.fromJson(data);
+    }
+
+    // Handle error codes safely
+    String? errorCode;
+    String? serverMessage;
+
+    try {
+      if (response.body.isNotEmpty) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        errorCode = data['errorCode']?.toString();
+        serverMessage = data['message']?.toString();
+      }
+    } catch (_) {}
+
+    if (errorCode == 'INVALID_EXPORT_STATUS' ||
+        errorCode == 'WORKFLOW_ALREADY_ACTIVE' ||
+        errorCode == 'WORKFLOW_STATE_INVALID' ||
+        response.statusCode == 409) {
+      throw Exception('The request state has changed. Refreshing the latest information.');
+    }
+
+    if (errorCode == 'AI_NOT_CONFIGURED') {
+      throw Exception(
+        'Automated compliance analysis is temporarily unavailable. Your request status has been refreshed.',
+      );
+    }
+    if (errorCode == 'AI_TIMEOUT') {
+      throw Exception(
+        'The automated compliance analysis timed out. Your request status has been refreshed.',
+      );
+    }
+    if (errorCode == 'AI_RATE_LIMITED') {
+      throw Exception(
+        'Automated compliance analysis is temporarily busy. Your request status has been refreshed.',
+      );
+    }
+    if (errorCode == 'AI_PROVIDER_ERROR') {
+      throw Exception(
+        'The automated compliance service could not complete the analysis. Your request status has been refreshed.',
+      );
+    }
+    if (errorCode == 'AI_INVALID_RESPONSE' ||
+        errorCode == 'AI_VALIDATION_FAILED' ||
+        errorCode == 'AI_WORKFLOW_VALIDATION_FAILED' ||
+        errorCode == 'AI_ANALYSIS_FAILED') {
+      throw Exception(
+        'The automated assessment could not be completed safely. Your request status has been refreshed.',
+      );
+    }
+
+    if (response.statusCode == 401) {
+      throw Exception('Your session has expired. Please sign in again.');
+    }
+    if (response.statusCode == 403) {
+      throw Exception('You don\'t have permission to perform compliance analysis on this export request.');
+    }
+    if (response.statusCode == 404) {
+      throw Exception('This export request could not be found.');
+    }
+
+    if (serverMessage != null && serverMessage.trim().isNotEmpty) {
+      throw Exception(serverMessage);
+    }
+
+    throw Exception(
+      'The automated compliance service could not complete the analysis. Your request status has been refreshed.',
+    );
+  }
 }
+
