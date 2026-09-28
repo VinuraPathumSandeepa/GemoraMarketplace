@@ -8,8 +8,10 @@ import {
 // PUBLIC PAGES
 // ============================================================
 
+import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import VerifyEmail from "./pages/VerifyEmail";
 
 // ============================================================
 // GENERAL DASHBOARD
@@ -58,22 +60,17 @@ function App() {
     <Routes>
 
       {/* ======================================================
-          HOME
+          PUBLIC HOME / LANDING PAGE
           ====================================================== */}
 
       <Route
         path="/"
-        element={
-          <Navigate
-            to="/login"
-            replace
-          />
-        }
+        element={<Home />}
       />
 
 
       {/* ======================================================
-          PUBLIC ROUTES
+          PUBLIC AUTH ROUTES
           ====================================================== */}
 
       <Route
@@ -86,12 +83,18 @@ function App() {
         element={<Register />}
       />
 
+      <Route
+        path="/verify-email"
+        element={<VerifyEmail />}
+      />
+
 
       {/* ======================================================
           GENERAL DASHBOARD
 
-          After login, Dashboard.jsx checks the role and
-          redirects the user to the correct role dashboard.
+          After login, Dashboard.jsx checks the logged-in
+          user's role and redirects them to the appropriate
+          role dashboard.
           ====================================================== */}
 
       <Route
@@ -180,12 +183,11 @@ function App() {
           Example:
           /seller/listings/10/edit
 
-          Editing is permitted by the UI only for:
-
+          Editing is permitted in the UI only for:
           - Draft
           - ChangesRequested
 
-          Backend rules remain the final security enforcement.
+          Backend remains the final security enforcement.
           ====================================================== */}
 
       <Route
@@ -207,13 +209,12 @@ function App() {
           /seller/listings/10
 
           Supports:
-
-          - View listing information
+          - View listing
           - View gemstone image
-          - Upload/replace gemstone image
+          - Upload/replace image
           - View certificate
           - Upload/replace certificate
-          - Navigate to Edit
+          - Edit listing
           - Submit for verification
           - Resubmit after ChangesRequested
           - Delete Draft
@@ -275,7 +276,6 @@ function App() {
               → VerificationDetails
 
           These will provide:
-
           - Pending verification queue
           - Seller evidence
           - Gemstone image
@@ -327,6 +327,5 @@ function App() {
     </Routes>
   );
 }
-
 
 export default App;

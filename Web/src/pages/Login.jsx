@@ -1,39 +1,41 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+
 import { useAuth } from "../context/AuthContext";
 
-// ── tiny inline SVG icons (no extra deps) ──────────────────
-const EyeIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-    <circle cx="12" cy="12" r="3"/>
-  </svg>
-);
-
-const EyeOffIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
-    <line x1="1" y1="1" x2="23" y2="23"/>
-  </svg>
-);
-
 function Login() {
-  // ==========================================
-  // STATE
-  // ==========================================
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
   const { login } = useAuth();
+
   const navigate = useNavigate();
+  const location = useLocation();
 
+  const verifiedEmail =
+    location.state?.email || "";
 
-  // ==========================================
+  const [email, setEmail] =
+    useState(verifiedEmail);
+
+  const [password, setPassword] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  const [success, setSuccess] =
+    useState(
+      location.state?.verified
+        ? "Email verified successfully. You can now sign in."
+        : ""
+    );
+
+  const [submitting, setSubmitting] =
+    useState(false);
+
+  // ============================================================
   // HANDLE LOGIN
   // ==========================================
 
@@ -41,145 +43,277 @@ function Login() {
     event.preventDefault();
 
     setError("");
+    setSuccess("");
+
+    if (!email.trim()) {
+      setError(
+        "Please enter your email address."
+      );
+
+      return;
+    }
+
+    if (!password) {
+      setError(
+        "Please enter your password."
+      );
+
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      const user = await login(email, password);
+      const user =
+        await login(
+          email
+            .trim()
+            .toLowerCase(),
+          password
+        );
 
-      console.log("Logged in user:", user);
+      console.log(
+        "Logged in user:",
+        user
+      );
 
-      navigate("/dashboard");
-
+      navigate(
+        "/dashboard",
+        {
+          replace: true,
+        }
+      );
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error(
+        "Login failed:",
+        error
+      );
+
+      const errorCode =
+        error.response?.data?.errorCode;
+
+      if (
+        errorCode ===
+        "EMAIL_NOT_VERIFIED"
+      ) {
+        const normalizedEmail =
+          email
+            .trim()
+            .toLowerCase();
+
+        sessionStorage.setItem(
+          "gemora_pending_verification_email",
+          normalizedEmail
+        );
+
+        setError(
+          "Your email has not been verified yet. Verify your email before signing in."
+        );
+
+        return;
+      }
 
       setError(
         error.response?.data?.message ||
           "Invalid email or password."
       );
-
     } finally {
       setSubmitting(false);
     }
   };
 
-
-  // ==========================================
+  // ============================================================
   // PAGE
-  // ==========================================
+  // ============================================================
 
   return (
-    <div className="auth-page">
+    <div className="login-page">
 
-      {/* ── LEFT PANEL ── */}
-      <div className="auth-left-panel">
+      <div className="login-card">
+
+        {/* BRAND */}
+
         <div className="auth-brand">
-          <div className="auth-gem-mark">
-            <span>◆</span>
-          </div>
-          <h1 className="auth-brand-name">Gemora</h1>
-          <p className="auth-brand-tagline">Gem Marketplace Management System</p>
+          <h1>
+            Gemora
+          </h1>
+
+          <p>
+            Secure Gemstone Marketplace
+          </p>
         </div>
 
-        <div className="auth-left-footer">
-          <p>"Where authentic gems meet trusted traders."</p>
+
+        {/* HEADING */}
+
+        <div className="auth-heading">
+
+          <span>
+            WELCOME BACK
+          </span>
+
+          <h2>
+            Sign in to Gemora
+          </h2>
+
+          <p>
+            Access your marketplace workspace,
+            gemstone listings, and verification
+            activities securely.
+          </p>
+
         </div>
-      </div>
 
-      {/* ── RIGHT PANEL ── */}
-      <div className="auth-right-panel">
-        <div className="auth-form-wrapper">
 
-          {/* HEADER */}
-          <div className="auth-form-header">
-            <p className="auth-form-eyebrow">Welcome back</p>
-            <h2 className="auth-form-title">Sign In</h2>
-            <p className="auth-form-subtitle">
-              Enter your credentials to access your account.
-            </p>
+        {/* SUCCESS */}
+
+        {success && (
+          <div className="success-message">
+            {success}
+          </div>
+        )}
+
+
+        {/* ERROR */}
+
+        {error && (
+          <div className="error-message">
+            {error}
+          </div>
+        )}
+
+
+        {/* LOGIN FORM */}
+
+        <form onSubmit={handleSubmit}>
+
+          {/* EMAIL */}
+
+          <div className="form-group">
+
+            <label htmlFor="email">
+              Email
+            </label>
+
+            <input
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(event) => {
+                setEmail(
+                  event.target.value
+                );
+
+                setError("");
+              }}
+              required
+              autoComplete="email"
+            />
+
           </div>
 
-          {/* ERROR */}
-          {error && (
-            <div className="auth-error">
-              <span className="auth-error-icon">!</span>
-              {error}
+
+          {/* PASSWORD */}
+
+          <div className="form-group">
+
+            <label htmlFor="password">
+              Password
+            </label>
+
+            <input
+              id="password"
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(event) => {
+                setPassword(
+                  event.target.value
+                );
+
+                setError("");
+              }}
+              required
+              autoComplete="current-password"
+            />
+
+          </div>
+
+
+          {/* SIGN IN BUTTON */}
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="auth-primary-button"
+          >
+            {submitting
+              ? "Signing In..."
+              : "Sign In →"}
+          </button>
+
+        </form>
+
+
+        {/* UNVERIFIED EMAIL HELP */}
+
+        {error &&
+          error
+            .toLowerCase()
+            .includes("verify") && (
+            <div className="login-verification-help">
+
+              <p>
+                Still waiting to verify
+                your account?
+              </p>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const normalizedEmail =
+                    email
+                      .trim()
+                      .toLowerCase();
+
+                  sessionStorage.setItem(
+                    "gemora_pending_verification_email",
+                    normalizedEmail
+                  );
+
+                  navigate(
+                    "/verify-email",
+                    {
+                      state: {
+                        email:
+                          normalizedEmail,
+                      },
+                    }
+                  );
+                }}
+              >
+                Go to Email Verification →
+              </button>
+
             </div>
           )}
 
-          {/* FORM */}
-          <form className="auth-form" onSubmit={handleSubmit}>
 
-            {/* EMAIL */}
-            <div className="auth-field">
-              <label className="auth-label" htmlFor="email">
-                Email address
-              </label>
-              <input
-                id="email"
-                className="auth-input"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
-            </div>
+        {/* FOOTER */}
 
-            {/* PASSWORD */}
-            <div className="auth-field">
-              <div className="auth-label-row">
-                <label className="auth-label" htmlFor="password">
-                  Password
-                </label>
-              </div>
-              <div className="auth-input-wrapper">
-                <input
-                  id="password"
-                  className="auth-input"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  className="auth-eye-btn"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                </button>
-              </div>
-            </div>
+        <div className="auth-footer">
 
-            {/* SUBMIT */}
-            <button
-              type="submit"
-              className="auth-submit-btn"
-              disabled={submitting}
-            >
-              {submitting ? (
-                <span className="auth-spinner" />
-              ) : (
-                "Sign In"
-              )}
-            </button>
-
-          </form>
-
-          {/* FOOTER */}
-          <p className="auth-switch-text">
+          <p>
             Don't have an account?{" "}
-            <Link className="auth-switch-link" to="/register">
+
+            <Link to="/register">
               Create Account
             </Link>
           </p>
 
         </div>
+
       </div>
 
     </div>

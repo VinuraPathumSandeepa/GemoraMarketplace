@@ -1,46 +1,159 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+} from "react-router-dom";
+
 import api from "../services/api";
 
-// ── tiny inline SVG icons (no extra deps) ──────────────────
-const EyeIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-    <circle cx="12" cy="12" r="3"/>
-  </svg>
-);
 
-const EyeOffIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
-    <line x1="1" y1="1" x2="23" y2="23"/>
-  </svg>
-);
+// ============================================================
+// COUNTRY OPTIONS
+// ============================================================
 
-const CheckIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12"/>
-  </svg>
-);
+const countries = [
+  {
+    code: "LK",
+    name: "Sri Lanka",
+    dialCode: "+94",
+  },
+  {
+    code: "IN",
+    name: "India",
+    dialCode: "+91",
+  },
+  {
+    code: "SG",
+    name: "Singapore",
+    dialCode: "+65",
+  },
+  {
+    code: "TH",
+    name: "Thailand",
+    dialCode: "+66",
+  },
+  {
+    code: "AU",
+    name: "Australia",
+    dialCode: "+61",
+  },
+  {
+    code: "GB",
+    name: "United Kingdom",
+    dialCode: "+44",
+  },
+  {
+    code: "US",
+    name: "United States",
+    dialCode: "+1",
+  },
+  {
+    code: "CA",
+    name: "Canada",
+    dialCode: "+1",
+  },
+  {
+    code: "AE",
+    name: "United Arab Emirates",
+    dialCode: "+971",
+  },
+  {
+    code: "JP",
+    name: "Japan",
+    dialCode: "+81",
+  },
+  {
+    code: "MY",
+    name: "Malaysia",
+    dialCode: "+60",
+  },
+  {
+    code: "ID",
+    name: "Indonesia",
+    dialCode: "+62",
+  },
+  {
+    code: "BD",
+    name: "Bangladesh",
+    dialCode: "+880",
+  },
+  {
+    code: "PK",
+    name: "Pakistan",
+    dialCode: "+92",
+  },
+  {
+    code: "NZ",
+    name: "New Zealand",
+    dialCode: "+64",
+  },
+];
+
 
 function Register() {
   const navigate = useNavigate();
 
+  // ============================================================
+  // FORM STATE
+  // ============================================================
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
+
+    phoneDialCode: "+94",
+    phoneNumber: "",
+
+    countryCode: "LK",
+    region: "",
+
     password: "",
+    confirmPassword: "",
+
     role: "Buyer",
   });
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+
+  // ============================================================
+  // PASSWORD VISIBILITY
+  // ============================================================
+
+  const [
+    showPassword,
+    setShowPassword,
+  ] = useState(false);
+
+  const [
+    showConfirmPassword,
+    setShowConfirmPassword,
+  ] = useState(false);
+
+
+  // ============================================================
+  // PAGE STATE
+  // ============================================================
+
+  const [error, setError] =
+    useState("");
+
+  const [success, setSuccess] =
+    useState("");
+
+  const [submitting, setSubmitting] =
+    useState(false);
+
+
+  // ============================================================
+  // NORMAL INPUT CHANGE
+  // ============================================================
 
   const handleChange = (event) => {
-    const { name, value } = event.target;
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setError("");
 
     setFormData((previous) => ({
       ...previous,
@@ -48,236 +161,852 @@ function Register() {
     }));
   };
 
+
+  // ============================================================
+  // COUNTRY CHANGE
+  //
+  // Automatically updates both:
+  // - ISO country
+  // - phone dialing code
+  // ============================================================
+
+  const handleCountryChange = (event) => {
+    const countryCode =
+      event.target.value;
+
+    const selectedCountry =
+      countries.find(
+        (country) =>
+          country.code ===
+          countryCode
+      );
+
+    setFormData((previous) => ({
+      ...previous,
+
+      countryCode,
+
+      phoneDialCode:
+        selectedCountry?.dialCode ||
+        previous.phoneDialCode,
+    }));
+
+    setError("");
+  };
+
+
+  // ============================================================
+  // PHONE NUMBER CHANGE
+  //
+  // Only allow digits.
+  // ============================================================
+
+  const handlePhoneChange = (event) => {
+    const value =
+      event.target.value
+        .replace(/\D/g, "")
+        .slice(0, 15);
+
+    setFormData((previous) => ({
+      ...previous,
+      phoneNumber: value,
+    }));
+
+    setError("");
+  };
+
+
+  // ============================================================
+  // BUILD INTERNATIONAL PHONE NUMBER
+  // ============================================================
+
+  const buildPhoneNumber = () => {
+    let localNumber =
+      formData.phoneNumber.trim();
+
+    /*
+      Example:
+
+      User enters:
+      0771234567
+
+      Selected:
+      +94
+
+      Result:
+      +94771234567
+    */
+
+    if (localNumber.startsWith("0")) {
+      localNumber =
+        localNumber.substring(1);
+    }
+
+    return (
+      formData.phoneDialCode +
+      localNumber
+    );
+  };
+
+
+  // ============================================================
+  // VALIDATION
+  // ============================================================
+
+  const validateForm = () => {
+    if (
+      formData.fullName
+        .trim()
+        .length < 2
+    ) {
+      return (
+        "Please enter your full name."
+      );
+    }
+
+
+    if (!formData.email.trim()) {
+      return (
+        "Please enter your email address."
+      );
+    }
+
+
+    if (
+      formData.phoneNumber
+        .trim()
+        .length < 7
+    ) {
+      return (
+        "Please enter a valid mobile number."
+      );
+    }
+
+
+    const completePhoneNumber =
+      buildPhoneNumber();
+
+
+    if (
+      !/^\+[1-9]\d{6,14}$/.test(
+        completePhoneNumber
+      )
+    ) {
+      return (
+        "Please enter a valid mobile number."
+      );
+    }
+
+
+    if (
+      !/^[A-Za-z]{2}$/.test(
+        formData.countryCode
+      )
+    ) {
+      return (
+        "Please select a valid country."
+      );
+    }
+
+
+    if (
+      formData.region
+        .trim()
+        .length < 2
+    ) {
+      return (
+        "Please enter your province, state, or region."
+      );
+    }
+
+
+    if (
+      formData.password.length < 6
+    ) {
+      return (
+        "Password must contain at least 6 characters."
+      );
+    }
+
+
+    if (
+      formData.password !==
+      formData.confirmPassword
+    ) {
+      return (
+        "Passwords do not match. Please re-enter your password."
+      );
+    }
+
+
+    return "";
+  };
+
+
+  // ============================================================
+  // REGISTER
+  // ============================================================
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     setError("");
     setSuccess("");
+
+
+    const validationError =
+      validateForm();
+
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+
     setSubmitting(true);
 
-    try {
-      await api.post("/Auth/register", formData);
 
-      setSuccess("Registration successful. Redirecting to login...");
+    try {
+      const payload = {
+        fullName:
+          formData.fullName.trim(),
+
+        email:
+          formData.email
+            .trim()
+            .toLowerCase(),
+
+        phoneNumber:
+          buildPhoneNumber(),
+
+        countryCode:
+          formData.countryCode,
+
+        region:
+          formData.region.trim(),
+
+        password:
+          formData.password,
+
+        role:
+          formData.role,
+      };
+
+
+      const response =
+        await api.post(
+          "/Auth/register",
+          payload
+        );
+
+
+      setSuccess(
+        response.data?.message ||
+          "Account created successfully. Check your email for the verification code."
+      );
+
+
+      sessionStorage.setItem(
+        "gemora_pending_verification_email",
+        payload.email
+      );
+
 
       setTimeout(() => {
-        navigate("/login");
-      }, 1500);
+        navigate(
+          "/verify-email",
+          {
+            state: {
+              email: payload.email,
+            },
+          }
+        );
+      }, 800);
 
     } catch (error) {
       setError(
         error.response?.data?.message ||
-          "Registration failed. Please try again."
+          "Registration failed. Please check your information and try again."
       );
+
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Password strength helper
-  const pwLen = formData.password.length;
-  const pwStrength =
-    pwLen === 0 ? null :
-    pwLen < 6   ? "weak" :
-    pwLen < 10  ? "fair" :
-                  "strong";
 
-  const strengthLabel = {
-    weak: "Weak",
-    fair: "Fair",
-    strong: "Strong",
-  };
+  // ============================================================
+  // PAGE
+  // ============================================================
 
   return (
-    <div className="auth-page">
+    <div className="register-page">
 
-      {/* ── LEFT PANEL ── */}
-      <div className="auth-left-panel">
+      <div className="register-card">
+
+        {/* ====================================================
+            BRAND
+            ==================================================== */}
+
         <div className="auth-brand">
-          <div className="auth-gem-mark">
-            <span>◆</span>
-          </div>
-          <h1 className="auth-brand-name">Gemora</h1>
-          <p className="auth-brand-tagline">Gem Marketplace Management System</p>
+
+          <h1>
+            Gemora
+          </h1>
+
+          <p>
+            Secure Gemstone Marketplace
+          </p>
+
         </div>
 
-        <ul className="auth-left-benefits">
-          <li><span className="auth-benefit-icon"><CheckIcon /></span>Verified gem listings</li>
-          <li><span className="auth-benefit-icon"><CheckIcon /></span>Secure buyer-seller transactions</li>
-          <li><span className="auth-benefit-icon"><CheckIcon /></span>Gemologist-certified quality</li>
-        </ul>
 
-        <div className="auth-left-footer">
-          <p>"Where authentic gems meet trusted traders."</p>
+        {/* ====================================================
+            HEADING
+            ==================================================== */}
+
+        <div className="auth-heading">
+
+          <span>
+            CREATE YOUR ACCOUNT
+          </span>
+
+          <h2>
+            Join Gemora
+          </h2>
+
+          <p>
+            Create a Buyer or Seller account
+            and verify your email to continue.
+          </p>
+
         </div>
-      </div>
 
-      {/* ── RIGHT PANEL ── */}
-      <div className="auth-right-panel">
-        <div className="auth-form-wrapper">
 
-          {/* HEADER */}
-          <div className="auth-form-header">
-            <p className="auth-form-eyebrow">Get started free</p>
-            <h2 className="auth-form-title">Create Account</h2>
-            <p className="auth-form-subtitle">
-              Join Gemora to buy, sell, or verify gemstones.
-            </p>
+        {/* ====================================================
+            ERROR
+            ==================================================== */}
+
+        {error && (
+          <div className="error-message">
+            {error}
+          </div>
+        )}
+
+
+        {/* ====================================================
+            SUCCESS
+            ==================================================== */}
+
+        {success && (
+          <div className="success-message">
+            {success}
+          </div>
+        )}
+
+
+        {/* ====================================================
+            FORM
+            ==================================================== */}
+
+        <form
+          onSubmit={handleSubmit}
+          className="register-form"
+        >
+
+          {/* FULL NAME */}
+
+          <div className="form-group">
+
+            <label htmlFor="fullName">
+              Full Name
+            </label>
+
+            <input
+              id="fullName"
+              type="text"
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleChange}
+              placeholder="Enter your full name"
+              required
+              minLength={2}
+              maxLength={100}
+              autoComplete="name"
+            />
+
           </div>
 
-          {/* ERROR */}
-          {error && (
-            <div className="auth-error">
-              <span className="auth-error-icon">!</span>
-              {error}
-            </div>
-          )}
 
-          {/* SUCCESS */}
-          {success && (
-            <div className="auth-success">
-              <span className="auth-success-icon">✓</span>
-              {success}
-            </div>
-          )}
+          {/* EMAIL */}
 
-          {/* FORM */}
-          <form className="auth-form" onSubmit={handleSubmit}>
+          <div className="form-group">
 
-            {/* FULL NAME */}
-            <div className="auth-field">
-              <label className="auth-label" htmlFor="fullName">
-                Full Name
-              </label>
-              <input
-                id="fullName"
-                className="auth-input"
-                type="text"
-                name="fullName"
-                placeholder="John Silva"
-                value={formData.fullName}
+            <label htmlFor="email">
+              Email
+            </label>
+
+            <input
+              id="email"
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="you@example.com"
+              required
+              autoComplete="email"
+            />
+
+          </div>
+
+
+          {/* ==================================================
+              MOBILE NUMBER
+              ================================================== */}
+
+          <div className="form-group">
+
+            <label htmlFor="phoneNumber">
+              Mobile Number
+            </label>
+
+
+            <div className="phone-input-wrapper">
+
+              {/* COUNTRY DIAL CODE */}
+
+              <select
+                className="phone-code-select"
+                name="phoneDialCode"
+                value={
+                  formData.phoneDialCode
+                }
                 onChange={handleChange}
-                required
-                minLength={2}
-                maxLength={100}
-                autoComplete="name"
-              />
-            </div>
+                aria-label="Phone country code"
+              >
 
-            {/* EMAIL */}
-            <div className="auth-field">
-              <label className="auth-label" htmlFor="email">
-                Email address
-              </label>
+                {countries.map(
+                  (country) => (
+                    <option
+                      key={
+                        `${country.code}-${country.dialCode}`
+                      }
+                      value={
+                        country.dialCode
+                      }
+                    >
+                      {country.dialCode}{" "}
+                      {country.name}
+                    </option>
+                  )
+                )}
+
+              </select>
+
+
+              {/* PHONE */}
+
               <input
-                id="email"
-                className="auth-input"
-                type="email"
-                name="email"
-                placeholder="you@example.com"
-                value={formData.email}
-                onChange={handleChange}
+                id="phoneNumber"
+                className="phone-number-input"
+                type="tel"
+                name="phoneNumber"
+                value={
+                  formData.phoneNumber
+                }
+                onChange={
+                  handlePhoneChange
+                }
+                placeholder="771234567"
                 required
-                autoComplete="email"
+                autoComplete="tel-national"
+                inputMode="numeric"
               />
+
             </div>
 
-            {/* PASSWORD */}
-            <div className="auth-field">
-              <label className="auth-label" htmlFor="password">
-                Password
-              </label>
-              <div className="auth-input-wrapper">
-                <input
-                  id="password"
-                  className="auth-input"
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  placeholder="Minimum 6 characters"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  minLength={6}
-                  autoComplete="new-password"
-                />
-                <button
-                  type="button"
-                  className="auth-eye-btn"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                </button>
-              </div>
 
-              {/* STRENGTH METER */}
-              {pwStrength && (
-                <div className="auth-pw-strength">
-                  <div className={`auth-pw-bar auth-pw-${pwStrength}`} />
-                  <span className={`auth-pw-label auth-pw-${pwStrength}`}>
-                    {strengthLabel[pwStrength]}
-                  </span>
-                </div>
-              )}
-            </div>
+            <small className="form-helper">
 
-            {/* ACCOUNT TYPE */}
-            <div className="auth-field">
-              <label className="auth-label" htmlFor="role">
-                Account Type
-              </label>
-              <div className="auth-role-grid">
-                {["Buyer", "Seller"].map((r) => (
-                  <label
-                    key={r}
-                    className={`auth-role-card ${formData.role === r ? "auth-role-selected" : ""}`}
-                  >
-                    <input
-                      type="radio"
-                      name="role"
-                      value={r}
-                      checked={formData.role === r}
-                      onChange={handleChange}
-                      className="auth-role-radio"
-                    />
-                    <span className="auth-role-icon">
-                      {r === "Buyer" ? "🛍️" : "💎"}
-                    </span>
-                    <span className="auth-role-name">{r}</span>
-                    <span className="auth-role-desc">
-                      {r === "Buyer"
-                        ? "Browse & purchase gems"
-                        : "List & sell gemstones"}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
+              Select your country code and
+              enter your mobile number.
 
-            {/* SUBMIT */}
-            <button
-              type="submit"
-              className="auth-submit-btn"
-              disabled={submitting}
+            </small>
+
+          </div>
+
+
+          {/* ==================================================
+              COUNTRY
+              ================================================== */}
+
+          <div className="form-group">
+
+            <label htmlFor="countryCode">
+              Country
+            </label>
+
+            <select
+              id="countryCode"
+              name="countryCode"
+              value={
+                formData.countryCode
+              }
+              onChange={
+                handleCountryChange
+              }
+              required
             >
-              {submitting ? (
-                <span className="auth-spinner" />
-              ) : (
-                "Create Account"
+
+              {countries.map(
+                (country) => (
+                  <option
+                    key={
+                      country.code
+                    }
+                    value={
+                      country.code
+                    }
+                  >
+                    {country.name}
+                  </option>
+                )
               )}
-            </button>
 
-          </form>
+            </select>
 
-          {/* FOOTER */}
-          <p className="auth-switch-text">
+          </div>
+
+
+          {/* ==================================================
+              REGION
+              ================================================== */}
+
+          <div className="form-group">
+
+            <label htmlFor="region">
+              Province / State / Region
+            </label>
+
+            <input
+              id="region"
+              type="text"
+              name="region"
+              value={formData.region}
+              onChange={handleChange}
+              placeholder="Example: Western Province"
+              required
+              minLength={2}
+              maxLength={100}
+              autoComplete="address-level1"
+            />
+
+          </div>
+
+
+          {/* ==================================================
+              PASSWORD
+              ================================================== */}
+
+          <div className="form-group">
+
+            <label htmlFor="password">
+              Password
+            </label>
+
+
+            <div className="password-input-wrapper">
+
+              <input
+                id="password"
+                type={
+                  showPassword
+                    ? "text"
+                    : "password"
+                }
+                name="password"
+                value={
+                  formData.password
+                }
+                onChange={
+                  handleChange
+                }
+                placeholder="Minimum 6 characters"
+                required
+                minLength={6}
+                maxLength={100}
+                autoComplete="new-password"
+              />
+
+
+              <button
+                type="button"
+                className="password-eye-button"
+                onClick={() =>
+                  setShowPassword(
+                    (current) =>
+                      !current
+                  )
+                }
+                aria-label={
+                  showPassword
+                    ? "Hide password"
+                    : "Show password"
+                }
+                title={
+                  showPassword
+                    ? "Hide password"
+                    : "Show password"
+                }
+              >
+
+                {showPassword ? (
+                  /* EYE OFF */
+
+                  <svg
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M3 3l18 18"
+                    />
+
+                    <path
+                      d="M10.6 10.6a2 2 0 0 0 2.8 2.8"
+                    />
+
+                    <path
+                      d="M9.9 4.2A10.8 10.8 0 0 1 12 4c5.5 0 9 5 9 5a15.7 15.7 0 0 1-2.1 2.7"
+                    />
+
+                    <path
+                      d="M6.6 6.6C4.4 8 3 10 3 10s3.5 5 9 5c1.1 0 2.1-.2 3-.5"
+                    />
+                  </svg>
+
+                ) : (
+                  /* EYE */
+
+                  <svg
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"
+                    />
+
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="2.5"
+                    />
+                  </svg>
+                )}
+
+              </button>
+
+            </div>
+
+          </div>
+
+
+          {/* ==================================================
+              CONFIRM PASSWORD
+              ================================================== */}
+
+          <div className="form-group">
+
+            <label htmlFor="confirmPassword">
+              Confirm Password
+            </label>
+
+
+            <div className="password-input-wrapper">
+
+              <input
+                id="confirmPassword"
+                type={
+                  showConfirmPassword
+                    ? "text"
+                    : "password"
+                }
+                name="confirmPassword"
+                value={
+                  formData.confirmPassword
+                }
+                onChange={
+                  handleChange
+                }
+                placeholder="Re-enter your password"
+                required
+                minLength={6}
+                maxLength={100}
+                autoComplete="new-password"
+              />
+
+
+              <button
+                type="button"
+                className="password-eye-button"
+                onClick={() =>
+                  setShowConfirmPassword(
+                    (current) =>
+                      !current
+                  )
+                }
+                aria-label={
+                  showConfirmPassword
+                    ? "Hide confirm password"
+                    : "Show confirm password"
+                }
+                title={
+                  showConfirmPassword
+                    ? "Hide password"
+                    : "Show password"
+                }
+              >
+
+                {showConfirmPassword ? (
+                  <svg
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M3 3l18 18"
+                    />
+
+                    <path
+                      d="M10.6 10.6a2 2 0 0 0 2.8 2.8"
+                    />
+
+                    <path
+                      d="M9.9 4.2A10.8 10.8 0 0 1 12 4c5.5 0 9 5 9 5a15.7 15.7 0 0 1-2.1 2.7"
+                    />
+
+                    <path
+                      d="M6.6 6.6C4.4 8 3 10 3 10s3.5 5 9 5c1.1 0 2.1-.2 3-.5"
+                    />
+                  </svg>
+
+                ) : (
+                  <svg
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"
+                    />
+
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="2.5"
+                    />
+                  </svg>
+                )}
+
+              </button>
+
+            </div>
+
+
+            {formData.confirmPassword &&
+              formData.password !==
+                formData.confirmPassword && (
+                <small className="password-mismatch">
+                  Passwords do not match.
+                </small>
+              )}
+
+
+            {formData.confirmPassword &&
+              formData.password ===
+                formData.confirmPassword && (
+                <small className="password-match">
+                  ✓ Passwords match.
+                </small>
+              )}
+
+          </div>
+
+
+          {/* ==================================================
+              ACCOUNT TYPE
+              ================================================== */}
+
+          <div className="form-group">
+
+            <label htmlFor="role">
+              Account Type
+            </label>
+
+            <select
+              id="role"
+              name="role"
+              value={
+                formData.role
+              }
+              onChange={
+                handleChange
+              }
+            >
+
+              <option value="Buyer">
+                Buyer
+              </option>
+
+              <option value="Seller">
+                Seller
+              </option>
+
+            </select>
+
+          </div>
+
+
+          {/* ==================================================
+              SUBMIT
+              ================================================== */}
+
+          <button
+            type="submit"
+            disabled={
+              submitting ||
+              (
+                formData.confirmPassword &&
+                formData.password !==
+                  formData.confirmPassword
+              )
+            }
+            className="auth-primary-button"
+          >
+
+            {submitting
+              ? "Creating Account..."
+              : "Create Account →"}
+
+          </button>
+
+        </form>
+
+
+        {/* ====================================================
+            FOOTER
+            ==================================================== */}
+
+        <div className="auth-footer">
+
+          <p>
             Already have an account?{" "}
-            <Link className="auth-switch-link" to="/login">
+
+            <Link to="/login">
               Sign In
             </Link>
           </p>
 
         </div>
+
       </div>
 
     </div>
