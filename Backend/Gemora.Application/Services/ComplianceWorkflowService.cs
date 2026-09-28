@@ -14,13 +14,16 @@ public class ComplianceWorkflowService : IComplianceWorkflowService
 {
     private readonly ApplicationDbContext _context;
     private readonly IComplianceAgentToolService _toolService;
+    private readonly IComplianceAiClient _aiClient;
 
     public ComplianceWorkflowService(
         ApplicationDbContext context,
-        IComplianceAgentToolService toolService)
+        IComplianceAgentToolService toolService,
+        IComplianceAiClient aiClient)
     {
         _context = context;
         _toolService = toolService;
+        _aiClient = aiClient;
     }
 
     public async Task<ComplianceWorkflowExecutionResult> StartContextCollectionAsync(
@@ -137,8 +140,8 @@ public class ComplianceWorkflowService : IComplianceWorkflowService
                 new
                 {
                     stepNumber = 3,
-                    actorType = "Agent",
-                    actor = "ComplianceRequirementsAgent",
+                    actorType = "System",
+                    actor = "ComplianceOutputValidator",
                     action = "ValidateStructuredAssessment"
                 },
                 new
@@ -445,5 +448,352 @@ public class ComplianceWorkflowService : IComplianceWorkflowService
             WorkflowStepId = step.Id,
             Context = null
         };
+    }
+
+    // ======================================================
+    // WORKFLOW ANALYSIS (STEP 2 + STEP 3 INTEGRATION)
+    // ======================================================
+    public async Task<ComplianceWorkflowAnalysisResultDto> RunComplianceAnalysisAsync(
+        Guid triggeredByUserId,
+        Guid exportRequestId,
+        CancellationToken cancellationToken = default)
+    {
+        // 1. Business Status Precondition check
+        var exportRequest = await _context.ExportRequests
+            .FirstOrDefaultAsync(r => r.Id == exportRequestId, cancellationToken);
+
+        if (exportRequest == null)
+        {
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = "REQUEST_NOT_FOUND",
+                Message = "Export request was not found."
+            };
+        }
+
+        if (exportRequest.Status != ExportRequestStatus.Submitted)
+        {
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = "INVALID_EXPORT_STATUS",
+                Message = $"Compliance analysis can only be run on export requests in Submitted status. Current status is {exportRequest.Status}."
+            };
+        }
+
+        // 2. Reuse Step 1 Context Collection
+        var step1Result = await StartContextCollectionAsync(triggeredByUserId, exportRequestId, cancellationToken);
+
+        if (!step1Result.Success || step1Result.Context == null)
+        {
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = step1Result.ErrorCode ?? "STEP1_FAILED",
+                Message = step1Result.Message,
+                WorkflowId = step1Result.WorkflowId
+            };
+        }
+
+        // 3. Update ExportRequest Status to UnderComplianceReview
+        var trackedRequest = await _context.ExportRequests
+            .FirstOrDefaultAsync(r => r.Id == exportRequestId, cancellationToken);
+
+        if (trackedRequest == null || trackedRequest.Status != ExportRequestStatus.Submitted)
+        {
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = "INVALID_EXPORT_STATUS",
+                Message = "Export request status changed during workflow execution.",
+                WorkflowId = step1Result.WorkflowId
+            };
+        }
+
+        trackedRequest.Status = ExportRequestStatus.UnderComplianceReview;
+        trackedRequest.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // 4. Load Workflow Entity for Step 2
+        var workflow = await _context.AgentWorkflows
+            .FirstOrDefaultAsync(w => w.Id == step1Result.WorkflowId, cancellationToken);
+
+        if (workflow == null ||
+            workflow.Status != AgentWorkflowStatus.Running ||
+            workflow.CurrentStep != 2 ||
+            workflow.RootEntityType != "ExportRequest" ||
+            workflow.RootEntityId != exportRequestId)
+        {
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = "WORKFLOW_STATE_INVALID",
+                Message = "Workflow state is invalid for Step 2 execution.",
+                WorkflowId = step1Result.WorkflowId
+            };
+        }
+
+        // 5. Create Step 2 AgentWorkflowStep Entity
+        var step2InputSummary = new
+        {
+            documentCount = step1Result.Context.Documents.Count,
+            deterministicComplete = step1Result.Context.DeterministicCheck.IsComplete,
+            missingRequirementCount = step1Result.Context.DeterministicCheck.MissingRequirements.Count,
+            warningCount = step1Result.Context.DeterministicCheck.Warnings.Count
+        };
+
+        var step2 = new AgentWorkflowStep
+        {
+            Id = Guid.NewGuid(),
+            WorkflowId = workflow.Id,
+            StepNumber = 2,
+            AgentName = "ComplianceRequirementsAgent",
+            Action = "GenerateStructuredComplianceAssessment",
+            Status = AgentWorkflowStepStatus.Running,
+            InputSummaryJson = JsonSerializer.Serialize(step2InputSummary),
+            StartedAt = DateTime.UtcNow
+        };
+
+        _context.AgentWorkflowSteps.Add(step2);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // 6. Invoke AI Client for Step 2
+        ComplianceAiClientResult aiResult;
+        try
+        {
+            aiResult = await _aiClient.AnalyzeAsync(step1Result.Context, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            return await HandleStep2FailureAsync(workflow, step2, "AI_ANALYSIS_FAILED", ex.Message, cancellationToken);
+        }
+
+        if (!aiResult.Success || aiResult.Result == null)
+        {
+            return await HandleStep2FailureAsync(workflow, step2, aiResult.ErrorCode ?? "AI_ANALYSIS_FAILED", aiResult.Message, cancellationToken);
+        }
+
+        // Step 2 Success Persistence
+        step2.Status = AgentWorkflowStepStatus.Succeeded;
+        step2.CompletedAt = DateTime.UtcNow;
+        step2.OutputSummaryJson = JsonSerializer.Serialize(aiResult.Result);
+        step2.ValidationResultJson = JsonSerializer.Serialize(new
+        {
+            providerResponseParsed = true,
+            clientValidationPassed = true,
+            modelName = aiResult.ModelName,
+            durationMs = aiResult.DurationMs
+        });
+
+        workflow.CurrentStep = 3;
+        workflow.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // 7. Create Step 3 AgentWorkflowStep Entity
+        var assessment = aiResult.Result;
+        var step3InputSummary = new
+        {
+            sourceStepNumber = 2,
+            documentFindingCount = assessment.DocumentFindings.Count,
+            missingRequirementCount = assessment.MissingRequirements.Count,
+            confidencePresent = true
+        };
+
+        var step3 = new AgentWorkflowStep
+        {
+            Id = Guid.NewGuid(),
+            WorkflowId = workflow.Id,
+            StepNumber = 3,
+            AgentName = "ComplianceOutputValidator",
+            Action = "ValidateStructuredAssessment",
+            Status = AgentWorkflowStepStatus.Running,
+            InputSummaryJson = JsonSerializer.Serialize(step3InputSummary),
+            StartedAt = DateTime.UtcNow
+        };
+
+        _context.AgentWorkflowSteps.Add(step3);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // 8. Deterministic Workflow Validation (Step 3)
+        string? step3ValidationError = ValidateWorkflowAssessment(assessment, step1Result.Context);
+
+        if (step3ValidationError != null)
+        {
+            step3.Status = AgentWorkflowStepStatus.Failed;
+            step3.ErrorCode = "AI_WORKFLOW_VALIDATION_FAILED";
+            step3.ErrorMessage = step3ValidationError;
+            step3.CompletedAt = DateTime.UtcNow;
+
+            workflow.Status = AgentWorkflowStatus.Failed;
+            workflow.ErrorCode = "AI_WORKFLOW_VALIDATION_FAILED";
+            workflow.ErrorMessage = step3ValidationError;
+            workflow.CompletedAt = DateTime.UtcNow;
+            workflow.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = "AI_WORKFLOW_VALIDATION_FAILED",
+                Message = step3ValidationError,
+                WorkflowId = workflow.Id,
+                AgentStepId = step2.Id,
+                ValidationStepId = step3.Id
+            };
+        }
+
+        // Step 3 Success Persistence
+        step3.Status = AgentWorkflowStepStatus.Succeeded;
+        step3.CompletedAt = DateTime.UtcNow;
+        step3.OutputSummaryJson = JsonSerializer.Serialize(new
+        {
+            validated = true,
+            deterministicComplete = assessment.DeterministicComplete,
+            documentFindingCount = assessment.DocumentFindings.Count,
+            missingRequirementCount = assessment.MissingRequirements.Count,
+            warningCount = assessment.Warnings.Count,
+            recommendedOfficerCheckCount = assessment.RecommendedOfficerChecks.Count
+        });
+        step3.ValidationResultJson = JsonSerializer.Serialize(new
+        {
+            schemaContractPassed = true,
+            deterministicConsistencyPassed = true,
+            documentReferenceValidationPassed = true,
+            advisoryBoundaryPassed = true
+        });
+
+        // 9. Update Workflow to WaitingForApproval
+        workflow.CurrentStep = 4;
+        workflow.Status = AgentWorkflowStatus.WaitingForApproval;
+        workflow.ApprovalStatus = AgentApprovalStatus.Pending;
+        workflow.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return new ComplianceWorkflowAnalysisResultDto
+        {
+            Success = true,
+            Message = "Compliance workflow analysis completed successfully and is waiting for officer approval.",
+            WorkflowId = workflow.Id,
+            AgentStepId = step2.Id,
+            ValidationStepId = step3.Id,
+            Assessment = assessment
+        };
+    }
+
+    private async Task<ComplianceWorkflowAnalysisResultDto> HandleStep2FailureAsync(
+        AgentWorkflow workflow,
+        AgentWorkflowStep step2,
+        string errorCode,
+        string errorMessage,
+        CancellationToken cancellationToken)
+    {
+        step2.Status = AgentWorkflowStepStatus.Failed;
+        step2.ErrorCode = errorCode;
+        step2.ErrorMessage = errorMessage;
+        step2.CompletedAt = DateTime.UtcNow;
+
+        workflow.Status = AgentWorkflowStatus.Failed;
+        workflow.ErrorCode = errorCode;
+        workflow.ErrorMessage = errorMessage;
+        workflow.CompletedAt = DateTime.UtcNow;
+        workflow.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return new ComplianceWorkflowAnalysisResultDto
+        {
+            Success = false,
+            ErrorCode = errorCode,
+            Message = errorMessage,
+            WorkflowId = workflow.Id,
+            AgentStepId = step2.Id
+        };
+    }
+
+    private static string? ValidateWorkflowAssessment(
+        ComplianceAgentResultDto assessment,
+        ComplianceAgentContextDto context)
+    {
+        if (assessment == null)
+        {
+            return "Assessment is null.";
+        }
+
+        if (assessment.MissingRequirements == null ||
+            assessment.DocumentFindings == null ||
+            assessment.Inconsistencies == null ||
+            assessment.Warnings == null ||
+            assessment.RecommendedOfficerChecks == null)
+        {
+            return "Assessment contains a null required collection.";
+        }
+
+        if (string.IsNullOrWhiteSpace(assessment.Summary))
+        {
+            return "AI summary must not be empty.";
+        }
+
+        if (assessment.Confidence < 0.0 || assessment.Confidence > 1.0)
+        {
+            return "AI confidence score must be between 0.0 and 1.0.";
+        }
+
+        if (assessment.DeterministicComplete != context.DeterministicCheck.IsComplete)
+        {
+            return "AI deterministic completeness contradicts application rules.";
+        }
+
+        var contextMissingReqs = context.DeterministicCheck.MissingRequirements ?? new List<string>();
+        foreach (var req in contextMissingReqs)
+        {
+            if (!assessment.MissingRequirements.Any(r => string.Equals(r, req, StringComparison.OrdinalIgnoreCase)))
+            {
+                return $"AI result omitted deterministic missing requirement: '{req}'.";
+            }
+        }
+
+        var allowedSeverities = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Info", "Warning", "Critical" };
+        var docMap = (context.Documents ?? Array.Empty<ComplianceAgentDocumentDto>())
+            .Where(d => d.DocumentId != Guid.Empty)
+            .ToDictionary(d => d.DocumentId, d => d, EqualityComparer<Guid>.Default);
+
+        foreach (var finding in assessment.DocumentFindings)
+        {
+            if (finding.DocumentId == Guid.Empty)
+            {
+                return "AI document finding has empty DocumentId.";
+            }
+
+            if (!docMap.TryGetValue(finding.DocumentId, out var contextDoc))
+            {
+                return $"AI referenced an invalid document ID '{finding.DocumentId}'.";
+            }
+
+            if (string.IsNullOrWhiteSpace(finding.Finding))
+            {
+                return "AI document finding has empty Finding.";
+            }
+
+            if (!string.Equals(finding.DocumentType, contextDoc.DocumentType, StringComparison.OrdinalIgnoreCase))
+            {
+                return "AI document type does not match the validated document metadata.";
+            }
+
+            if (string.IsNullOrWhiteSpace(finding.Severity) || !allowedSeverities.Contains(finding.Severity))
+            {
+                return $"Invalid document finding severity: '{finding.Severity}'.";
+            }
+        }
+
+        const string expectedDisclaimer = "AI-generated advisory assessment. Final export decisions must be made by an authorized Export Officer.";
+        if (!string.Equals(assessment.Disclaimer, expectedDisclaimer, StringComparison.Ordinal))
+        {
+            return "AI result disclaimer does not match the backend advisory disclaimer.";
+        }
+
+        return null;
     }
 }

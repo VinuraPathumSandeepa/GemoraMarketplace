@@ -8,4 +8,9 @@ public interface IComplianceWorkflowService
         Guid triggeredByUserId,
         Guid exportRequestId,
         CancellationToken cancellationToken = default);
+
+    Task<ComplianceWorkflowAnalysisResultDto> RunComplianceAnalysisAsync(
+        Guid triggeredByUserId,
+        Guid exportRequestId,
+        CancellationToken cancellationToken = default);
 }
