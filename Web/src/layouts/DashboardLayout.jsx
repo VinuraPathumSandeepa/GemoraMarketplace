@@ -94,6 +94,17 @@ function DashboardLayout({ children }) {
             >
               Create Listing
             </NavLink>
+
+            <NavLink
+              to="/seller/shipments"
+              className={({ isActive }) =>
+                isActive
+                  ? "gemora-nav-link active"
+                  : "gemora-nav-link"
+              }
+            >
+              My Shipments
+            </NavLink>
           </>
         );
 
@@ -128,6 +139,17 @@ function DashboardLayout({ children }) {
             >
               Dashboard
             </NavLink>
+
+            <NavLink
+              to="/buyer/shipments"
+              className={({ isActive }) =>
+                isActive
+                  ? "gemora-nav-link active"
+                  : "gemora-nav-link"
+              }
+            >
+              My Shipments
+            </NavLink>
           </>
         );
 
@@ -144,6 +166,17 @@ function DashboardLayout({ children }) {
               }
             >
               Dashboard
+            </NavLink>
+
+            <NavLink
+              to="/admin/shipments"
+              className={({ isActive }) =>
+                isActive
+                  ? "gemora-nav-link active"
+                  : "gemora-nav-link"
+              }
+            >
+              Manage Shipments
             </NavLink>
           </>
         );
