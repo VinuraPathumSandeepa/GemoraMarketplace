@@ -111,7 +111,7 @@ public class GeminiComplianceAiClient : IComplianceAiClient
                 {
                     text = new
                     {
-                        mimeType = "application/json",
+                        mimeType = "APPLICATION_JSON",
                         schema = new
                         {
                             type = "object",
@@ -233,6 +233,24 @@ public class GeminiComplianceAiClient : IComplianceAiClient
                 {
                     await Task.Delay(1000, cts.Token);
                     continue;
+                }
+
+                var (providerStatus, providerMessage) = TryExtractProviderError(rawResponseBody);
+                if (!string.IsNullOrWhiteSpace(providerStatus) || !string.IsNullOrWhiteSpace(providerMessage))
+                {
+                    _logger.LogWarning(
+                        "Gemini API returned non-success HTTP status {StatusCode} for model {Model}. Provider error status: {ProviderStatus}, message: {ProviderMessage}",
+                        (int)statusCode,
+                        model,
+                        providerStatus ?? "N/A",
+                        providerMessage ?? "N/A");
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Gemini API returned non-success HTTP status {StatusCode} for model {Model}.",
+                        (int)statusCode,
+                        model);
                 }
 
                 sw.Stop();
@@ -458,5 +476,41 @@ public class GeminiComplianceAiClient : IComplianceAiClient
         }
 
         return null;
+    }
+
+    private static (string? Status, string? Message) TryExtractProviderError(string? rawResponseBody)
+    {
+        if (string.IsNullOrWhiteSpace(rawResponseBody))
+        {
+            return (null, null);
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(rawResponseBody);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("error", out var errorElem) && errorElem.ValueKind == JsonValueKind.Object)
+            {
+                string? status = null;
+                if (errorElem.TryGetProperty("status", out var statusProp) && statusProp.ValueKind == JsonValueKind.String)
+                {
+                    status = statusProp.GetString();
+                }
+
+                string? message = null;
+                if (errorElem.TryGetProperty("message", out var msgProp) && msgProp.ValueKind == JsonValueKind.String)
+                {
+                    message = msgProp.GetString();
+                }
+
+                return (status, message);
+            }
+        }
+        catch
+        {
+            // Ignore parsing errors and fall back to status code + model logging
+        }
+
+        return (null, null);
     }
 }
