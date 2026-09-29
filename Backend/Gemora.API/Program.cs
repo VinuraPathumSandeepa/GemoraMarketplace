@@ -285,7 +285,10 @@ builder.Services.AddCors(
                         "https://localhost:5174",
                         "http://localhost:5174",
                         "http://localhost:5175",
-                        "https://localhost:5175")
+                        "https://localhost:5175",
+                        "https://gemora-marketplace-web.onrender.com",
+                        "http://gemora-marketplace-web.onrender.com"
+                )
                     .AllowAnyHeader()
                     .AllowAnyMethod();
             });
