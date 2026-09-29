@@ -42,16 +42,19 @@ builder.Services.AddDbContext<ApplicationDbContext>(
 // 2. DEPENDENCY INJECTION
 // ======================================================
 
+// Stub services for development (must be registered BEFORE services that depend on them)
+builder.Services.AddScoped<IEmailService, StubEmailService>();
+builder.Services.AddScoped<Gemora.Domain.Interfaces.IFileStorageService, StubFileStorageService>();
+builder.Services.AddScoped<Gemora.Domain.AI.IGemAiModelClient, StubGemAiModelClient>();
+builder.Services.AddScoped<Gemora.Domain.Interfaces.IGemImageReader, StubGemImageReader>();
+
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddScoped<TokenService>();
 
 
-<<<<<<< Updated upstream
-// ======================================================
 // 3. CONTROLLERS
 // ======================================================
-=======
 // ------------------------------------------------------------
 // Gem listing management
 // ------------------------------------------------------------
@@ -116,150 +119,18 @@ builder.Services.AddScoped<
 
 
 // ============================================================
-// GEMINI CONFIGURATION
-//
-// User Secrets:
-// Gemini:ApiKey
-// Gemini:Model
-//
-// Never put the real API key in appsettings.json.
-// ============================================================
-
-builder.Services.Configure<GeminiOptions>(
-    builder.Configuration.GetSection(
-        GeminiOptions.SectionName));
-
-
-// ============================================================
-// GEMINI MODEL CLIENT
-// ============================================================
-
-builder.Services.AddHttpClient<
-    IGemAiModelClient,
-    GeminiGemAnalysisClient>(
-        client =>
-        {
-            client.BaseAddress =
-                new Uri(
-                    "https://generativelanguage.googleapis.com/");
-
-            client.Timeout =
-                TimeSpan.FromSeconds(60);
-        });
-
-
-// ============================================================
-// LOCAL FILE STORAGE SERVICE
-//
-// Gemora.API
-//   └── wwwroot
-//       └── uploads
-//           ├── gem-images
-//           └── certificates
-// ============================================================
-
-builder.Services.AddScoped<IFileStorageService>(
-    serviceProvider =>
-    {
-        var environment =
-            serviceProvider
-                .GetRequiredService<
-                    IWebHostEnvironment>();
-
-        var webRootPath =
-            environment.WebRootPath;
-
-        if (string.IsNullOrWhiteSpace(
-                webRootPath))
-        {
-            webRootPath =
-                Path.Combine(
-                    environment.ContentRootPath,
-                    "wwwroot");
-        }
-
-        Directory.CreateDirectory(
-            webRootPath);
-
-        var uploadRoot =
-            Path.Combine(
-                webRootPath,
-                "uploads");
-
-        Directory.CreateDirectory(
-            uploadRoot);
-
-        return new LocalFileStorageService(
-            uploadRoot);
-    });
-
-
-// ============================================================
-// GEM IMAGE READER
-//
-// Application layer sees:
-// IGemImageReader
-//
-// Infrastructure handles:
-// - wwwroot
-// - physical file paths
-// - streams
-// - MIME types
-// - path safety
-// ============================================================
-
-builder.Services.AddScoped<IGemImageReader>(
-    serviceProvider =>
-    {
-        var environment =
-            serviceProvider
-                .GetRequiredService<
-                    IWebHostEnvironment>();
-
-        var webRootPath =
-            environment.WebRootPath;
-
-        if (string.IsNullOrWhiteSpace(
-                webRootPath))
-        {
-            webRootPath =
-                Path.Combine(
-                    environment.ContentRootPath,
-                    "wwwroot");
-        }
-
-        Directory.CreateDirectory(
-            webRootPath);
-
-        var uploadRoot =
-            Path.Combine(
-                webRootPath,
-                "uploads");
-
-        Directory.CreateDirectory(
-            uploadRoot);
-
-        return new LocalGemImageReader(
-            uploadRoot);
-    });
-
-
-// ============================================================
 // CONTROLLERS
 // ============================================================
->>>>>>> Stashed changes
+
 
 builder.Services.AddControllers();
 
 
-<<<<<<< Updated upstream
-// ======================================================
 // 4. JWT CONFIGURATION
 // ======================================================
 // JWT Key comes from .NET User Secrets.
 // Issuer and Audience come from appsettings.json.
 // ======================================================
-=======
 // ============================================================
 // CORS
 //
@@ -290,7 +161,7 @@ builder.Services.AddCors(
 // ============================================================
 // JWT AUTHENTICATION
 // ============================================================
->>>>>>> Stashed changes
+
 
 var jwtKey =
     builder.Configuration["Jwt:Key"];

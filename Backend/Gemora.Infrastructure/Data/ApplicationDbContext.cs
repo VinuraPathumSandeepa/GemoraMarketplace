@@ -11,9 +11,6 @@ public class ApplicationDbContext : DbContext
     {
     }
 
-<<<<<<< Updated upstream
-    public DbSet<User> Users { get; set; }
-=======
     public DbSet<User> Users => Set<User>();
 
     public DbSet<Order> Orders => Set<Order>();
@@ -25,7 +22,6 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<EmailVerificationCode> EmailVerificationCodes
         => Set<EmailVerificationCode>();
->>>>>>> Stashed changes
 
     public DbSet<Shipment> Shipments => Set<Shipment>();
     

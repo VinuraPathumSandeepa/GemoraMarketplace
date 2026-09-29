@@ -1,4 +1,5 @@
 using Gemora.Application.DTOs;
+using Gemora.Application.Interfaces;
 using Gemora.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

@@ -224,11 +224,11 @@ public static class DbSeeder
             var order1 = new Domain.Entities.Order
             {
                 Id = Guid.NewGuid(),
-                BuyerUserId = buyer.Id,
-                SellerUserId = seller.Id,
+                BuyerId = buyer.Id,
+                SellerId = seller.Id,
                 TotalAmount = 5000.00m,
                 Currency = "USD",
-                Status = Domain.Enums.OrderStatus.Paid,
+                Status = "Paid",
                 CreatedAt = DateTime.UtcNow.AddDays(-7),
                 UpdatedAt = DateTime.UtcNow
             };
@@ -237,11 +237,11 @@ public static class DbSeeder
             var order2 = new Domain.Entities.Order
             {
                 Id = Guid.NewGuid(),
-                BuyerUserId = buyer.Id,
-                SellerUserId = seller.Id,
+                BuyerId = buyer.Id,
+                SellerId = seller.Id,
                 TotalAmount = 3000.00m,
                 Currency = "USD",
-                Status = Domain.Enums.OrderStatus.Paid,
+                Status = "Paid",
                 CreatedAt = DateTime.UtcNow.AddDays(-6),
                 UpdatedAt = DateTime.UtcNow
             };
@@ -250,11 +250,11 @@ public static class DbSeeder
             var order3 = new Domain.Entities.Order
             {
                 Id = Guid.NewGuid(),
-                BuyerUserId = buyer.Id,
-                SellerUserId = seller.Id,
+                BuyerId = buyer.Id,
+                SellerId = seller.Id,
                 TotalAmount = 2000.00m,
                 Currency = "USD",
-                Status = Domain.Enums.OrderStatus.Pending,
+                Status = "Pending",
                 CreatedAt = DateTime.UtcNow.AddDays(-1),
                 UpdatedAt = DateTime.UtcNow
             };
@@ -273,7 +273,7 @@ public static class DbSeeder
         {
             // Get the first paid order for shipment 1
             var paidOrder1 = await context.Orders
-                .Where(o => o.Status == Domain.Enums.OrderStatus.Paid)
+                .Where(o => o.Status == "Paid")
                 .OrderBy(o => o.CreatedAt)
                 .FirstOrDefaultAsync();
 
@@ -282,19 +282,15 @@ public static class DbSeeder
             {
                 Id = Guid.NewGuid(),
                 OrderId = paidOrder1?.Id ?? Guid.NewGuid(),
-                ShipmentNumber = "SHP-2026-001",
-                SellerUserId = seller.Id,
-                BuyerUserId = buyer.Id,
-                Origin = "Colombo, Sri Lanka",
-                Destination = "Kandy, Sri Lanka",
+                SellerId = seller.Id,
+                BuyerId = buyer.Id,
+                OriginAddress = "Colombo, Sri Lanka",
+                DestinationAddress = "Kandy, Sri Lanka",
                 DeclaredValue = paidOrder1?.TotalAmount ?? 5000.00m,
                 Currency = paidOrder1?.Currency ?? "USD",
                 PackageDescription = "2.5 carat blue sapphire with certificate",
-                SelectedService = "Express Courier",
-                CourierName = "DHL Express",
-                ExternalShipmentReference = null,
-                TrackingNumber = null,
-                Status = Domain.Enums.ShipmentStatus.Planning,
+                PreferredService = "Express Courier",
+                Status = "Planning",
                 CreatedAt = DateTime.UtcNow.AddDays(-5),
                 UpdatedAt = DateTime.UtcNow
             };
@@ -304,19 +300,16 @@ public static class DbSeeder
             {
                 Id = Guid.NewGuid(),
                 OrderId = Guid.NewGuid(),
-                ShipmentNumber = "SHP-2026-002",
-                SellerUserId = seller.Id,
-                BuyerUserId = buyer.Id,
-                Origin = "Colombo, Sri Lanka",
-                Destination = "Galle, Sri Lanka",
+                SellerId = seller.Id,
+                BuyerId = buyer.Id,
+                OriginAddress = "Colombo, Sri Lanka",
+                DestinationAddress = "Galle, Sri Lanka",
                 DeclaredValue = 3000.00m,
                 Currency = "USD",
                 PackageDescription = "1.8 carat ruby ring",
-                SelectedService = "Standard Post",
-                CourierName = "Sri Lanka Post",
-                ExternalShipmentReference = "EXT-REF-002",
+                PreferredService = "Standard Post",
                 TrackingNumber = "TRK-987654321",
-                Status = Domain.Enums.ShipmentStatus.InTransit,
+                Status = "InTransit",
                 CreatedAt = DateTime.UtcNow.AddDays(-3),
                 UpdatedAt = DateTime.UtcNow
             };
@@ -333,34 +326,30 @@ public static class DbSeeder
             {
                 Id = Guid.NewGuid(),
                 ShipmentId = shipment1.Id,
-                RiskLevel = Domain.Enums.RiskLevel.Medium,
+                RiskLevel = "Medium",
                 RecommendedServiceType = "Express Courier with Insurance",
                 InsuranceRecommended = true,
-                RecommendedCoverage = 5000.00m,
-                Requirements = "[\"Certificate of Authenticity\", \"Export Permit\"]",
+                RecommendedCoverageAmount = 5000.00m,
+                HandlingRequirements = "[\"Certificate of Authenticity\", \"Export Permit\"]",
                 Warnings = "[\"Ensure proper packaging for fragile items\", \"High value requires signature on delivery\"]",
-                GeneratedAt = DateTime.UtcNow.AddDays(-5),
-                Status = "PendingAdminApproval",
-                ApprovedAt = null,
-                ApprovedByUserId = null,
-                RejectionReason = null
+                CreatedAt = DateTime.UtcNow.AddDays(-5),
+                IsApproved = false
             };
 
             var plan2 = new ShippingPlan
             {
                 Id = Guid.NewGuid(),
                 ShipmentId = shipment2.Id,
-                RiskLevel = Domain.Enums.RiskLevel.Low,
+                RiskLevel = "Low",
                 RecommendedServiceType = "Standard Post with Basic Insurance",
                 InsuranceRecommended = true,
-                RecommendedCoverage = 3000.00m,
-                Requirements = "[\"Invoice\", \"Packing List\"]",
+                RecommendedCoverageAmount = 3000.00m,
+                HandlingRequirements = "[\"Invoice\", \"Packing List\"]",
                 Warnings = "[]",
-                GeneratedAt = DateTime.UtcNow.AddDays(-3),
-                Status = "Approved",
-                ApprovedAt = DateTime.UtcNow.AddDays(-2),
-                ApprovedByUserId = seller.Id,
-                RejectionReason = null
+                CreatedAt = DateTime.UtcNow.AddDays(-3),
+                IsApproved = true,
+                ApprovedBy = seller.Id,
+                ApprovedAt = DateTime.UtcNow.AddDays(-2)
             };
 
             context.ShippingPlans.AddRange(plan1, plan2);
@@ -377,34 +366,31 @@ public static class DbSeeder
                 {
                     Id = Guid.NewGuid(),
                     ShipmentId = shipment2.Id,
-                    Status = "Created",
-                    LocationText = "Colombo",
-                    ExternalEventCode = null,
+                    EventType = "Created",
+                    Location = "Colombo",
                     Description = "Shipment created and label generated",
-                    OccurredAt = DateTime.UtcNow.AddDays(-3),
-                    RecordedAt = DateTime.UtcNow.AddDays(-3)
+                    EventTimestamp = DateTime.UtcNow.AddDays(-3),
+                    CreatedAt = DateTime.UtcNow.AddDays(-3)
                 },
                 new ShipmentTrackingEvent
                 {
                     Id = Guid.NewGuid(),
                     ShipmentId = shipment2.Id,
-                    Status = "Picked Up",
-                    LocationText = "Colombo Distribution Center",
-                    ExternalEventCode = null,
+                    EventType = "Picked Up",
+                    Location = "Colombo Distribution Center",
                     Description = "Package picked up by courier",
-                    OccurredAt = DateTime.UtcNow.AddDays(-2.5),
-                    RecordedAt = DateTime.UtcNow.AddDays(-2.5)
+                    EventTimestamp = DateTime.UtcNow.AddDays(-2.5),
+                    CreatedAt = DateTime.UtcNow.AddDays(-2.5)
                 },
                 new ShipmentTrackingEvent
                 {
                     Id = Guid.NewGuid(),
                     ShipmentId = shipment2.Id,
-                    Status = "In Transit",
-                    LocationText = "En Route to Galle",
-                    ExternalEventCode = null,
+                    EventType = "In Transit",
+                    Location = "En Route to Galle",
                     Description = "Package in transit to destination",
-                    OccurredAt = DateTime.UtcNow.AddDays(-1),
-                    RecordedAt = DateTime.UtcNow.AddDays(-1)
+                    EventTimestamp = DateTime.UtcNow.AddDays(-1),
+                    CreatedAt = DateTime.UtcNow.AddDays(-1)
                 }
             };
 
@@ -420,13 +406,11 @@ public static class DbSeeder
             {
                 Id = Guid.NewGuid(),
                 ShipmentId = shipment2.Id,
-                Provider = "Mock Insurance Provider",
-                PolicyReference = "INS-2026-001",
-                DeclaredValue = 3000.00m,
+                ProviderName = "Mock Insurance Provider",
+                PolicyNumber = "INS-2026-001",
                 CoverageAmount = 3000.00m,
-                CoverageType = Domain.Enums.InsuranceCoverageType.Standard,
-                Status = Domain.Enums.InsuranceStatus.Active,
-                PremiumAmount = 45.00m,
+                CoverageType = "Standard",
+                Status = "Active",
                 Currency = "USD",
                 CreatedAt = DateTime.UtcNow.AddDays(-3),
                 UpdatedAt = DateTime.UtcNow
