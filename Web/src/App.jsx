@@ -8,14 +8,17 @@ import {
 // PUBLIC PAGES
 // ============================================================
 
+import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import VerifyEmail from "./pages/VerifyEmail";
 
 // ============================================================
-// GENERAL DASHBOARD
+// GENERAL DASHBOARD / SHARED PAGES
 // ============================================================
 
 import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
 
 // ============================================================
 // ROLE DASHBOARDS
@@ -37,13 +40,11 @@ import GemListingDetails from "./pages/seller/GemListingDetails";
 import EditGemListing from "./pages/seller/EditGemListing";
 
 // ============================================================
-// COMPONENT 1 — GEMOLOGIST PAGES
-//
-// We will enable these after finishing/testing the Seller UI.
+// COMPONENT 1 — GEMOLOGIST VERIFICATION PAGES
 // ============================================================
 
-// import VerificationQueue from "./pages/gemologist/VerificationQueue";
-// import VerificationDetails from "./pages/gemologist/VerificationDetails";
+import VerificationQueue from "./pages/gemologist/VerificationQueue";
+import VerificationDetails from "./pages/gemologist/VerificationDetails";
 
 // ============================================================
 // ROUTE PROTECTION
@@ -52,28 +53,21 @@ import EditGemListing from "./pages/seller/EditGemListing";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleProtectedRoute from "./routes/RoleProtectedRoute";
 
-
 function App() {
   return (
     <Routes>
 
       {/* ======================================================
-          HOME
+          PUBLIC HOME
           ====================================================== */}
 
       <Route
         path="/"
-        element={
-          <Navigate
-            to="/login"
-            replace
-          />
-        }
+        element={<Home />}
       />
 
-
       {/* ======================================================
-          PUBLIC ROUTES
+          PUBLIC AUTH ROUTES
           ====================================================== */}
 
       <Route
@@ -86,12 +80,17 @@ function App() {
         element={<Register />}
       />
 
+      <Route
+        path="/verify-email"
+        element={<VerifyEmail />}
+      />
 
       {/* ======================================================
           GENERAL DASHBOARD
 
-          After login, Dashboard.jsx checks the role and
-          redirects the user to the correct role dashboard.
+          After login:
+          Dashboard.jsx checks the logged-in user's role
+          and redirects them to the appropriate dashboard.
           ====================================================== */}
 
       <Route
@@ -103,6 +102,25 @@ function App() {
         }
       />
 
+      {/* ======================================================
+          SHARED USER PROFILE
+
+          Available to every authenticated role:
+          - Buyer
+          - Seller
+          - Gemologist
+          - ExportOfficer
+          - Admin
+          ====================================================== */}
+
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
 
       {/* ======================================================
           BUYER DASHBOARD
@@ -119,7 +137,6 @@ function App() {
         }
       />
 
-
       {/* ======================================================
           SELLER DASHBOARD
           ====================================================== */}
@@ -134,7 +151,6 @@ function App() {
           </RoleProtectedRoute>
         }
       />
-
 
       {/* ======================================================
           COMPONENT 1 — SELLER: MY GEM LISTINGS
@@ -154,7 +170,6 @@ function App() {
         }
       />
 
-
       {/* ======================================================
           COMPONENT 1 — SELLER: CREATE GEM LISTING
 
@@ -173,19 +188,17 @@ function App() {
         }
       />
 
-
       {/* ======================================================
           COMPONENT 1 — SELLER: EDIT GEM LISTING
 
           Example:
           /seller/listings/10/edit
 
-          Editing is permitted by the UI only for:
-
+          Editing is intended for:
           - Draft
           - ChangesRequested
 
-          Backend rules remain the final security enforcement.
+          Backend rules remain the final enforcement.
           ====================================================== */}
 
       <Route
@@ -199,7 +212,6 @@ function App() {
         }
       />
 
-
       {/* ======================================================
           COMPONENT 1 — SELLER: GEM LISTING DETAILS
 
@@ -207,13 +219,12 @@ function App() {
           /seller/listings/10
 
           Supports:
-
           - View listing information
           - View gemstone image
-          - Upload/replace gemstone image
+          - Upload / replace image
           - View certificate
-          - Upload/replace certificate
-          - Navigate to Edit
+          - Upload / replace certificate
+          - Edit listing
           - Submit for verification
           - Resubmit after ChangesRequested
           - Delete Draft
@@ -230,6 +241,85 @@ function App() {
         }
       />
 
+      {/* ======================================================
+          GEMOLOGIST DASHBOARD
+          ====================================================== */}
+
+      <Route
+        path="/gemologist"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Gemologist"]}
+          >
+            <GemologistDashboard />
+          </RoleProtectedRoute>
+        }
+      />
+
+      {/* ======================================================
+          COMPONENT 1 — GEMOLOGIST VERIFICATION QUEUE
+
+          URL:
+          /gemologist/verifications
+
+          Supports:
+          - Pending verification queue
+          - Search
+          - Sort
+          - Evidence indicators
+          - AI status indicators
+          - Open verification
+          ====================================================== */}
+
+      <Route
+        path="/gemologist/verifications"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Gemologist"]}
+          >
+            <VerificationQueue />
+          </RoleProtectedRoute>
+        }
+      />
+
+      {/* ======================================================
+          COMPONENT 1 — GEMOLOGIST VERIFICATION DETAILS
+
+          Example:
+          /gemologist/verifications/5
+
+          Supports:
+          - Seller information
+          - Gemstone details
+          - Gemstone image evidence
+          - Certificate evidence
+          - AI-assisted analysis
+          - AI suggested gem type
+          - Confidence score
+          - AI findings
+          - Visual observations
+          - Risk flags
+          - Validation issues
+          - Agent execution steps
+          - Review notes
+          - Approve
+          - Request Changes
+          - Reject
+
+          AI remains advisory.
+          Final decision belongs to the Gemologist.
+          ====================================================== */}
+
+      <Route
+        path="/gemologist/verifications/:id"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Gemologist"]}
+          >
+            <VerificationDetails />
+          </RoleProtectedRoute>
+        }
+      />
 
       {/* ======================================================
           ADMIN DASHBOARD
@@ -246,51 +336,6 @@ function App() {
         }
       />
 
-
-      {/* ======================================================
-          GEMOLOGIST DASHBOARD
-          ====================================================== */}
-
-      <Route
-        path="/gemologist"
-        element={
-          <RoleProtectedRoute
-            allowedRoles={["Gemologist"]}
-          >
-            <GemologistDashboard />
-          </RoleProtectedRoute>
-        }
-      />
-
-
-      {/* ======================================================
-          COMPONENT 1 — GEMOLOGIST VERIFICATION
-
-          Next phase:
-
-          /gemologist/verifications
-              → VerificationQueue
-
-          /gemologist/verifications/:id
-              → VerificationDetails
-
-          These will provide:
-
-          - Pending verification queue
-          - Seller evidence
-          - Gemstone image
-          - Certificate information
-          - Run AI analysis
-          - AI visual observations
-          - AI risk flags
-          - AI suggested gem type
-          - Confidence score
-          - Approve
-          - Request Changes
-          - Reject
-          ====================================================== */}
-
-
       {/* ======================================================
           EXPORT OFFICER DASHBOARD
           ====================================================== */}
@@ -306,12 +351,11 @@ function App() {
         }
       />
 
-
       {/* ======================================================
           UNKNOWN ROUTES
 
-          Invalid URLs redirect through /dashboard.
-          Dashboard.jsx then handles role-based redirection.
+          Unknown URLs redirect through /dashboard.
+          Dashboard.jsx then performs role-based routing.
           ====================================================== */}
 
       <Route
@@ -327,6 +371,5 @@ function App() {
     </Routes>
   );
 }
-
 
 export default App;

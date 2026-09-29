@@ -1,95 +1,180 @@
 import { useState } from "react";
 import {
   Link,
+  useLocation,
   useNavigate,
 } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 
 function Login() {
-  // ==========================================
-  // STATE
-  // ==========================================
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
   const { login } = useAuth();
+
   const navigate = useNavigate();
+  const location = useLocation();
 
+  const verifiedEmail =
+    location.state?.email || "";
 
-  // ==========================================
+  const [email, setEmail] =
+    useState(verifiedEmail);
+
+  const [password, setPassword] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  const [success, setSuccess] =
+    useState(
+      location.state?.verified
+        ? "Email verified successfully. You can now sign in."
+        : ""
+    );
+
+  const [submitting, setSubmitting] =
+    useState(false);
+
+  // ============================================================
   // HANDLE LOGIN
-  // ==========================================
+  // ============================================================
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     setError("");
+    setSuccess("");
+
+    if (!email.trim()) {
+      setError(
+        "Please enter your email address."
+      );
+
+      return;
+    }
+
+    if (!password) {
+      setError(
+        "Please enter your password."
+      );
+
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      // Login using AuthContext
-      const user = await login(
-        email,
-        password
-      );
+      const user =
+        await login(
+          email
+            .trim()
+            .toLowerCase(),
+          password
+        );
 
       console.log(
         "Logged in user:",
         user
       );
 
-      // Redirect after successful login
-      navigate("/dashboard");
-
+      navigate(
+        "/dashboard",
+        {
+          replace: true,
+        }
+      );
     } catch (error) {
       console.error(
         "Login failed:",
         error
       );
 
+      const errorCode =
+        error.response?.data?.errorCode;
+
+      if (
+        errorCode ===
+        "EMAIL_NOT_VERIFIED"
+      ) {
+        const normalizedEmail =
+          email
+            .trim()
+            .toLowerCase();
+
+        sessionStorage.setItem(
+          "gemora_pending_verification_email",
+          normalizedEmail
+        );
+
+        setError(
+          "Your email has not been verified yet. Verify your email before signing in."
+        );
+
+        return;
+      }
+
       setError(
         error.response?.data?.message ||
           "Invalid email or password."
       );
-
     } finally {
       setSubmitting(false);
     }
   };
 
-
-  // ==========================================
+  // ============================================================
   // PAGE
-  // ==========================================
+  // ============================================================
 
   return (
     <div className="login-page">
 
       <div className="login-card">
 
-        {/* GEMORA TITLE */}
+        {/* BRAND */}
 
-        <h1>
-          Gemora
-        </h1>
+        <div className="auth-brand">
+          <h1>
+            Gemora
+          </h1>
 
-        <p className="login-subtitle">
-          Gem Marketplace Management System
-        </p>
-
-
-        {/* LOGIN TITLE */}
-
-        <h2>
-          Sign In
-        </h2>
+          <p>
+            Secure Gemstone Marketplace
+          </p>
+        </div>
 
 
-        {/* ERROR MESSAGE */}
+        {/* HEADING */}
+
+        <div className="auth-heading">
+
+          <span>
+            WELCOME BACK
+          </span>
+
+          <h2>
+            Sign in to Gemora
+          </h2>
+
+          <p>
+            Access your marketplace workspace,
+            gemstone listings, and verification
+            activities securely.
+          </p>
+
+        </div>
+
+
+        {/* SUCCESS */}
+
+        {success && (
+          <div className="success-message">
+            {success}
+          </div>
+        )}
+
+
+        {/* ERROR */}
 
         {error && (
           <div className="error-message">
@@ -113,14 +198,17 @@ function Login() {
             <input
               id="email"
               type="email"
-              placeholder="Enter your email"
+              placeholder="you@example.com"
               value={email}
-              onChange={(event) =>
+              onChange={(event) => {
                 setEmail(
                   event.target.value
-                )
-              }
+                );
+
+                setError("");
+              }}
               required
+              autoComplete="email"
             />
 
           </div>
@@ -139,42 +227,92 @@ function Login() {
               type="password"
               placeholder="Enter your password"
               value={password}
-              onChange={(event) =>
+              onChange={(event) => {
                 setPassword(
                   event.target.value
-                )
-              }
+                );
+
+                setError("");
+              }}
               required
+              autoComplete="current-password"
             />
 
           </div>
 
 
-          {/* LOGIN BUTTON */}
+          {/* SIGN IN BUTTON */}
 
           <button
             type="submit"
             disabled={submitting}
+            className="auth-primary-button"
           >
-
             {submitting
-              ? "Signing in..."
-              : "Sign In"}
-
+              ? "Signing In..."
+              : "Sign In →"}
           </button>
 
         </form>
 
 
-        {/* REGISTER LINK */}
+        {/* UNVERIFIED EMAIL HELP */}
 
-        <p>
-          Don't have an account?{" "}
+        {error &&
+          error
+            .toLowerCase()
+            .includes("verify") && (
+            <div className="login-verification-help">
 
-          <Link to="/register">
-            Create Account
-          </Link>
-        </p>
+              <p>
+                Still waiting to verify
+                your account?
+              </p>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const normalizedEmail =
+                    email
+                      .trim()
+                      .toLowerCase();
+
+                  sessionStorage.setItem(
+                    "gemora_pending_verification_email",
+                    normalizedEmail
+                  );
+
+                  navigate(
+                    "/verify-email",
+                    {
+                      state: {
+                        email:
+                          normalizedEmail,
+                      },
+                    }
+                  );
+                }}
+              >
+                Go to Email Verification →
+              </button>
+
+            </div>
+          )}
+
+
+        {/* FOOTER */}
+
+        <div className="auth-footer">
+
+          <p>
+            Don't have an account?{" "}
+
+            <Link to="/register">
+              Create Account
+            </Link>
+          </p>
+
+        </div>
 
       </div>
 
