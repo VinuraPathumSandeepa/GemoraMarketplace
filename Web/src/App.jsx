@@ -14,10 +14,11 @@ import Register from "./pages/Register";
 import VerifyEmail from "./pages/VerifyEmail";
 
 // ============================================================
-// GENERAL DASHBOARD
+// GENERAL DASHBOARD / SHARED PAGES
 // ============================================================
 
 import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
 
 // ============================================================
 // ROLE DASHBOARDS
@@ -52,7 +53,6 @@ import VerificationDetails from "./pages/gemologist/VerificationDetails";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleProtectedRoute from "./routes/RoleProtectedRoute";
 
-
 function App() {
   return (
     <Routes>
@@ -65,7 +65,6 @@ function App() {
         path="/"
         element={<Home />}
       />
-
 
       {/* ======================================================
           PUBLIC AUTH ROUTES
@@ -86,7 +85,6 @@ function App() {
         element={<VerifyEmail />}
       />
 
-
       {/* ======================================================
           GENERAL DASHBOARD
 
@@ -104,6 +102,25 @@ function App() {
         }
       />
 
+      {/* ======================================================
+          SHARED USER PROFILE
+
+          Available to every authenticated role:
+          - Buyer
+          - Seller
+          - Gemologist
+          - ExportOfficer
+          - Admin
+          ====================================================== */}
+
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
 
       {/* ======================================================
           BUYER DASHBOARD
@@ -120,7 +137,6 @@ function App() {
         }
       />
 
-
       {/* ======================================================
           SELLER DASHBOARD
           ====================================================== */}
@@ -135,7 +151,6 @@ function App() {
           </RoleProtectedRoute>
         }
       />
-
 
       {/* ======================================================
           COMPONENT 1 — SELLER: MY GEM LISTINGS
@@ -155,7 +170,6 @@ function App() {
         }
       />
 
-
       {/* ======================================================
           COMPONENT 1 — SELLER: CREATE GEM LISTING
 
@@ -173,7 +187,6 @@ function App() {
           </RoleProtectedRoute>
         }
       />
-
 
       {/* ======================================================
           COMPONENT 1 — SELLER: EDIT GEM LISTING
@@ -198,7 +211,6 @@ function App() {
           </RoleProtectedRoute>
         }
       />
-
 
       {/* ======================================================
           COMPONENT 1 — SELLER: GEM LISTING DETAILS
@@ -229,7 +241,6 @@ function App() {
         }
       />
 
-
       {/* ======================================================
           GEMOLOGIST DASHBOARD
           ====================================================== */}
@@ -244,7 +255,6 @@ function App() {
           </RoleProtectedRoute>
         }
       />
-
 
       {/* ======================================================
           COMPONENT 1 — GEMOLOGIST VERIFICATION QUEUE
@@ -271,7 +281,6 @@ function App() {
           </RoleProtectedRoute>
         }
       />
-
 
       {/* ======================================================
           COMPONENT 1 — GEMOLOGIST VERIFICATION DETAILS
@@ -312,7 +321,6 @@ function App() {
         }
       />
 
-
       {/* ======================================================
           ADMIN DASHBOARD
           ====================================================== */}
@@ -328,7 +336,6 @@ function App() {
         }
       />
 
-
       {/* ======================================================
           EXPORT OFFICER DASHBOARD
           ====================================================== */}
@@ -343,7 +350,6 @@ function App() {
           </RoleProtectedRoute>
         }
       />
-
 
       {/* ======================================================
           UNKNOWN ROUTES

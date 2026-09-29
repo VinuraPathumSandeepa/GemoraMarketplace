@@ -19351,3 +19351,76 @@ article:nth-child(3) {
   }
 
 }
+/* ============================================================
+   SHARED PROFILE MENU
+   ============================================================ */
+
+.gemora-dashboard-avatar {
+  flex-shrink: 0;
+
+  border:
+    1px solid
+    rgba(217, 188, 123, 0.42);
+
+  box-sizing: border-box;
+}
+
+.gemora-dashboard-avatar.gemora-user-avatar-image {
+  object-fit: cover;
+}
+
+.gemora-profile-menu-action {
+  width: 100%;
+
+  border: 0;
+
+  padding: 14px 20px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  background: transparent;
+
+  color: #213d35;
+
+  cursor: pointer;
+
+  font: inherit;
+
+  text-align: left;
+
+  transition:
+    background 0.2s ease;
+}
+
+.gemora-profile-menu-action:hover {
+  background: #f6f2e9;
+}
+
+.gemora-profile-menu-action > span {
+  color: #b9914b;
+
+  font-size: 18px;
+}
+
+.gemora-profile-menu-action > div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 2px;
+}
+
+.gemora-profile-menu-action strong {
+  color: #203c34;
+
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.gemora-profile-menu-action small {
+  color: #7b847f;
+
+  font-size: 10px;
+}
