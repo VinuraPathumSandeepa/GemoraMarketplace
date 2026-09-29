@@ -1,9 +1,13 @@
 using System.Security.Cryptography;
+
 using Gemora.Application.DTOs;
 using Gemora.Application.Interfaces;
+
 using Gemora.Domain.Constants;
 using Gemora.Domain.Entities;
+
 using Gemora.Infrastructure.Data;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Gemora.Application.Services;
@@ -18,6 +22,11 @@ public class AuthService : IAuthService
     private const int OtpResendCooldownSeconds = 60;
     private const int MaxOtpAttempts = 5;
 
+
+    // ============================================================
+    // CONSTRUCTOR
+    // ============================================================
+
     public AuthService(
         ApplicationDbContext context,
         TokenService tokenService,
@@ -28,25 +37,41 @@ public class AuthService : IAuthService
         _emailService = emailService;
     }
 
+
     // ============================================================
     // REGISTER
     // ============================================================
 
-    public async Task<AuthResult> Register(RegisterDto dto)
+    public async Task<AuthResult> Register(
+        RegisterDto dto)
     {
-        var fullName = dto.FullName.Trim();
-        var email = dto.Email.Trim().ToLowerInvariant();
-        var role = dto.Role.Trim();
+        var fullName =
+            dto.FullName.Trim();
 
-        var phoneNumber = dto.PhoneNumber.Trim();
+        var email =
+            dto.Email
+                .Trim()
+                .ToLowerInvariant();
 
-        var countryCode = dto.CountryCode
-            .Trim()
-            .ToUpperInvariant();
+        var role =
+            dto.Role.Trim();
 
-        var region = dto.Region.Trim();
+        var phoneNumber =
+            dto.PhoneNumber.Trim();
 
-        // Only Buyer and Seller can register publicly.
+        var countryCode =
+            dto.CountryCode
+                .Trim()
+                .ToUpperInvariant();
+
+        var region =
+            dto.Region.Trim();
+
+
+        // --------------------------------------------------------
+        // Only Buyer and Seller can register publicly
+        // --------------------------------------------------------
+
         if (!role.Equals(
                 UserRoles.Buyer,
                 StringComparison.OrdinalIgnoreCase) &&
@@ -57,112 +82,167 @@ public class AuthService : IAuthService
             return new AuthResult
             {
                 Success = false,
+
                 Message =
                     "Only Buyer or Seller registration is allowed.",
-                ErrorCode = "INVALID_ROLE"
+
+                ErrorCode =
+                    "INVALID_ROLE"
             };
         }
 
-        // Normalize role.
-        role = role.Equals(
-            UserRoles.Buyer,
-            StringComparison.OrdinalIgnoreCase)
-            ? UserRoles.Buyer
-            : UserRoles.Seller;
 
         // --------------------------------------------------------
-        // Check duplicate email
+        // Normalize role
         // --------------------------------------------------------
 
-        var emailExists = await _context.Users
-            .AnyAsync(u => u.Email.ToLower() == email);
+        role =
+            role.Equals(
+                UserRoles.Buyer,
+                StringComparison.OrdinalIgnoreCase)
+                ? UserRoles.Buyer
+                : UserRoles.Seller;
+
+
+        // --------------------------------------------------------
+        // Duplicate email check
+        // --------------------------------------------------------
+
+        var emailExists =
+            await _context.Users
+                .AnyAsync(
+                    u =>
+                        u.Email.ToLower() ==
+                        email
+                );
+
 
         if (emailExists)
         {
             return new AuthResult
             {
                 Success = false,
-                Message = "Email already registered.",
-                ErrorCode = "EMAIL_EXISTS"
+
+                Message =
+                    "Email already registered.",
+
+                ErrorCode =
+                    "EMAIL_EXISTS"
             };
         }
 
+
         // --------------------------------------------------------
-        // Hash password
+        // Password hashing
         // --------------------------------------------------------
 
         var passwordHash =
-            BCrypt.Net.BCrypt.HashPassword(dto.Password);
+            BCrypt.Net.BCrypt.HashPassword(
+                dto.Password
+            );
+
 
         // --------------------------------------------------------
-        // Create unverified user
+        // Create user
         // --------------------------------------------------------
 
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
+        var user =
+            new User
+            {
+                Id =
+                    Guid.NewGuid(),
 
-            FullName = fullName,
+                FullName =
+                    fullName,
 
-            Email = email,
+                Email =
+                    email,
 
-            PasswordHash = passwordHash,
+                PasswordHash =
+                    passwordHash,
 
-            Role = role,
+                Role =
+                    role,
 
-            PhoneNumber = phoneNumber,
+                PhoneNumber =
+                    phoneNumber,
 
-            CountryCode = countryCode,
+                CountryCode =
+                    countryCode,
 
-            Region = region,
+                Region =
+                    region,
 
-            IsEmailVerified = false,
+                ProfileImageUrl =
+                    null,
 
-            EmailVerifiedAt = null,
+                IsEmailVerified =
+                    false,
 
-            CreatedAt = DateTime.UtcNow
-        };
+                EmailVerifiedAt =
+                    null,
+
+                CreatedAt =
+                    DateTime.UtcNow
+            };
+
 
         _context.Users.Add(user);
 
+
         // --------------------------------------------------------
-        // Generate 6-digit OTP
+        // Generate secure OTP
         // --------------------------------------------------------
 
-        var verificationCode = GenerateOtp();
+        var verificationCode =
+            GenerateOtp();
 
-        // Never store the real OTP in PostgreSQL.
+
         var codeHash =
             BCrypt.Net.BCrypt.HashPassword(
                 verificationCode
             );
 
-        var verification = new EmailVerificationCode
-        {
-            Id = Guid.NewGuid(),
 
-            UserId = user.Id,
+        var verification =
+            new EmailVerificationCode
+            {
+                Id =
+                    Guid.NewGuid(),
 
-            CodeHash = codeHash,
+                UserId =
+                    user.Id,
 
-            ExpiresAt = DateTime.UtcNow
-                .AddMinutes(OtpExpiryMinutes),
+                CodeHash =
+                    codeHash,
 
-            AttemptCount = 0,
+                ExpiresAt =
+                    DateTime.UtcNow
+                        .AddMinutes(
+                            OtpExpiryMinutes
+                        ),
 
-            UsedAt = null,
+                AttemptCount =
+                    0,
 
-            CreatedAt = DateTime.UtcNow
-        };
+                UsedAt =
+                    null,
+
+                CreatedAt =
+                    DateTime.UtcNow
+            };
+
 
         _context.EmailVerificationCodes.Add(
             verification
         );
 
+
         await _context.SaveChangesAsync();
 
+
         // --------------------------------------------------------
-        // Send OTP email
+        // Send verification email
         // --------------------------------------------------------
 
         try
@@ -176,27 +256,28 @@ public class AuthService : IAuthService
         }
         catch
         {
-            /*
-             * Registration exists, but email delivery failed.
-             *
-             * The user can later use the resend endpoint.
-             */
             return new AuthResult
             {
                 Success = true,
+
                 Message =
                     "Your account was created, but we could not send the verification email. Please request a new verification code.",
-                ErrorCode = "EMAIL_DELIVERY_FAILED"
+
+                ErrorCode =
+                    "EMAIL_DELIVERY_FAILED"
             };
         }
+
 
         return new AuthResult
         {
             Success = true,
+
             Message =
                 "Registration successful. A 6-digit verification code has been sent to your email."
         };
     }
+
 
     // ============================================================
     // VERIFY EMAIL
@@ -206,58 +287,88 @@ public class AuthService : IAuthService
         VerifyEmailDto dto)
     {
         var email =
-            dto.Email.Trim().ToLowerInvariant();
+            dto.Email
+                .Trim()
+                .ToLowerInvariant();
 
-        var code = dto.Code.Trim();
+        var code =
+            dto.Code.Trim();
 
-        var user = await _context.Users
-            .FirstOrDefaultAsync(
-                u => u.Email.ToLower() == email
-            );
+
+        var user =
+            await _context.Users
+                .FirstOrDefaultAsync(
+                    u =>
+                        u.Email.ToLower() ==
+                        email
+                );
+
 
         if (user == null)
         {
             return new AuthResult
             {
                 Success = false,
+
                 Message =
                     "The verification code is invalid or has expired.",
-                ErrorCode = "INVALID_OTP"
+
+                ErrorCode =
+                    "INVALID_OTP"
             };
         }
 
-        // Already verified.
+
+        // --------------------------------------------------------
+        // Already verified
+        // --------------------------------------------------------
+
         if (user.IsEmailVerified)
         {
             return new AuthResult
             {
                 Success = true,
+
                 Message =
                     "Your email address is already verified."
             };
         }
 
+
         var verification =
-            await _context.EmailVerificationCodes
-                .Where(v =>
-                    v.UserId == user.Id &&
-                    v.UsedAt == null)
-                .OrderByDescending(v => v.CreatedAt)
+            await _context
+                .EmailVerificationCodes
+                .Where(
+                    v =>
+                        v.UserId ==
+                            user.Id &&
+                        v.UsedAt ==
+                            null
+                )
+                .OrderByDescending(
+                    v =>
+                        v.CreatedAt
+                )
                 .FirstOrDefaultAsync();
+
 
         if (verification == null)
         {
             return new AuthResult
             {
                 Success = false,
+
                 Message =
                     "No active verification code was found. Please request a new code.",
-                ErrorCode = "OTP_NOT_FOUND"
+
+                ErrorCode =
+                    "OTP_NOT_FOUND"
             };
         }
 
+
         // --------------------------------------------------------
-        // Check expiry
+        // Expiry
         // --------------------------------------------------------
 
         if (verification.ExpiresAt <
@@ -266,14 +377,18 @@ public class AuthService : IAuthService
             return new AuthResult
             {
                 Success = false,
+
                 Message =
                     "Your verification code has expired. Please request a new code.",
-                ErrorCode = "OTP_EXPIRED"
+
+                ErrorCode =
+                    "OTP_EXPIRED"
             };
         }
 
+
         // --------------------------------------------------------
-        // Check attempt limit
+        // Attempt limit
         // --------------------------------------------------------
 
         if (verification.AttemptCount >=
@@ -282,14 +397,18 @@ public class AuthService : IAuthService
             return new AuthResult
             {
                 Success = false,
+
                 Message =
                     "Too many incorrect verification attempts. Please request a new code.",
-                ErrorCode = "OTP_ATTEMPTS_EXCEEDED"
+
+                ErrorCode =
+                    "OTP_ATTEMPTS_EXCEEDED"
             };
         }
 
+
         // --------------------------------------------------------
-        // Verify hash
+        // Verify OTP
         // --------------------------------------------------------
 
         var codeValid =
@@ -298,23 +417,30 @@ public class AuthService : IAuthService
                 verification.CodeHash
             );
 
+
         if (!codeValid)
         {
             verification.AttemptCount++;
 
-            await _context.SaveChangesAsync();
+
+            await _context
+                .SaveChangesAsync();
+
 
             var attemptsRemaining =
                 MaxOtpAttempts -
                 verification.AttemptCount;
 
+
             return new AuthResult
             {
                 Success = false,
+
                 Message =
                     attemptsRemaining > 0
                         ? $"Incorrect verification code. {attemptsRemaining} attempt(s) remaining."
                         : "Too many incorrect verification attempts. Please request a new code.",
+
                 ErrorCode =
                     attemptsRemaining > 0
                         ? "INVALID_OTP"
@@ -322,11 +448,13 @@ public class AuthService : IAuthService
             };
         }
 
+
         // --------------------------------------------------------
-        // Verification successful
+        // Success
         // --------------------------------------------------------
 
-        user.IsEmailVerified = true;
+        user.IsEmailVerified =
+            true;
 
         user.EmailVerifiedAt =
             DateTime.UtcNow;
@@ -334,15 +462,20 @@ public class AuthService : IAuthService
         verification.UsedAt =
             DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+
+        await _context
+            .SaveChangesAsync();
+
 
         return new AuthResult
         {
             Success = true,
+
             Message =
                 "Email verified successfully. You can now sign in to Gemora."
         };
     }
+
 
     // ============================================================
     // RESEND VERIFICATION CODE
@@ -353,54 +486,74 @@ public class AuthService : IAuthService
             ResendVerificationCodeDto dto)
     {
         var email =
-            dto.Email.Trim().ToLowerInvariant();
+            dto.Email
+                .Trim()
+                .ToLowerInvariant();
 
-        var user = await _context.Users
-            .FirstOrDefaultAsync(
-                u => u.Email.ToLower() == email
-            );
 
-        /*
-         * Generic response for unknown email.
-         * Avoids exposing whether an account exists.
-         */
+        var user =
+            await _context.Users
+                .FirstOrDefaultAsync(
+                    u =>
+                        u.Email.ToLower() ==
+                        email
+                );
+
+
+        // Generic response avoids account enumeration.
+
         if (user == null)
         {
             return new AuthResult
             {
                 Success = true,
+
                 Message =
                     "If an unverified account exists for this email, a new verification code will be sent."
             };
         }
+
 
         if (user.IsEmailVerified)
         {
             return new AuthResult
             {
                 Success = true,
+
                 Message =
                     "This email address is already verified."
             };
         }
+
 
         // --------------------------------------------------------
         // Resend cooldown
         // --------------------------------------------------------
 
         var latestCode =
-            await _context.EmailVerificationCodes
-                .Where(v =>
-                    v.UserId == user.Id)
-                .OrderByDescending(v => v.CreatedAt)
+            await _context
+                .EmailVerificationCodes
+                .Where(
+                    v =>
+                        v.UserId ==
+                        user.Id
+                )
+                .OrderByDescending(
+                    v =>
+                        v.CreatedAt
+                )
                 .FirstOrDefaultAsync();
+
 
         if (latestCode != null)
         {
             var secondsSinceLastCode =
-                (DateTime.UtcNow -
-                 latestCode.CreatedAt)
+                (
+                    DateTime.UtcNow -
+                    latestCode.CreatedAt
+                )
                 .TotalSeconds;
+
 
             if (secondsSinceLastCode <
                 OtpResendCooldownSeconds)
@@ -411,69 +564,96 @@ public class AuthService : IAuthService
                         secondsSinceLastCode
                     );
 
+
                 return new AuthResult
                 {
                     Success = false,
+
                     Message =
                         $"Please wait {waitSeconds} second(s) before requesting another verification code.",
-                    ErrorCode = "OTP_RESEND_COOLDOWN"
+
+                    ErrorCode =
+                        "OTP_RESEND_COOLDOWN"
                 };
             }
         }
 
+
         // --------------------------------------------------------
-        // Invalidate old unused verification codes
+        // Invalidate previous unused OTPs
         // --------------------------------------------------------
 
         var unusedCodes =
-            await _context.EmailVerificationCodes
-                .Where(v =>
-                    v.UserId == user.Id &&
-                    v.UsedAt == null)
+            await _context
+                .EmailVerificationCodes
+                .Where(
+                    v =>
+                        v.UserId ==
+                            user.Id &&
+                        v.UsedAt ==
+                            null
+                )
                 .ToListAsync();
+
 
         foreach (var oldCode in unusedCodes)
         {
-            oldCode.UsedAt = DateTime.UtcNow;
+            oldCode.UsedAt =
+                DateTime.UtcNow;
         }
+
 
         // --------------------------------------------------------
         // Create new OTP
         // --------------------------------------------------------
 
-        var verificationCode = GenerateOtp();
+        var verificationCode =
+            GenerateOtp();
+
 
         var codeHash =
             BCrypt.Net.BCrypt.HashPassword(
                 verificationCode
             );
 
+
         var newVerification =
             new EmailVerificationCode
             {
-                Id = Guid.NewGuid(),
+                Id =
+                    Guid.NewGuid(),
 
-                UserId = user.Id,
+                UserId =
+                    user.Id,
 
-                CodeHash = codeHash,
+                CodeHash =
+                    codeHash,
 
                 ExpiresAt =
-                    DateTime.UtcNow.AddMinutes(
-                        OtpExpiryMinutes
-                    ),
+                    DateTime.UtcNow
+                        .AddMinutes(
+                            OtpExpiryMinutes
+                        ),
 
-                AttemptCount = 0,
+                AttemptCount =
+                    0,
 
-                UsedAt = null,
+                UsedAt =
+                    null,
 
-                CreatedAt = DateTime.UtcNow
+                CreatedAt =
+                    DateTime.UtcNow
             };
+
 
         _context.EmailVerificationCodes.Add(
             newVerification
         );
 
-        await _context.SaveChangesAsync();
+
+        await _context
+            .SaveChangesAsync();
+
 
         // --------------------------------------------------------
         // Send email
@@ -493,49 +673,67 @@ public class AuthService : IAuthService
             return new AuthResult
             {
                 Success = false,
+
                 Message =
                     "We could not send the verification email. Please try again.",
-                ErrorCode = "EMAIL_DELIVERY_FAILED"
+
+                ErrorCode =
+                    "EMAIL_DELIVERY_FAILED"
             };
         }
+
 
         return new AuthResult
         {
             Success = true,
+
             Message =
                 "A new 6-digit verification code has been sent to your email."
         };
     }
 
+
     // ============================================================
     // LOGIN
     // ============================================================
 
-    public async Task<AuthResult> Login(LoginDto dto)
+    public async Task<AuthResult> Login(
+        LoginDto dto)
     {
         var email =
-            dto.Email.Trim().ToLowerInvariant();
+            dto.Email
+                .Trim()
+                .ToLowerInvariant();
 
-        var user = await _context.Users
-            .FirstOrDefaultAsync(
-                u => u.Email.ToLower() == email
-            );
+
+        var user =
+            await _context.Users
+                .FirstOrDefaultAsync(
+                    u =>
+                        u.Email.ToLower() ==
+                        email
+                );
+
 
         /*
-         * Same message for unknown email and invalid password
-         * to avoid exposing whether an account exists.
+         * Use the same message for an unknown account
+         * and an incorrect password.
          */
+
         if (user == null)
         {
             return new AuthResult
             {
                 Success = false,
+
                 Message =
                     "Invalid email or password.",
+
                 ErrorCode =
                     "INVALID_CREDENTIALS"
             };
         }
+
 
         var passwordValid =
             BCrypt.Net.BCrypt.Verify(
@@ -543,20 +741,24 @@ public class AuthService : IAuthService
                 user.PasswordHash
             );
 
+
         if (!passwordValid)
         {
             return new AuthResult
             {
                 Success = false,
+
                 Message =
                     "Invalid email or password.",
+
                 ErrorCode =
                     "INVALID_CREDENTIALS"
             };
         }
 
+
         // --------------------------------------------------------
-        // Block new accounts until OTP verification is complete
+        // Email must be verified
         // --------------------------------------------------------
 
         if (!user.IsEmailVerified)
@@ -564,24 +766,238 @@ public class AuthService : IAuthService
             return new AuthResult
             {
                 Success = false,
+
                 Message =
                     "Please verify your email before signing in.",
+
                 ErrorCode =
                     "EMAIL_NOT_VERIFIED"
             };
         }
 
+
+        // --------------------------------------------------------
+        // Generate JWT
+        // --------------------------------------------------------
+
         var token =
-            _tokenService.CreateToken(user);
+            _tokenService.CreateToken(
+                user
+            );
+
 
         return new AuthResult
         {
             Success = true,
+
             Message =
                 "Login successful.",
-            Token = token
+
+            Token =
+                token
         };
     }
+
+
+    // ============================================================
+    // GET CURRENT USER PROFILE
+    // ============================================================
+
+    public async Task<MyProfileDto?> GetMyProfile(
+        Guid userId)
+    {
+        var user =
+            await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    u =>
+                        u.Id ==
+                        userId
+                );
+
+
+        if (user == null)
+        {
+            return null;
+        }
+
+
+        return MapToMyProfileDto(
+            user
+        );
+    }
+
+
+    // ============================================================
+    // UPDATE CURRENT USER PROFILE
+    //
+    // Editable:
+    // - FullName
+    // - PhoneNumber
+    // - CountryCode
+    // - Region
+    //
+    // Protected:
+    // - ID
+    // - Email
+    // - Role
+    // - PasswordHash
+    // - Email verification status
+    // - Profile image
+    // ============================================================
+
+    public async Task<MyProfileDto?> UpdateMyProfile(
+        Guid userId,
+        UpdateMyProfileDto dto)
+    {
+        var user =
+            await _context.Users
+                .FirstOrDefaultAsync(
+                    u =>
+                        u.Id ==
+                        userId
+                );
+
+
+        if (user == null)
+        {
+            return null;
+        }
+
+
+        var fullName =
+            dto.FullName.Trim();
+
+
+        var phoneNumber =
+            dto.PhoneNumber?
+                .Trim() ??
+            string.Empty;
+
+
+        var countryCode =
+            dto.CountryCode?
+                .Trim()
+                .ToUpperInvariant() ??
+            string.Empty;
+
+
+        var region =
+            dto.Region?
+                .Trim() ??
+            string.Empty;
+
+
+        user.FullName =
+            fullName;
+
+        user.PhoneNumber =
+            phoneNumber;
+
+        user.CountryCode =
+            countryCode;
+
+        user.Region =
+            region;
+
+
+        await _context
+            .SaveChangesAsync();
+
+
+        return MapToMyProfileDto(
+            user
+        );
+    }
+
+
+    // ============================================================
+    // UPDATE PROFILE IMAGE URL
+    //
+    // File storage itself is handled in the API layer.
+    // This method only updates PostgreSQL.
+    // ============================================================
+
+    public async Task<MyProfileDto?> UpdateProfileImage(
+        Guid userId,
+        string? profileImageUrl)
+    {
+        var user =
+            await _context.Users
+                .FirstOrDefaultAsync(
+                    u =>
+                        u.Id ==
+                        userId
+                );
+
+
+        if (user == null)
+        {
+            return null;
+        }
+
+
+        user.ProfileImageUrl =
+            string.IsNullOrWhiteSpace(
+                profileImageUrl)
+                ? null
+                : profileImageUrl.Trim();
+
+
+        await _context
+            .SaveChangesAsync();
+
+
+        return MapToMyProfileDto(
+            user
+        );
+    }
+
+
+    // ============================================================
+    // PROFILE MAPPER
+    // ============================================================
+
+    private static MyProfileDto MapToMyProfileDto(
+        User user)
+    {
+        return new MyProfileDto
+        {
+            Id =
+                user.Id,
+
+            FullName =
+                user.FullName,
+
+            Email =
+                user.Email,
+
+            Role =
+                user.Role,
+
+            PhoneNumber =
+                user.PhoneNumber,
+
+            CountryCode =
+                user.CountryCode,
+
+            Region =
+                user.Region,
+
+            ProfileImageUrl =
+                user.ProfileImageUrl,
+
+            IsEmailVerified =
+                user.IsEmailVerified,
+
+            EmailVerifiedAt =
+                user.EmailVerifiedAt,
+
+            CreatedAt =
+                user.CreatedAt
+        };
+    }
+
 
     // ============================================================
     // GENERATE SECURE OTP
@@ -589,15 +1005,12 @@ public class AuthService : IAuthService
 
     private static string GenerateOtp()
     {
-        /*
-         * Cryptographically secure random 6-digit value:
-         * 100000 - 999999
-         */
         var number =
             RandomNumberGenerator.GetInt32(
                 100000,
                 1000000
             );
+
 
         return number.ToString();
     }

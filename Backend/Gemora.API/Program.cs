@@ -54,6 +54,15 @@ builder.Services.AddScoped<
 
 
 // ------------------------------------------------------------
+// Profile image storage
+// ------------------------------------------------------------
+
+builder.Services.AddScoped<
+    IProfileImageStorageService,
+    ProfileImageStorageService>();
+
+
+// ------------------------------------------------------------
 // Email verification / OTP
 // ------------------------------------------------------------
 

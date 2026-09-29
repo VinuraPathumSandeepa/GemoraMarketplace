@@ -12934,3 +12934,6493 @@ html {
   }
 
 }
+/* ============================================================
+   GEMOLOGIST VERIFICATION QUEUE
+   ============================================================ */
+
+.verification-queue-page {
+  width: 100%;
+
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+
+  color: #153129;
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.verification-queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  gap: 30px;
+
+  padding: 30px;
+
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #06271f,
+      #0c3a2f
+    );
+
+  box-shadow:
+    0 20px 45px
+    rgba(7, 41, 32, 0.12);
+}
+
+
+.verification-eyebrow {
+  display: block;
+
+  margin-bottom: 10px;
+
+  color: #dca958;
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: 1.8px;
+}
+
+
+.verification-queue-header h1 {
+  margin: 0;
+
+  color: #ffffff;
+
+  font-family:
+    Georgia,
+    "Times New Roman",
+    serif;
+
+  font-size: 36px;
+
+  font-weight: 500;
+}
+
+
+.verification-queue-header p {
+  max-width: 650px;
+
+  margin:
+    12px
+    0
+    0;
+
+  color:
+    rgba(255, 255, 255, 0.6);
+
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+
+.verification-refresh-button {
+  min-width: 150px;
+  min-height: 44px;
+
+  padding:
+    0
+    17px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.16);
+
+  border-radius: 10px;
+
+  background:
+    rgba(255, 255, 255, 0.06);
+
+  color: #ffffff;
+
+  cursor: pointer;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+
+.verification-refresh-button:hover:not(:disabled) {
+  transform:
+    translateY(-2px);
+
+  background:
+    rgba(255, 255, 255, 0.12);
+}
+
+
+.verification-refresh-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+
+/* ============================================================
+   HUMAN IN LOOP NOTICE
+   ============================================================ */
+
+.verification-human-notice {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+
+  padding: 18px 21px;
+
+  border:
+    1px solid #dfd3bf;
+
+  border-radius: 14px;
+
+  background:
+    #fffaf1;
+}
+
+
+.verification-human-icon {
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 12px;
+
+  background:
+    #0b362b;
+
+  color: #e1ad5e;
+
+  font-size: 11px;
+  font-weight: 900;
+}
+
+
+.verification-human-notice strong {
+  color: #16352b;
+
+  font-size: 13px;
+}
+
+
+.verification-human-notice p {
+  margin:
+    5px
+    0
+    0;
+
+  color: #738079;
+
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+
+/* ============================================================
+   STATS
+   ============================================================ */
+
+.verification-stat-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0, 1fr)
+    );
+
+  gap: 15px;
+}
+
+
+.verification-stat-grid article {
+  padding: 20px;
+
+  border:
+    1px solid #e5ddd1;
+
+  border-radius: 15px;
+
+  background: #fffdf9;
+
+  box-shadow:
+    0 12px 30px
+    rgba(16, 52, 40, 0.04);
+}
+
+
+.verification-stat-grid span {
+  display: block;
+
+  color: #8a6a3f;
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: 0.9px;
+
+  text-transform: uppercase;
+}
+
+
+.verification-stat-grid strong {
+  display: block;
+
+  margin:
+    8px
+    0
+    5px;
+
+  color: #123329;
+
+  font-family:
+    Georgia,
+    serif;
+
+  font-size: 30px;
+  font-weight: 500;
+}
+
+
+.verification-stat-grid small {
+  color: #7f8b85;
+
+  font-size: 10px;
+}
+
+
+/* ============================================================
+   TOOLBAR
+   ============================================================ */
+
+.verification-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 20px;
+
+  padding: 17px;
+
+  border:
+    1px solid #e5ddd1;
+
+  border-radius: 14px;
+
+  background: #fffdf9;
+}
+
+
+.verification-search {
+  flex: 1;
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  padding:
+    0
+    14px;
+
+  border:
+    1px solid #ddd4c7;
+
+  border-radius: 10px;
+
+  background: #ffffff;
+}
+
+
+.verification-search span {
+  color: #9a7b4e;
+
+  font-size: 18px;
+}
+
+
+.verification-search input {
+  width: 100%;
+  height: 43px;
+
+  border: none;
+  outline: none;
+
+  background: transparent;
+
+  color: #17342b;
+
+  font: inherit;
+  font-size: 12px;
+}
+
+
+.verification-sort {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+
+.verification-sort label {
+  color: #697871;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  text-transform: uppercase;
+}
+
+
+.verification-sort select {
+  height: 43px;
+
+  padding:
+    0
+    12px;
+
+  border:
+    1px solid #ddd4c7;
+
+  border-radius: 10px;
+
+  background: #ffffff;
+
+  color: #18352c;
+
+  font-size: 11px;
+}
+
+
+/* ============================================================
+   CARD GRID
+   ============================================================ */
+
+.verification-card-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+
+  gap: 20px;
+}
+
+
+.verification-queue-card {
+  overflow: hidden;
+
+  border:
+    1px solid #e3dbcf;
+
+  border-radius: 18px;
+
+  background: #fffdf9;
+
+  box-shadow:
+    0 18px 38px
+    rgba(18, 53, 43, 0.06);
+
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+
+.verification-queue-card:hover {
+  transform:
+    translateY(-4px);
+
+  box-shadow:
+    0 25px 45px
+    rgba(18, 53, 43, 0.1);
+}
+
+
+/* ============================================================
+   IMAGE
+   ============================================================ */
+
+.verification-card-image {
+  height: 250px;
+
+  position: relative;
+
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      circle at center,
+      #0b3a2e,
+      #021812
+    );
+}
+
+
+.verification-card-image img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+
+  transition:
+    transform 0.5s ease;
+}
+
+
+.verification-queue-card:hover
+.verification-card-image img {
+  transform:
+    scale(1.025);
+}
+
+
+.verification-no-image {
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  gap: 8px;
+
+  color:
+    rgba(255, 255, 255, 0.42);
+}
+
+
+.verification-no-image span {
+  color: #dba657;
+
+  font-size: 32px;
+}
+
+
+.verification-no-image small {
+  font-size: 10px;
+
+  letter-spacing: 1px;
+
+  text-transform: uppercase;
+}
+
+
+.verification-status-chip {
+  position: absolute;
+
+  top: 15px;
+  right: 15px;
+
+  padding:
+    7px
+    11px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.14);
+
+  border-radius: 20px;
+
+  background:
+    rgba(5, 34, 27, 0.8);
+
+  backdrop-filter:
+    blur(9px);
+
+  color: #f0bf72;
+
+  font-size: 8px;
+  font-weight: 800;
+
+  letter-spacing: 0.7px;
+
+  text-transform: uppercase;
+}
+
+
+/* ============================================================
+   CARD BODY
+   ============================================================ */
+
+.verification-card-body {
+  padding: 23px;
+}
+
+
+.verification-card-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 15px;
+}
+
+
+.verification-card-topline span {
+  color: #a67533;
+
+  font-size: 8px;
+  font-weight: 800;
+
+  letter-spacing: 1px;
+
+  text-transform: uppercase;
+}
+
+
+.verification-card-topline small {
+  color: #929b96;
+
+  font-size: 9px;
+}
+
+
+.verification-card-body h2 {
+  margin:
+    10px
+    0
+    6px;
+
+  color: #12342a;
+
+  font-family:
+    Georgia,
+    serif;
+
+  font-size: 24px;
+  font-weight: 500;
+}
+
+
+.verification-seller {
+  margin: 0;
+
+  color: #7c8983;
+
+  font-size: 11px;
+}
+
+
+.verification-seller strong {
+  color: #4d625a;
+}
+
+
+/* ============================================================
+   FACTS
+   ============================================================ */
+
+.verification-gem-facts {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      1fr
+    );
+
+  gap: 10px;
+
+  margin-top: 20px;
+}
+
+
+.verification-gem-facts div {
+  padding: 11px;
+
+  border-radius: 9px;
+
+  background: #f7f2ea;
+}
+
+
+.verification-gem-facts span,
+.verification-ai-row span,
+.verification-price-row span {
+  display: block;
+
+  color: #8b9691;
+
+  font-size: 8px;
+
+  letter-spacing: 0.6px;
+
+  text-transform: uppercase;
+}
+
+
+.verification-gem-facts strong {
+  display: block;
+
+  margin-top: 4px;
+
+  color: #19392e;
+
+  font-size: 10px;
+}
+
+
+/* ============================================================
+   PRICE
+   ============================================================ */
+
+.verification-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-top: 15px;
+
+  padding:
+    14px
+    0;
+
+  border-top:
+    1px solid #ebe4da;
+
+  border-bottom:
+    1px solid #ebe4da;
+}
+
+
+.verification-price-row strong {
+  color: #13382c;
+
+  font-size: 15px;
+}
+
+
+/* ============================================================
+   EVIDENCE
+   ============================================================ */
+
+.verification-evidence-row {
+  display: flex;
+  gap: 10px;
+
+  margin-top: 15px;
+}
+
+
+.verification-evidence-row span {
+  padding:
+    6px
+    9px;
+
+  border-radius: 20px;
+
+  font-size: 8px;
+  font-weight: 800;
+}
+
+
+.evidence-ready {
+  background: #eaf7f1;
+  color: #237553;
+}
+
+
+.evidence-missing {
+  background: #f5f0ea;
+  color: #8a8178;
+}
+
+
+/* ============================================================
+   AI
+   ============================================================ */
+
+.verification-ai-row {
+  display: flex;
+
+  gap: 30px;
+
+  margin-top: 15px;
+
+  padding: 13px;
+
+  border-radius: 10px;
+
+  background:
+    #0b352a;
+}
+
+
+.verification-ai-row strong {
+  display: block;
+
+  margin-top: 4px;
+
+  color: #ffffff;
+
+  font-size: 10px;
+}
+
+
+/* ============================================================
+   OPEN BUTTON
+   ============================================================ */
+
+.verification-open-button {
+  min-height: 46px;
+
+  margin-top: 17px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding:
+    0
+    16px;
+
+  border-radius: 10px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #dfa958,
+      #c98b38
+    );
+
+  color: #102c23;
+
+  text-decoration: none;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+.verification-open-button:hover {
+  transform:
+    translateY(-2px);
+
+  box-shadow:
+    0 12px 25px
+    rgba(182, 123, 43, 0.2);
+}
+
+
+/* ============================================================
+   ERROR / EMPTY / LOADING
+   ============================================================ */
+
+.verification-error {
+  padding: 16px;
+
+  border:
+    1px solid #efc3bd;
+
+  border-radius: 12px;
+
+  background: #fff1ef;
+
+  color: #9e352d;
+
+  font-size: 12px;
+}
+
+
+.verification-loading,
+.verification-empty {
+  min-height: 260px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  padding: 40px;
+
+  text-align: center;
+
+  border:
+    1px solid #e4ddd2;
+
+  border-radius: 18px;
+
+  background: #fffdf9;
+}
+
+
+.verification-loader {
+  width: 38px;
+  height: 38px;
+
+  border:
+    3px solid #e8ded0;
+
+  border-top-color:
+    #c78b3b;
+
+  border-radius: 50%;
+
+  animation:
+    verificationSpin
+    0.8s linear infinite;
+}
+
+
+@keyframes verificationSpin {
+  to {
+    transform:
+      rotate(360deg);
+  }
+}
+
+
+.verification-empty-icon {
+  width: 55px;
+  height: 55px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 50%;
+
+  background: #eaf7f1;
+
+  color: #277a58;
+
+  font-size: 20px;
+}
+
+
+.verification-loading h3,
+.verification-empty h3 {
+  margin:
+    14px
+    0
+    6px;
+
+  color: #17362c;
+
+  font-family:
+    Georgia,
+    serif;
+}
+
+
+.verification-loading p,
+.verification-empty p {
+  margin: 0;
+
+  color: #7c8983;
+
+  font-size: 11px;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 1050px) {
+
+  .verification-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+
+  .verification-stat-grid {
+    grid-template-columns:
+      repeat(2, 1fr);
+  }
+
+}
+
+
+@media (max-width: 700px) {
+
+  .verification-queue-header {
+    flex-direction: column;
+  }
+
+
+  .verification-refresh-button {
+    width: 100%;
+  }
+
+
+  .verification-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+
+  .verification-sort {
+    justify-content: space-between;
+  }
+
+
+  .verification-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+
+  .verification-gem-facts {
+    grid-template-columns:
+      repeat(2, 1fr);
+  }
+
+
+  .verification-card-topline {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+}
+/* ============================================================
+   GEMOLOGIST DASHBOARD
+   ============================================================ */
+
+.gemologist-dashboard-home {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+
+.gemologist-dashboard-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 30px;
+
+  padding: 35px;
+
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #06271f,
+      #0b3b2f
+    );
+}
+
+
+.gemologist-dashboard-hero > div {
+  max-width: 680px;
+}
+
+
+.gemologist-dashboard-hero > div > span {
+  color: #dda958;
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: 1.7px;
+}
+
+
+.gemologist-dashboard-hero h1 {
+  margin:
+    10px
+    0;
+
+  color: #ffffff;
+
+  font-family:
+    Georgia,
+    serif;
+
+  font-size: 38px;
+  font-weight: 500;
+}
+
+
+.gemologist-dashboard-hero p {
+  margin: 0;
+
+  color:
+    rgba(255, 255, 255, 0.6);
+
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+
+.gemologist-queue-button {
+  min-width: 210px;
+  min-height: 50px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding:
+    0
+    18px;
+
+  border-radius: 11px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #e0aa58,
+      #c98c3a
+    );
+
+  color: #102a22;
+
+  text-decoration: none;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+
+.gemologist-dashboard-guidance {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: 17px;
+}
+
+
+.gemologist-dashboard-guidance article {
+  padding: 24px;
+
+  border:
+    1px solid #e3dbd0;
+
+  border-radius: 15px;
+
+  background: #fffdf9;
+}
+
+
+.gemologist-dashboard-guidance article > strong {
+  color: #bd8030;
+
+  font-family:
+    Georgia,
+    serif;
+
+  font-size: 13px;
+}
+
+
+.gemologist-dashboard-guidance h3 {
+  margin:
+    14px
+    0
+    8px;
+
+  color: #17362c;
+}
+
+
+.gemologist-dashboard-guidance p {
+  margin: 0;
+
+  color: #7b8782;
+
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+
+.gemologist-ai-notice {
+  padding: 20px;
+
+  border:
+    1px solid #dfd2bd;
+
+  border-radius: 13px;
+
+  background: #fff8ed;
+}
+
+
+.gemologist-ai-notice strong {
+  color: #17382d;
+}
+
+
+.gemologist-ai-notice p {
+  margin:
+    5px
+    0
+    0;
+
+  color: #78837e;
+
+  font-size: 11px;
+}
+
+
+@media (max-width: 850px) {
+
+  .gemologist-dashboard-hero {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+
+  .gemologist-queue-button {
+    width: 100%;
+  }
+
+
+  .gemologist-dashboard-guidance {
+    grid-template-columns: 1fr;
+  }
+
+}
+/* ============================================================
+   GEMOLOGIST VERIFICATION DETAILS
+   ============================================================ */
+
+.verification-details-page {
+  width: 100%;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 22px;
+
+  color: #15342a;
+}
+
+
+/* ============================================================
+   BACK
+   ============================================================ */
+
+.verification-back-link {
+  width: fit-content;
+
+  color: #8d652f;
+
+  text-decoration: none;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.verification-back-link:hover {
+  color: #174b3c;
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.verification-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  gap: 30px;
+
+  padding: 30px;
+
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #06271f,
+      #0b392e
+    );
+
+  box-shadow:
+    0 20px 45px
+    rgba(7, 41, 32, 0.12);
+}
+
+
+.verification-details-header h1 {
+  margin:
+    8px
+    0;
+
+  color: #ffffff;
+
+  font-family:
+    Georgia,
+    "Times New Roman",
+    serif;
+
+  font-size: 38px;
+  font-weight: 500;
+}
+
+
+.verification-details-header p {
+  margin: 0;
+
+  color:
+    rgba(255, 255, 255, 0.57);
+
+  font-size: 12px;
+}
+
+
+.verification-details-header p strong {
+  color:
+    rgba(255, 255, 255, 0.9);
+}
+
+
+.verification-header-statuses {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 9px;
+}
+
+
+.verification-detail-status,
+.verification-detail-decision {
+  padding:
+    8px
+    12px;
+
+  border-radius: 20px;
+
+  font-size: 8px;
+  font-weight: 800;
+
+  letter-spacing: 0.8px;
+
+  text-transform: uppercase;
+}
+
+
+.verification-detail-status {
+  background:
+    rgba(224, 170, 88, 0.13);
+
+  color: #e5b86f;
+
+  border:
+    1px solid
+    rgba(224, 170, 88, 0.19);
+}
+
+
+.verification-detail-decision {
+  background:
+    rgba(255, 255, 255, 0.07);
+
+  color:
+    rgba(255, 255, 255, 0.78);
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.12);
+}
+
+
+/* ============================================================
+   SUCCESS
+   ============================================================ */
+
+.verification-details-success {
+  padding: 15px 17px;
+
+  border:
+    1px solid #bfe3d1;
+
+  border-radius: 12px;
+
+  background: #ecf8f2;
+
+  color: #216748;
+
+  font-size: 12px;
+}
+
+
+/* ============================================================
+   COMMON PANEL
+   ============================================================ */
+
+.verification-detail-panel {
+  padding: 24px;
+
+  border:
+    1px solid #e3dbcf;
+
+  border-radius: 17px;
+
+  background: #fffdf9;
+
+  box-shadow:
+    0 15px 35px
+    rgba(17, 52, 41, 0.045);
+}
+
+
+.verification-panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  gap: 20px;
+
+  margin-bottom: 20px;
+}
+
+
+.verification-panel-heading span,
+.verification-human-review-heading
+> div:first-child > span,
+.verification-ai-header
+> div:first-child > span {
+  color: #ac7531;
+
+  font-size: 8px;
+  font-weight: 800;
+
+  letter-spacing: 1.4px;
+
+  text-transform: uppercase;
+}
+
+
+.verification-panel-heading h2,
+.verification-human-review-heading h2,
+.verification-ai-header h2 {
+  margin:
+    6px
+    0
+    0;
+
+  color: #14372c;
+
+  font-family:
+    Georgia,
+    serif;
+
+  font-size: 25px;
+  font-weight: 500;
+}
+
+
+.verification-panel-heading a {
+  color: #92662f;
+
+  text-decoration: none;
+
+  font-size: 10px;
+  font-weight: 800;
+}
+
+
+/* ============================================================
+   EVIDENCE LAYOUT
+   ============================================================ */
+
+.verification-evidence-layout {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.05fr)
+    minmax(0, 0.95fr);
+
+  gap: 20px;
+}
+
+
+.verification-large-image {
+  height: 450px;
+
+  overflow: hidden;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 14px;
+
+  background:
+    radial-gradient(
+      circle at center,
+      #0c3c30,
+      #021914
+    );
+}
+
+
+.verification-large-image img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+}
+
+
+/* ============================================================
+   GEM FACTS
+   ============================================================ */
+
+.verification-detail-facts {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, 1fr);
+
+  gap: 12px;
+}
+
+
+.verification-detail-facts > div,
+.verification-certificate-grid > div,
+.verification-submission-meta > div {
+  padding: 14px;
+
+  border-radius: 11px;
+
+  background: #f7f2ea;
+}
+
+
+.verification-detail-facts span,
+.verification-certificate-grid span,
+.verification-submission-meta span {
+  display: block;
+
+  color: #8b958f;
+
+  font-size: 8px;
+
+  letter-spacing: 0.6px;
+
+  text-transform: uppercase;
+}
+
+
+.verification-detail-facts strong,
+.verification-certificate-grid strong,
+.verification-submission-meta strong {
+  display: block;
+
+  margin-top: 5px;
+
+  color: #16372c;
+
+  font-size: 11px;
+}
+
+
+.verification-description {
+  margin-top: 17px;
+
+  padding-top: 17px;
+
+  border-top:
+    1px solid #e9e1d6;
+}
+
+
+.verification-description > span {
+  color: #a26d2e;
+
+  font-size: 8px;
+  font-weight: 800;
+
+  letter-spacing: 1px;
+}
+
+
+.verification-description p {
+  margin:
+    7px
+    0
+    0;
+
+  color: #6f7d76;
+
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+
+.verification-submission-meta {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, 1fr);
+
+  gap: 10px;
+
+  margin-top: 17px;
+}
+
+
+/* ============================================================
+   CERTIFICATE
+   ============================================================ */
+
+.verification-certificate-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: 12px;
+}
+
+
+/* ============================================================
+   AI PANEL
+   ============================================================ */
+
+.verification-ai-panel {
+  padding: 27px;
+
+  border-radius: 19px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #06271f,
+      #0b3a2f
+    );
+
+  color: #ffffff;
+
+  box-shadow:
+    0 20px 45px
+    rgba(7, 41, 32, 0.12);
+}
+
+
+.verification-ai-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  gap: 30px;
+}
+
+
+.verification-ai-header h2 {
+  color: #ffffff;
+}
+
+
+.verification-ai-header p {
+  max-width: 650px;
+
+  margin:
+    8px
+    0
+    0;
+
+  color:
+    rgba(255, 255, 255, 0.52);
+
+  font-size: 11px;
+
+  line-height: 1.65;
+}
+
+
+.verification-run-ai-button {
+  min-width: 165px;
+  min-height: 46px;
+
+  padding:
+    0
+    17px;
+
+  border: none;
+  border-radius: 10px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #e0ac5e,
+      #c98b39
+    );
+
+  color: #102a22;
+
+  cursor: pointer;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+.verification-run-ai-button:hover:not(:disabled) {
+  transform:
+    translateY(-2px);
+
+  box-shadow:
+    0 12px 28px
+    rgba(194, 132, 48, 0.22);
+}
+
+
+.verification-run-ai-button:disabled {
+  cursor: not-allowed;
+
+  opacity: 0.55;
+}
+
+
+/* ============================================================
+   AI STATUS
+   ============================================================ */
+
+.verification-ai-status-row {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: 12px;
+
+  margin-top: 24px;
+}
+
+
+.verification-ai-status-row > div {
+  padding: 14px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.09);
+
+  border-radius: 10px;
+
+  background:
+    rgba(255, 255, 255, 0.04);
+}
+
+
+.verification-ai-status-row span {
+  display: block;
+
+  color:
+    rgba(255, 255, 255, 0.4);
+
+  font-size: 8px;
+
+  letter-spacing: 0.8px;
+
+  text-transform: uppercase;
+}
+
+
+.verification-ai-status-row strong {
+  display: block;
+
+  margin-top: 5px;
+
+  color: #ffffff;
+
+  font-size: 11px;
+}
+
+
+/* ============================================================
+   AI SUMMARY
+   ============================================================ */
+
+.verification-ai-summary {
+  display: grid;
+
+  grid-template-columns:
+    1fr
+    1fr;
+
+  gap: 12px;
+
+  margin-top: 17px;
+}
+
+
+.verification-ai-summary article {
+  padding: 16px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.09);
+
+  border-radius: 11px;
+
+  background:
+    rgba(255, 255, 255, 0.045);
+}
+
+
+.verification-ai-summary article > span {
+  display: block;
+
+  color: #d7a657;
+
+  font-size: 8px;
+  font-weight: 800;
+
+  letter-spacing: 0.8px;
+
+  text-transform: uppercase;
+}
+
+
+.verification-ai-summary strong {
+  display: block;
+
+  margin-top: 6px;
+
+  color: #ffffff;
+
+  font-family:
+    Georgia,
+    serif;
+
+  font-size: 22px;
+  font-weight: 500;
+}
+
+
+.verification-ai-findings-card {
+  grid-column: 1 / -1;
+}
+
+
+.verification-ai-findings-card p {
+  margin:
+    8px
+    0
+    0;
+
+  color:
+    rgba(255, 255, 255, 0.68);
+
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+
+/* ============================================================
+   AI LISTS
+   ============================================================ */
+
+.verification-ai-list-block {
+  margin-top: 16px;
+
+  padding: 17px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.08);
+
+  border-radius: 11px;
+
+  background:
+    rgba(255, 255, 255, 0.035);
+}
+
+
+.verification-ai-list-block h3 {
+  margin:
+    0
+    0
+    10px;
+
+  color: #ffffff;
+
+  font-size: 12px;
+}
+
+
+.verification-ai-list-block ul {
+  margin: 0;
+
+  padding-left: 19px;
+
+  color:
+    rgba(255, 255, 255, 0.66);
+
+  font-size: 11px;
+
+  line-height: 1.7;
+}
+
+
+.verification-risk-block {
+  border-color:
+    rgba(226, 173, 88, 0.18);
+
+  background:
+    rgba(226, 173, 88, 0.06);
+}
+
+
+.verification-validation-block {
+  border-color:
+    rgba(225, 106, 92, 0.2);
+
+  background:
+    rgba(225, 106, 92, 0.06);
+}
+
+
+.verification-ai-warning {
+  margin-top: 16px;
+
+  padding: 14px;
+
+  border:
+    1px solid
+    rgba(226, 173, 88, 0.24);
+
+  border-radius: 10px;
+
+  background:
+    rgba(226, 173, 88, 0.08);
+
+  color: #f0c880;
+
+  font-size: 11px;
+
+  line-height: 1.6;
+}
+
+
+/* ============================================================
+   AI AUDIT
+   ============================================================ */
+
+.verification-agent-audit {
+  margin-top: 16px;
+
+  padding: 15px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.09);
+
+  border-radius: 10px;
+
+  background:
+    rgba(0, 0, 0, 0.1);
+}
+
+
+.verification-agent-audit summary {
+  color: #dcb06b;
+
+  cursor: pointer;
+
+  font-size: 10px;
+  font-weight: 800;
+}
+
+
+.verification-agent-audit ol {
+  margin:
+    13px
+    0
+    0;
+
+  padding-left: 20px;
+
+  color:
+    rgba(255, 255, 255, 0.55);
+
+  font-size: 10px;
+  line-height: 1.8;
+}
+
+
+/* ============================================================
+   EMPTY AI
+   ============================================================ */
+
+.verification-ai-empty {
+  display: flex;
+  align-items: center;
+
+  gap: 15px;
+
+  margin-top: 18px;
+
+  padding: 18px;
+
+  border:
+    1px dashed
+    rgba(255, 255, 255, 0.13);
+
+  border-radius: 11px;
+}
+
+
+.verification-ai-empty > span {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 10px;
+
+  background:
+    rgba(221, 169, 88, 0.13);
+
+  color: #dda958;
+
+  font-size: 10px;
+  font-weight: 900;
+}
+
+
+.verification-ai-empty strong {
+  color: #ffffff;
+
+  font-size: 11px;
+}
+
+
+.verification-ai-empty p {
+  margin:
+    4px
+    0
+    0;
+
+  color:
+    rgba(255, 255, 255, 0.45);
+
+  font-size: 10px;
+}
+
+
+/* ============================================================
+   HUMAN REVIEW
+   ============================================================ */
+
+.verification-human-review-panel {
+  padding: 27px;
+
+  border:
+    1px solid #e2d7c6;
+
+  border-radius: 18px;
+
+  background: #fffaf2;
+}
+
+
+.verification-human-review-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  gap: 20px;
+}
+
+
+.verification-human-review-heading p {
+  max-width: 650px;
+
+  margin:
+    8px
+    0
+    0;
+
+  color: #77837d;
+
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+
+.verification-human-badge {
+  padding:
+    8px
+    11px;
+
+  border:
+    1px solid #d9c29e;
+
+  border-radius: 20px;
+
+  color: #92642d;
+
+  font-size: 8px;
+  font-weight: 800;
+
+  text-transform: uppercase;
+}
+
+
+/* ============================================================
+   REVIEW NOTES
+   ============================================================ */
+
+.verification-review-notes {
+  margin-top: 22px;
+}
+
+
+.verification-review-notes label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  color: #18382e;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  text-transform: uppercase;
+}
+
+
+.verification-review-notes textarea {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  padding: 14px;
+
+  border:
+    1px solid #d9cfc0;
+
+  border-radius: 11px;
+
+  outline: none;
+
+  resize: vertical;
+
+  background: #ffffff;
+
+  color: #17372d;
+
+  font: inherit;
+
+  font-size: 12px;
+
+  line-height: 1.6;
+}
+
+
+.verification-review-notes textarea:focus {
+  border-color: #c98c3a;
+
+  box-shadow:
+    0 0 0 4px
+    rgba(201, 140, 58, 0.1);
+}
+
+
+.verification-note-footer {
+  display: flex;
+  justify-content: space-between;
+
+  gap: 15px;
+
+  margin-top: 6px;
+
+  color: #8b948f;
+
+  font-size: 9px;
+}
+
+
+/* ============================================================
+   DECISION BUTTONS
+   ============================================================ */
+
+.verification-decision-buttons {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: 12px;
+
+  margin-top: 18px;
+}
+
+
+.verification-decision-buttons button {
+  min-height: 48px;
+
+  border-radius: 10px;
+
+  cursor: pointer;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+.verification-decision-buttons button:hover:not(:disabled) {
+  transform:
+    translateY(-2px);
+}
+
+
+.verification-approve-button {
+  border: none;
+
+  background: #176f50;
+
+  color: #ffffff;
+}
+
+
+.verification-changes-button {
+  border:
+    1px solid #d6a14d;
+
+  background: #fff5e4;
+
+  color: #84591f;
+}
+
+
+.verification-reject-button {
+  border:
+    1px solid #e2b6b0;
+
+  background: #fff0ee;
+
+  color: #a23831;
+}
+
+
+/* ============================================================
+   CONFIRM DECISION
+   ============================================================ */
+
+.verification-decision-confirm {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 25px;
+
+  margin-top: 18px;
+
+  padding: 17px;
+
+  border:
+    1px solid #dec8a5;
+
+  border-radius: 12px;
+
+  background: #f7eee0;
+}
+
+
+.verification-decision-confirm
+> div:first-child > span {
+  display: block;
+
+  color: #9d6b2b;
+
+  font-size: 8px;
+  font-weight: 800;
+
+  letter-spacing: 1px;
+}
+
+
+.verification-decision-confirm strong {
+  display: block;
+
+  margin-top: 4px;
+
+  color: #17372d;
+
+  font-size: 12px;
+}
+
+
+.verification-decision-confirm p {
+  margin:
+    4px
+    0
+    0;
+
+  color: #79847f;
+
+  font-size: 10px;
+}
+
+
+.verification-confirm-actions {
+  display: flex;
+
+  gap: 8px;
+}
+
+
+.verification-confirm-actions button {
+  min-height: 40px;
+
+  padding:
+    0
+    13px;
+
+  border:
+    1px solid #d4c8b7;
+
+  border-radius: 9px;
+
+  background: #ffffff;
+
+  color: #4f5f59;
+
+  cursor: pointer;
+
+  font-size: 9px;
+  font-weight: 800;
+}
+
+
+.verification-confirm-actions
+.verification-confirm-button {
+  border: none;
+
+  background: #173d31;
+
+  color: #ffffff;
+}
+
+
+/* ============================================================
+   COMPLETED REVIEW
+   ============================================================ */
+
+.verification-review-completed {
+  margin-top: 20px;
+
+  padding: 20px;
+
+  border-radius: 12px;
+
+  background: #edf7f2;
+
+  border:
+    1px solid #c5dfd2;
+}
+
+
+.verification-review-completed > span {
+  color: #347359;
+
+  font-size: 8px;
+  font-weight: 800;
+
+  letter-spacing: 1px;
+}
+
+
+.verification-review-completed h3 {
+  margin:
+    6px
+    0;
+
+  color: #16382c;
+
+  font-family:
+    Georgia,
+    serif;
+
+  font-size: 25px;
+}
+
+
+.verification-review-completed p {
+  color: #65746d;
+
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+
+.verification-review-completed small {
+  color: #819089;
+
+  font-size: 9px;
+}
+
+
+/* ============================================================
+   LOAD / ERROR
+   ============================================================ */
+
+.verification-details-loading,
+.verification-details-error {
+  min-height: 350px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  padding: 40px;
+
+  text-align: center;
+
+  border:
+    1px solid #e3dbcf;
+
+  border-radius: 18px;
+
+  background: #fffdf9;
+}
+
+
+.verification-details-loading h3,
+.verification-details-error h2 {
+  margin:
+    15px
+    0
+    6px;
+
+  color: #17372d;
+
+  font-family:
+    Georgia,
+    serif;
+}
+
+
+.verification-details-loading p,
+.verification-details-error p {
+  color: #7c8983;
+
+  font-size: 11px;
+}
+
+
+.verification-details-error a {
+  margin-top: 12px;
+
+  color: #93652d;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  text-decoration: none;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 1000px) {
+
+  .verification-evidence-layout {
+    grid-template-columns: 1fr;
+  }
+
+
+  .verification-large-image {
+    height: 400px;
+  }
+
+}
+
+
+@media (max-width: 750px) {
+
+  .verification-details-header,
+  .verification-ai-header,
+  .verification-human-review-heading,
+  .verification-decision-confirm {
+    flex-direction: column;
+  }
+
+
+  .verification-ai-status-row,
+  .verification-certificate-grid,
+  .verification-decision-buttons {
+    grid-template-columns: 1fr;
+  }
+
+
+  .verification-ai-summary,
+  .verification-detail-facts,
+  .verification-submission-meta {
+    grid-template-columns: 1fr;
+  }
+
+
+  .verification-run-ai-button {
+    width: 100%;
+  }
+
+
+  .verification-confirm-actions {
+    width: 100%;
+  }
+
+
+  .verification-confirm-actions button {
+    flex: 1;
+  }
+
+
+  .verification-large-image {
+    height: 300px;
+  }
+
+}
+/* ============================================================
+   GEMORA VERIFICATION AGENT
+   ============================================================ */
+
+.gemora-agent-panel {
+  position: relative;
+  overflow: hidden;
+
+  padding: 28px;
+
+  border:
+    1px solid
+    rgba(219, 169, 88, 0.2);
+
+  border-radius: 22px;
+
+  background:
+    radial-gradient(
+      circle at 92% 10%,
+      rgba(26, 126, 98, 0.19),
+      transparent 25%
+    ),
+    linear-gradient(
+      135deg,
+      #041d17 0%,
+      #082c23 48%,
+      #0a382c 100%
+    );
+
+  color: #ffffff;
+
+  box-shadow:
+    0 25px 60px
+    rgba(4, 35, 27, 0.17);
+}
+
+
+.gemora-agent-panel::before {
+  content: "";
+
+  position: absolute;
+
+  width: 420px;
+  height: 420px;
+
+  top: -260px;
+  right: -180px;
+
+  border:
+    1px solid
+    rgba(221, 169, 88, 0.08);
+
+  border-radius: 50%;
+
+  box-shadow:
+    0 0 0 70px
+    rgba(221, 169, 88, 0.025),
+    0 0 0 140px
+    rgba(221, 169, 88, 0.015);
+
+  pointer-events: none;
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.gemora-agent-header {
+  position: relative;
+  z-index: 2;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 35px;
+}
+
+
+.gemora-agent-identity {
+  display: flex;
+  align-items: center;
+
+  gap: 18px;
+}
+
+
+.gemora-agent-orb {
+  width: 70px;
+  min-width: 70px;
+  height: 70px;
+
+  position: relative;
+
+  display: grid;
+  place-items: center;
+}
+
+
+.agent-orb-ring {
+  position: absolute;
+
+  inset: 0;
+
+  border:
+    1px solid
+    rgba(221, 169, 88, 0.34);
+
+  border-radius: 50%;
+}
+
+
+.agent-orb-ring::before {
+  content: "";
+
+  position: absolute;
+
+  inset: 8px;
+
+  border:
+    1px dashed
+    rgba(255, 255, 255, 0.14);
+
+  border-radius: 50%;
+}
+
+
+.agent-orb-core {
+  width: 42px;
+  height: 42px;
+
+  position: relative;
+  z-index: 2;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 13px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #e0ab59,
+      #b9792d
+    );
+
+  color: #0b2b21;
+
+  box-shadow:
+    0 0 26px
+    rgba(221, 169, 88, 0.18);
+
+  font-size: 16px;
+}
+
+
+.agent-orb-processing
+.agent-orb-ring {
+  animation:
+    gemoraAgentOrbit
+    2.5s linear infinite;
+}
+
+
+.agent-orb-processing
+.agent-orb-ring::before {
+  animation:
+    gemoraAgentOrbit
+    1.5s linear infinite reverse;
+}
+
+
+@keyframes gemoraAgentOrbit {
+  to {
+    transform:
+      rotate(360deg);
+  }
+}
+
+
+/* ============================================================
+   TITLE
+   ============================================================ */
+
+.gemora-agent-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+
+  gap: 12px;
+
+  margin-bottom: 5px;
+}
+
+
+.gemora-agent-label {
+  color: #dda958;
+
+  font-size: 8px;
+  font-weight: 900;
+
+  letter-spacing: 1.7px;
+}
+
+
+.gemora-agent-identity h2 {
+  margin: 0;
+
+  color: #ffffff;
+
+  font-family:
+    Georgia,
+    serif;
+
+  font-size: 27px;
+  font-weight: 500;
+}
+
+
+.gemora-agent-identity p {
+  margin:
+    7px
+    0
+    0;
+
+  color:
+    rgba(255, 255, 255, 0.48);
+
+  font-size: 10px;
+
+  line-height: 1.6;
+}
+
+
+/* ============================================================
+   STATUS
+   ============================================================ */
+
+.gemora-agent-status {
+  display: inline-flex;
+  align-items: center;
+
+  gap: 6px;
+
+  padding:
+    5px
+    8px;
+
+  border-radius: 20px;
+
+  font-size: 7px;
+  font-weight: 900;
+
+  letter-spacing: 0.8px;
+}
+
+
+.gemora-agent-status i {
+  width: 6px;
+  height: 6px;
+
+  display: block;
+
+  border-radius: 50%;
+}
+
+
+.agent-status-ready {
+  background:
+    rgba(221, 169, 88, 0.09);
+
+  color: #e4b76f;
+}
+
+
+.agent-status-ready i {
+  background: #dda958;
+}
+
+
+.agent-status-processing {
+  background:
+    rgba(70, 142, 209, 0.11);
+
+  color: #83bde9;
+}
+
+
+.agent-status-processing i {
+  background: #6caee0;
+
+  animation:
+    agentStatusPulse
+    1s ease-in-out infinite;
+}
+
+
+.agent-status-completed {
+  background:
+    rgba(55, 169, 119, 0.12);
+
+  color: #7cd5ab;
+}
+
+
+.agent-status-completed i {
+  background: #65c79c;
+}
+
+
+.agent-status-warning {
+  background:
+    rgba(221, 169, 88, 0.11);
+
+  color: #edc27d;
+}
+
+
+.agent-status-warning i {
+  background: #dda958;
+}
+
+
+.agent-status-failed {
+  background:
+    rgba(205, 81, 70, 0.12);
+
+  color: #ef9b93;
+}
+
+
+.agent-status-failed i {
+  background: #d85e54;
+}
+
+
+@keyframes agentStatusPulse {
+
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+}
+
+
+/* ============================================================
+   RUN BUTTON
+   ============================================================ */
+
+.gemora-agent-run-button {
+  min-width: 205px;
+  min-height: 51px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 10px;
+
+  padding:
+    0
+    19px;
+
+  border: none;
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #e2ad5d,
+      #c78834
+    );
+
+  color: #0b2b21;
+
+  cursor: pointer;
+
+  font-size: 10px;
+  font-weight: 900;
+
+  box-shadow:
+    0 13px 30px
+    rgba(186, 124, 42, 0.18);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+.gemora-agent-run-button:hover:not(:disabled) {
+  transform:
+    translateY(-2px);
+
+  box-shadow:
+    0 18px 36px
+    rgba(186, 124, 42, 0.28);
+}
+
+
+.gemora-agent-run-button:disabled {
+  cursor: not-allowed;
+
+  opacity: 0.58;
+}
+
+
+.agent-button-symbol {
+  font-size: 12px;
+}
+
+
+.agent-button-spinner {
+  width: 14px;
+  height: 14px;
+
+  border:
+    2px solid
+    rgba(9, 42, 32, 0.25);
+
+  border-top-color:
+    #0b2b21;
+
+  border-radius: 50%;
+
+  animation:
+    gemoraAgentSpinner
+    0.75s linear infinite;
+}
+
+
+@keyframes gemoraAgentSpinner {
+  to {
+    transform:
+      rotate(360deg);
+  }
+}
+
+
+/* ============================================================
+   AGENT ROLES
+   ============================================================ */
+
+.gemora-agent-role-grid {
+  position: relative;
+  z-index: 2;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, 1fr);
+
+  gap: 11px;
+
+  margin-top: 25px;
+}
+
+
+.gemora-agent-role-grid > div {
+  padding: 15px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.075);
+
+  border-radius: 11px;
+
+  background:
+    rgba(255, 255, 255, 0.035);
+}
+
+
+.agent-role-number {
+  display: block;
+
+  margin-bottom: 9px;
+
+  color: #dda958;
+
+  font-size: 8px;
+  font-weight: 900;
+}
+
+
+.gemora-agent-role-grid strong {
+  display: block;
+
+  color:
+    rgba(255, 255, 255, 0.9);
+
+  font-size: 10px;
+}
+
+
+.gemora-agent-role-grid p {
+  margin:
+    6px
+    0
+    0;
+
+  color:
+    rgba(255, 255, 255, 0.39);
+
+  font-size: 9px;
+
+  line-height: 1.55;
+}
+
+
+/* ============================================================
+   PROCESSING
+   ============================================================ */
+
+.gemora-agent-processing {
+  display: flex;
+  align-items: center;
+
+  gap: 22px;
+
+  margin-top: 20px;
+
+  padding: 18px;
+
+  border:
+    1px solid
+    rgba(95, 174, 220, 0.16);
+
+  border-radius: 13px;
+
+  background:
+    rgba(70, 142, 209, 0.055);
+}
+
+
+.agent-processing-visual {
+  width: 70px;
+  min-width: 70px;
+  height: 70px;
+
+  position: relative;
+
+  display: grid;
+  place-items: center;
+}
+
+
+.agent-scan-ring {
+  position: absolute;
+
+  border-radius: 50%;
+
+  border:
+    1px solid
+    rgba(105, 184, 226, 0.25);
+}
+
+
+.agent-scan-ring-one {
+  inset: 3px;
+
+  animation:
+    agentScan
+    2s ease-in-out infinite;
+}
+
+
+.agent-scan-ring-two {
+  inset: 13px;
+
+  animation:
+    agentScan
+    1.5s ease-in-out infinite reverse;
+}
+
+
+.agent-processing-core {
+  color: #86c6eb;
+
+  font-size: 18px;
+}
+
+
+@keyframes agentScan {
+
+  0%,
+  100% {
+    transform:
+      scale(0.87);
+
+    opacity: 0.3;
+  }
+
+  50% {
+    transform:
+      scale(1);
+
+    opacity: 1;
+  }
+
+}
+
+
+.gemora-agent-processing span {
+  color: #78bbe3;
+
+  font-size: 7px;
+  font-weight: 900;
+
+  letter-spacing: 1.4px;
+}
+
+
+.gemora-agent-processing h3 {
+  margin:
+    4px
+    0;
+
+  color: #ffffff;
+
+  font-size: 13px;
+}
+
+
+.gemora-agent-processing p {
+  margin: 0;
+
+  color:
+    rgba(255, 255, 255, 0.43);
+
+  font-size: 9px;
+
+  line-height: 1.6;
+}
+
+
+/* ============================================================
+   SECTION HEADING
+   ============================================================ */
+
+.agent-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  gap: 20px;
+
+  margin-bottom: 16px;
+}
+
+
+.agent-section-heading span {
+  color: #dca958;
+
+  font-size: 7px;
+  font-weight: 900;
+
+  letter-spacing: 1.4px;
+}
+
+
+.agent-section-heading h3 {
+  margin:
+    5px
+    0
+    0;
+
+  color: #ffffff;
+
+  font-size: 15px;
+}
+
+
+.agent-section-heading small {
+  color:
+    rgba(255, 255, 255, 0.35);
+
+  font-size: 8px;
+}
+
+
+/* ============================================================
+   EXECUTION TIMELINE
+   ============================================================ */
+
+.gemora-agent-execution {
+  margin-top: 20px;
+
+  padding: 20px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.075);
+
+  border-radius: 14px;
+
+  background:
+    rgba(0, 0, 0, 0.09);
+}
+
+
+.agent-timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+
+.agent-timeline-step {
+  min-height: 49px;
+
+  position: relative;
+
+  display: grid;
+
+  grid-template-columns:
+    32px
+    1fr;
+
+  gap: 12px;
+}
+
+
+.agent-timeline-step:not(:last-child)::after {
+  content: "";
+
+  position: absolute;
+
+  left: 15px;
+  top: 31px;
+
+  width: 1px;
+  height:
+    calc(
+      100% - 5px
+    );
+
+  background:
+    rgba(255, 255, 255, 0.09);
+}
+
+
+.agent-timeline-marker {
+  width: 30px;
+  height: 30px;
+
+  position: relative;
+  z-index: 2;
+
+  display: grid;
+  place-items: center;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.12);
+
+  border-radius: 50%;
+
+  background:
+    #082c23;
+
+  color:
+    rgba(255, 255, 255, 0.38);
+
+  font-size: 8px;
+  font-weight: 800;
+}
+
+
+.agent-step-completed
+.agent-timeline-marker {
+  background:
+    rgba(52, 157, 112, 0.17);
+
+  border-color:
+    rgba(91, 199, 151, 0.24);
+
+  color: #77d4aa;
+}
+
+
+.agent-step-active
+.agent-timeline-marker {
+  border-color:
+    rgba(105, 183, 224, 0.35);
+
+  color: #82c4e9;
+
+  animation:
+    agentActiveStep
+    1.2s ease-in-out infinite;
+}
+
+
+@keyframes agentActiveStep {
+
+  0%,
+  100% {
+    box-shadow:
+      0 0 0
+      0
+      rgba(100, 179, 221, 0);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0
+      6px
+      rgba(100, 179, 221, 0.07);
+  }
+
+}
+
+
+.agent-timeline-content {
+  padding-top: 4px;
+}
+
+
+.agent-timeline-content strong {
+  display: block;
+
+  color:
+    rgba(255, 255, 255, 0.74);
+
+  font-size: 10px;
+}
+
+
+.agent-timeline-content small {
+  display: block;
+
+  margin-top: 3px;
+
+  color:
+    rgba(255, 255, 255, 0.35);
+
+  font-size: 8px;
+
+  line-height: 1.5;
+}
+
+
+/* ============================================================
+   RESULTS
+   ============================================================ */
+
+.gemora-agent-results {
+  margin-top: 20px;
+
+  padding: 20px;
+
+  border:
+    1px solid
+    rgba(89, 190, 145, 0.13);
+
+  border-radius: 14px;
+
+  background:
+    rgba(47, 143, 103, 0.045);
+}
+
+
+.agent-image-analyzed {
+  padding:
+    6px
+    9px;
+
+  border-radius: 20px;
+
+  background:
+    rgba(76, 179, 128, 0.1);
+
+  color: #77d4aa;
+
+  font-size: 8px;
+  font-weight: 800;
+}
+
+
+.agent-result-summary {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: 10px;
+}
+
+
+.agent-result-summary article {
+  padding: 15px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.075);
+
+  border-radius: 10px;
+
+  background:
+    rgba(255, 255, 255, 0.035);
+}
+
+
+.agent-result-summary span,
+.agent-findings-card > span {
+  display: block;
+
+  color: #d9a555;
+
+  font-size: 7px;
+  font-weight: 900;
+
+  letter-spacing: 1px;
+
+  text-transform: uppercase;
+}
+
+
+.agent-result-summary strong {
+  display: block;
+
+  margin-top: 6px;
+
+  color: #ffffff;
+
+  font-family:
+    Georgia,
+    serif;
+
+  font-size: 18px;
+  font-weight: 500;
+}
+
+
+/* ============================================================
+   FINDINGS
+   ============================================================ */
+
+.agent-findings-card {
+  margin-top: 12px;
+
+  padding: 17px;
+
+  border-radius: 11px;
+
+  background:
+    rgba(255, 255, 255, 0.04);
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.075);
+}
+
+
+.agent-findings-card p {
+  margin:
+    8px
+    0
+    0;
+
+  color:
+    rgba(255, 255, 255, 0.66);
+
+  font-size: 10px;
+
+  line-height: 1.7;
+}
+
+
+/* ============================================================
+   REPORT BLOCKS
+   ============================================================ */
+
+.agent-report-block {
+  margin-top: 12px;
+
+  padding: 16px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.07);
+
+  border-radius: 11px;
+
+  background:
+    rgba(255, 255, 255, 0.03);
+}
+
+
+.agent-report-block h4 {
+  margin:
+    0
+    0
+    10px;
+
+  color: #ffffff;
+
+  font-size: 11px;
+}
+
+
+.agent-report-block ul {
+  margin: 0;
+
+  padding: 0;
+
+  list-style: none;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+}
+
+
+.agent-report-block li {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 8px;
+
+  color:
+    rgba(255, 255, 255, 0.57);
+
+  font-size: 9px;
+
+  line-height: 1.5;
+}
+
+
+.agent-report-block li span {
+  width: 17px;
+  min-width: 17px;
+  height: 17px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 50%;
+
+  background:
+    rgba(72, 169, 122, 0.11);
+
+  color: #73d0a5;
+
+  font-size: 8px;
+}
+
+
+.agent-risk-report {
+  background:
+    rgba(218, 163, 79, 0.045);
+
+  border-color:
+    rgba(218, 163, 79, 0.13);
+}
+
+
+.agent-risk-report
+li span {
+  background:
+    rgba(218, 163, 79, 0.11);
+
+  color: #e4b86f;
+}
+
+
+.agent-validation-report {
+  background:
+    rgba(210, 92, 79, 0.04);
+
+  border-color:
+    rgba(210, 92, 79, 0.12);
+}
+
+
+.agent-validation-report
+li span {
+  background:
+    rgba(210, 92, 79, 0.11);
+
+  color: #e38f86;
+}
+
+
+/* ============================================================
+   HUMAN AUTHORITY BOUNDARY
+   ============================================================ */
+
+.gemora-agent-human-boundary {
+  display: flex;
+  align-items: center;
+
+  gap: 13px;
+
+  margin-top: 20px;
+
+  padding:
+    14px
+    16px;
+
+  border:
+    1px solid
+    rgba(221, 169, 88, 0.14);
+
+  border-radius: 11px;
+
+  background:
+    rgba(221, 169, 88, 0.045);
+}
+
+
+.agent-human-icon {
+  width: 35px;
+  min-width: 35px;
+  height: 35px;
+
+  display: grid;
+  place-items: center;
+
+  border:
+    1px solid
+    rgba(221, 169, 88, 0.2);
+
+  border-radius: 9px;
+
+  color: #dda958;
+
+  font-family:
+    Georgia,
+    serif;
+
+  font-size: 13px;
+}
+
+
+.gemora-agent-human-boundary strong {
+  color:
+    rgba(255, 255, 255, 0.82);
+
+  font-size: 10px;
+}
+
+
+.gemora-agent-human-boundary p {
+  margin:
+    3px
+    0
+    0;
+
+  color:
+    rgba(255, 255, 255, 0.39);
+
+  font-size: 8px;
+
+  line-height: 1.55;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 950px) {
+
+  .gemora-agent-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+
+  .gemora-agent-run-button {
+    width: 100%;
+  }
+
+
+  .gemora-agent-role-grid {
+    grid-template-columns:
+      repeat(2, 1fr);
+  }
+
+}
+
+
+@media (max-width: 650px) {
+
+  .gemora-agent-panel {
+    padding: 19px;
+  }
+
+
+  .gemora-agent-identity {
+    align-items: flex-start;
+  }
+
+
+  .gemora-agent-orb {
+    width: 55px;
+    min-width: 55px;
+    height: 55px;
+  }
+
+
+  .agent-orb-core {
+    width: 35px;
+    height: 35px;
+  }
+
+
+  .gemora-agent-role-grid,
+  .agent-result-summary {
+    grid-template-columns: 1fr;
+  }
+
+
+  .gemora-agent-title-row {
+    align-items: flex-start;
+  }
+
+}
+/* ============================================================
+   GEMOLOGIST — PROFESSIONAL LIVE DASHBOARD
+   ============================================================ */
+
+.gemologist-dashboard-page {
+  width: min(1450px, calc(100% - 48px));
+  min-width: 0;
+
+  margin: 0 auto;
+
+  padding:
+    34px
+    0
+    75px;
+
+  color: #14251f;
+}
+
+
+/* ============================================================
+   HERO
+   ============================================================ */
+
+.gemologist-dashboard-hero {
+  min-height: 250px;
+
+  padding:
+    43px
+    32px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 40px;
+
+  overflow: hidden;
+
+  border-radius: 22px;
+
+  background:
+    radial-gradient(
+      circle at 90% 10%,
+      rgba(216, 164, 77, 0.1),
+      transparent 24%
+    ),
+    linear-gradient(
+      135deg,
+      #003d31,
+      #005345
+    );
+
+  box-shadow:
+    0 20px 45px
+    rgba(13, 55, 44, 0.1);
+}
+
+
+.gemologist-dashboard-hero-content {
+  max-width: 780px;
+}
+
+
+.gemologist-dashboard-eyebrow {
+  display: block;
+
+  margin-bottom: 12px;
+
+  color: #e2a54a;
+
+  font-size: 9px;
+  font-weight: 900;
+
+  letter-spacing: 1.8px;
+}
+
+
+.gemologist-dashboard-hero h1 {
+  margin:
+    0
+    0
+    13px;
+
+  color: #ffffff;
+
+  font-family:
+    Georgia,
+    serif;
+
+  font-size:
+    clamp(36px, 4vw, 54px);
+
+  font-weight: 500;
+
+  letter-spacing: -1.7px;
+}
+
+
+.gemologist-dashboard-hero p {
+  max-width: 720px;
+
+  color:
+    rgba(255, 255, 255, 0.7);
+
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+
+.gemologist-queue-button {
+  min-width: 210px;
+  min-height: 50px;
+
+  padding:
+    0
+    18px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #efad49,
+      #d99738
+    );
+
+  color: #10251f;
+
+  text-decoration: none;
+
+  font-size: 11px;
+  font-weight: 900;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+.gemologist-queue-button:hover {
+  transform:
+    translateY(-2px);
+
+  box-shadow:
+    0 13px 28px
+    rgba(212, 143, 48, 0.22);
+}
+
+
+/* ============================================================
+   SECTIONS
+   ============================================================ */
+
+.gemologist-dashboard-section {
+  margin-top: 32px;
+}
+
+
+.gemologist-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  margin-bottom: 17px;
+}
+
+
+.gemologist-section-heading span,
+.gemologist-panel-heading
+> div > span {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color: #b97927;
+
+  font-size: 8px;
+  font-weight: 900;
+
+  letter-spacing: 1.4px;
+}
+
+
+.gemologist-section-heading h2,
+.gemologist-panel-heading h2 {
+  margin: 0;
+
+  color: #11352b;
+
+  font-size: 22px;
+  font-weight: 750;
+}
+
+
+.gemologist-refresh-button {
+  min-height: 36px;
+
+  padding:
+    0
+    13px;
+
+  border:
+    1px solid #dcd4c8;
+
+  border-radius: 9px;
+
+  background: #ffffff;
+
+  color: #42544e;
+
+  cursor: pointer;
+
+  font-size: 9px;
+  font-weight: 800;
+}
+
+
+/* ============================================================
+   STATS
+   ============================================================ */
+
+.gemologist-stats-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 14px;
+}
+
+
+.gemologist-stat-card {
+  min-width: 0;
+  min-height: 165px;
+
+  padding: 20px;
+
+  border:
+    1px solid #e4ded4;
+
+  border-radius: 16px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 10px 30px
+    rgba(19, 48, 39, 0.035);
+}
+
+
+.gemologist-stat-primary {
+  background:
+    linear-gradient(
+      145deg,
+      #102f27,
+      #173e34
+    );
+
+  border-color:
+    rgba(219, 167, 78, 0.16);
+}
+
+
+.gemologist-stat-top {
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+}
+
+
+.gemologist-stat-icon {
+  width: 30px;
+  height: 30px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 9px;
+
+  background: #f5ede0;
+
+  color: #bb8032;
+
+  font-size: 9px;
+  font-weight: 900;
+}
+
+
+.gemologist-stat-icon.completed {
+  background: #e8f7ef;
+  color: #277152;
+}
+
+
+.gemologist-stat-icon.pending {
+  background: #fff5e5;
+  color: #ad7324;
+}
+
+
+.gemologist-stat-icon.attention {
+  background: #fff0ed;
+  color: #b34d3f;
+}
+
+
+.gemologist-stat-label {
+  color: #7e8984;
+
+  font-size: 8px;
+  font-weight: 900;
+
+  letter-spacing: 0.8px;
+
+  text-transform: uppercase;
+}
+
+
+.gemologist-stat-primary
+.gemologist-stat-label {
+  color:
+    rgba(255, 255, 255, 0.55);
+}
+
+
+.gemologist-stat-card > strong {
+  display: block;
+
+  margin-top: 15px;
+
+  color: #163a2f;
+
+  font-family:
+    Georgia,
+    serif;
+
+  font-size: 35px;
+  font-weight: 500;
+}
+
+
+.gemologist-stat-primary
+> strong {
+  color: #dfb468;
+}
+
+
+.gemologist-stat-card p {
+  margin-top: 9px;
+
+  color: #87908c;
+
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+
+.gemologist-stat-primary p {
+  color:
+    rgba(255, 255, 255, 0.48);
+}
+
+
+/* ============================================================
+   TWO COLUMN AREA
+   ============================================================ */
+
+.gemologist-dashboard-two-column {
+  margin-top: 28px;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.5fr)
+    minmax(320px, 0.7fr);
+
+  gap: 18px;
+}
+
+
+.gemologist-dashboard-panel {
+  min-width: 0;
+
+  padding: 22px;
+
+  border:
+    1px solid #e5dfd5;
+
+  border-radius: 17px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 12px 32px
+    rgba(18, 48, 39, 0.035);
+}
+
+
+.gemologist-panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  gap: 20px;
+
+  margin-bottom: 18px;
+}
+
+
+.gemologist-panel-heading p {
+  margin-top: 6px;
+
+  max-width: 560px;
+
+  color: #86908c;
+
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+
+.gemologist-panel-link {
+  flex-shrink: 0;
+
+  color: #a86f29;
+
+  text-decoration: none;
+
+  font-size: 9px;
+  font-weight: 900;
+}
+
+
+/* ============================================================
+   PENDING PREVIEW
+   ============================================================ */
+
+.gemologist-preview-list {
+  display: flex;
+  flex-direction: column;
+
+  gap: 9px;
+}
+
+
+.gemologist-preview-item {
+  min-width: 0;
+
+  display: grid;
+
+  grid-template-columns:
+    66px
+    minmax(0, 1fr)
+    auto;
+
+  align-items: center;
+
+  gap: 14px;
+
+  padding: 12px;
+
+  border:
+    1px solid #ebe6de;
+
+  border-radius: 13px;
+
+  background: #fbfaf7;
+}
+
+
+.gemologist-preview-image {
+  width: 66px;
+  height: 66px;
+
+  overflow: hidden;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 10px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #12372e,
+      #1e4b40
+    );
+
+  color: #d8aa5b;
+}
+
+
+.gemologist-preview-image img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+
+.gemologist-preview-content {
+  min-width: 0;
+}
+
+
+.gemologist-preview-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 12px;
+}
+
+
+.gemologist-preview-title-row
+> div {
+  min-width: 0;
+}
+
+
+.gemologist-preview-title-row
+> div > span {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: #b87b2c;
+
+  font-size: 7px;
+  font-weight: 900;
+
+  letter-spacing: 0.8px;
+
+  text-transform: uppercase;
+}
+
+
+.gemologist-preview-title-row h3 {
+  margin: 0;
+
+  overflow: hidden;
+
+  color: #18372e;
+
+  font-size: 12px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+.gemologist-ai-chip {
+  flex-shrink: 0;
+
+  padding:
+    5px
+    8px;
+
+  border-radius: 999px;
+
+  font-size: 7px;
+  font-weight: 900;
+}
+
+
+.gemologist-ai-chip.completed {
+  background: #e8f7ef;
+  color: #267153;
+}
+
+
+.gemologist-ai-chip.processing {
+  background: #ebf4fb;
+  color: #34769c;
+}
+
+
+.gemologist-ai-chip.warning {
+  background: #fff3df;
+  color: #996623;
+}
+
+
+.gemologist-ai-chip.failed {
+  background: #fdebea;
+  color: #a7443b;
+}
+
+
+.gemologist-ai-chip.not-started {
+  background: #efefec;
+  color: #747d79;
+}
+
+
+.gemologist-preview-meta {
+  margin-top: 7px;
+
+  display: flex;
+  flex-wrap: wrap;
+
+  gap:
+    5px
+    13px;
+
+  color: #89918e;
+
+  font-size: 8px;
+}
+
+
+.gemologist-preview-meta strong {
+  color: #52615c;
+}
+
+
+.gemologist-preview-evidence {
+  margin-top: 7px;
+
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 6px;
+}
+
+
+.gemologist-preview-evidence span {
+  padding:
+    4px
+    7px;
+
+  border-radius: 999px;
+
+  font-size: 7px;
+  font-weight: 800;
+}
+
+
+.gemologist-preview-evidence
+.available {
+  background: #eaf7ef;
+  color: #337052;
+}
+
+
+.gemologist-preview-evidence
+.missing {
+  background: #f9e9e6;
+  color: #9c4b40;
+}
+
+
+.gemologist-preview-open {
+  min-width: 92px;
+  min-height: 36px;
+
+  padding:
+    0
+    10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 8px;
+
+  border-radius: 8px;
+
+  background: #143b31;
+
+  color: #ffffff;
+
+  text-decoration: none;
+
+  font-size: 8px;
+  font-weight: 800;
+}
+
+
+/* ============================================================
+   ATTENTION REQUIRED
+   ============================================================ */
+
+.gemologist-attention-list {
+  display: flex;
+  flex-direction: column;
+
+  gap: 9px;
+}
+
+
+.gemologist-attention-item {
+  min-width: 0;
+
+  padding: 13px;
+
+  display: grid;
+
+  grid-template-columns:
+    auto
+    minmax(0, 1fr)
+    auto;
+
+  align-items: flex-start;
+
+  gap: 11px;
+
+  border:
+    1px solid #ecd9c4;
+
+  border-radius: 12px;
+
+  background: #fffaf4;
+
+  color: inherit;
+
+  text-decoration: none;
+}
+
+
+.gemologist-attention-icon {
+  width: 30px;
+  height: 30px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 9px;
+
+  background: #f7e4cf;
+
+  color: #a66527;
+
+  font-weight: 900;
+}
+
+
+.gemologist-attention-item
+> div:nth-child(2) {
+  min-width: 0;
+}
+
+
+.gemologist-attention-item
+> div:nth-child(2)
+> span {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: #b37a35;
+
+  font-size: 7px;
+  font-weight: 900;
+
+  letter-spacing: 0.8px;
+}
+
+
+.gemologist-attention-item strong {
+  display: block;
+
+  overflow: hidden;
+
+  color: #443629;
+
+  font-size: 10px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+.gemologist-attention-item ul {
+  margin:
+    6px
+    0
+    0;
+
+  padding-left: 14px;
+
+  color: #8b6b4d;
+
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+
+.gemologist-attention-arrow {
+  align-self: center;
+
+  color: #af7530;
+}
+
+
+/* ============================================================
+   WORKFLOW
+   ============================================================ */
+
+.gemologist-workflow-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap: 15px;
+}
+
+
+.gemologist-workflow-grid article {
+  min-height: 150px;
+
+  padding: 22px;
+
+  border:
+    1px solid #e4ddd3;
+
+  border-radius: 15px;
+
+  background: #fffdf9;
+}
+
+
+.gemologist-workflow-grid article
+> span {
+  display: block;
+
+  margin-bottom: 19px;
+
+  color: #c27621;
+
+  font-size: 9px;
+  font-weight: 900;
+}
+
+
+.gemologist-workflow-grid h3 {
+  margin:
+    0
+    0
+    7px;
+
+  color: #12372c;
+
+  font-size: 15px;
+}
+
+
+.gemologist-workflow-grid p {
+  color: #84908b;
+
+  font-size: 9px;
+  line-height: 1.65;
+}
+
+
+/* ============================================================
+   HUMAN NOTICE
+   ============================================================ */
+
+.gemologist-human-notice {
+  margin-top: 20px;
+
+  padding:
+    19px
+    20px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 14px;
+
+  border:
+    1px solid #e5d2b4;
+
+  border-radius: 14px;
+
+  background: #fff8ef;
+}
+
+
+.gemologist-human-notice-icon {
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 10px;
+
+  background: #f2e1c7;
+
+  color: #a96d25;
+
+  font-family:
+    Georgia,
+    serif;
+}
+
+
+.gemologist-human-notice h3 {
+  margin:
+    0
+    0
+    3px;
+
+  color: #17382d;
+
+  font-size: 13px;
+}
+
+
+.gemologist-human-notice p {
+  color: #7d8984;
+
+  font-size: 9px;
+}
+
+
+/* ============================================================
+   STATES
+   ============================================================ */
+
+.gemologist-panel-state {
+  min-height: 190px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+
+  gap: 8px;
+
+  text-align: center;
+
+  color: #818b87;
+}
+
+
+.gemologist-panel-state strong {
+  color: #214037;
+
+  font-size: 11px;
+}
+
+
+.gemologist-panel-state p {
+  max-width: 270px;
+
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+
+.gemologist-dashboard-loader {
+  width: 28px;
+  height: 28px;
+
+  border:
+    2px solid #e8e2d8;
+
+  border-top-color: #b87a2d;
+
+  border-radius: 50%;
+
+  animation:
+    gemologistDashboardSpin
+    0.7s linear infinite;
+}
+
+
+.gemologist-empty-symbol {
+  width: 35px;
+  height: 35px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 50%;
+
+  background: #e9f6ef;
+
+  color: #337355;
+
+  font-size: 13px;
+  font-weight: 900;
+}
+
+
+.gemologist-dashboard-error {
+  margin-bottom: 15px;
+
+  padding: 12px;
+
+  border:
+    1px solid #efc7c1;
+
+  border-radius: 10px;
+
+  background: #fff4f2;
+
+  color: #943d34;
+
+  font-size: 9px;
+}
+
+
+@keyframes gemologistDashboardSpin {
+  to {
+    transform:
+      rotate(360deg);
+  }
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 1100px) {
+
+  .gemologist-stats-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+
+  .gemologist-dashboard-two-column {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+
+@media (max-width: 760px) {
+
+  .gemologist-dashboard-page {
+    width:
+      min(
+        100% - 24px,
+        1450px
+      );
+
+    padding-top: 20px;
+  }
+
+
+  .gemologist-dashboard-hero {
+    align-items: flex-start;
+
+    flex-direction: column;
+
+    padding:
+      31px
+      22px;
+  }
+
+
+  .gemologist-queue-button {
+    width: 100%;
+  }
+
+
+  .gemologist-workflow-grid {
+    grid-template-columns: 1fr;
+  }
+
+
+  .gemologist-preview-item {
+    grid-template-columns:
+      55px
+      minmax(0, 1fr);
+  }
+
+
+  .gemologist-preview-image {
+    width: 55px;
+    height: 55px;
+  }
+
+
+  .gemologist-preview-open {
+    grid-column:
+      1 / -1;
+
+    width: 100%;
+  }
+
+}
+
+
+@media (max-width: 540px) {
+
+  .gemologist-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+
+  .gemologist-preview-title-row {
+    flex-direction: column;
+  }
+
+
+  .gemologist-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+
+  .gemologist-refresh-button {
+    width: 100%;
+  }
+
+}
+/* ============================================================
+   GEMORA — READABLE PROFESSIONAL TYPOGRAPHY
+   GEMOLOGIST DASHBOARD
+   Keep this at the VERY BOTTOM of App.css
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   HERO
+   ------------------------------------------------------------ */
+
+.gemologist-dashboard-eyebrow {
+  font-size: 12px;
+  font-weight: 800;
+
+  letter-spacing: 1.8px;
+}
+
+
+.gemologist-dashboard-hero h1 {
+  font-size:
+    clamp(44px, 4.5vw, 62px);
+
+  line-height: 1.05;
+}
+
+
+.gemologist-dashboard-hero p {
+  max-width: 760px;
+
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+
+.gemologist-queue-button {
+  min-height: 54px;
+
+  font-size: 13px;
+}
+
+
+/* ------------------------------------------------------------
+   SECTION HEADINGS
+   ------------------------------------------------------------ */
+
+.gemologist-section-heading span,
+.gemologist-panel-heading > div > span {
+  font-size: 11px;
+
+  letter-spacing: 1.5px;
+}
+
+
+.gemologist-section-heading h2,
+.gemologist-panel-heading h2 {
+  font-size: 27px;
+  line-height: 1.2;
+}
+
+
+.gemologist-panel-heading p {
+  max-width: 600px;
+
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+
+.gemologist-panel-link {
+  font-size: 12px;
+}
+
+
+.gemologist-refresh-button {
+  min-height: 40px;
+
+  padding:
+    0
+    15px;
+
+  font-size: 12px;
+}
+
+
+/* ------------------------------------------------------------
+   STATISTIC CARDS
+   ------------------------------------------------------------ */
+
+.gemologist-stat-card {
+  min-height: 185px;
+
+  padding: 23px;
+}
+
+
+.gemologist-stat-icon {
+  width: 36px;
+  height: 36px;
+
+  font-size: 11px;
+}
+
+
+.gemologist-stat-label {
+  font-size: 11px;
+
+  letter-spacing: 0.8px;
+}
+
+
+.gemologist-stat-card > strong {
+  margin-top: 17px;
+
+  font-size: 43px;
+}
+
+
+.gemologist-stat-card p {
+  margin-top: 11px;
+
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+
+/* ------------------------------------------------------------
+   PENDING VERIFICATION LIST
+   ------------------------------------------------------------ */
+
+.gemologist-preview-item {
+  padding: 15px;
+
+  gap: 16px;
+}
+
+
+.gemologist-preview-image {
+  width: 76px;
+  height: 76px;
+}
+
+
+.gemologist-preview-title-row
+> div > span {
+  margin-bottom: 5px;
+
+  font-size: 10px;
+
+  letter-spacing: 0.9px;
+}
+
+
+.gemologist-preview-title-row h3 {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+
+.gemologist-ai-chip {
+  padding:
+    6px
+    10px;
+
+  font-size: 10px;
+}
+
+
+.gemologist-preview-meta {
+  margin-top: 9px;
+
+  gap:
+    6px
+    15px;
+
+  font-size: 11px;
+}
+
+
+.gemologist-preview-evidence {
+  margin-top: 9px;
+}
+
+
+.gemologist-preview-evidence span {
+  padding:
+    5px
+    9px;
+
+  font-size: 10px;
+}
+
+
+.gemologist-preview-open {
+  min-width: 110px;
+  min-height: 42px;
+
+  padding:
+    0
+    13px;
+
+  font-size: 11px;
+}
+
+
+/* ------------------------------------------------------------
+   ATTENTION REQUIRED
+   ------------------------------------------------------------ */
+
+.gemologist-attention-item {
+  padding: 16px;
+
+  gap: 13px;
+}
+
+
+.gemologist-attention-icon {
+  width: 36px;
+  height: 36px;
+
+  font-size: 13px;
+}
+
+
+.gemologist-attention-item
+> div:nth-child(2)
+> span {
+  margin-bottom: 5px;
+
+  font-size: 10px;
+}
+
+
+.gemologist-attention-item strong {
+  font-size: 13px;
+}
+
+
+.gemologist-attention-item ul {
+  margin-top: 8px;
+
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+
+.gemologist-attention-arrow {
+  font-size: 18px;
+}
+
+
+/* ------------------------------------------------------------
+   WORKFLOW
+   ------------------------------------------------------------ */
+
+.gemologist-workflow-grid article {
+  min-height: 180px;
+
+  padding: 25px;
+}
+
+
+.gemologist-workflow-grid article > span {
+  margin-bottom: 22px;
+
+  font-size: 11px;
+}
+
+
+.gemologist-workflow-grid h3 {
+  margin-bottom: 9px;
+
+  font-size: 18px;
+}
+
+
+.gemologist-workflow-grid p {
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+
+/* ------------------------------------------------------------
+   HUMAN AUTHORITY NOTICE
+   ------------------------------------------------------------ */
+
+.gemologist-human-notice {
+  padding:
+    22px
+    24px;
+}
+
+
+.gemologist-human-notice-icon {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+
+  font-size: 16px;
+}
+
+
+.gemologist-human-notice h3 {
+  margin-bottom: 5px;
+
+  font-size: 17px;
+}
+
+
+.gemologist-human-notice p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+
+/* ------------------------------------------------------------
+   EMPTY / LOADING STATES
+   ------------------------------------------------------------ */
+
+.gemologist-panel-state strong {
+  font-size: 14px;
+}
+
+
+.gemologist-panel-state p {
+  max-width: 330px;
+
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+
+.gemologist-dashboard-error {
+  padding: 14px;
+
+  font-size: 12px;
+}
+
+
+/* ============================================================
+   GEMORA VERIFICATION AGENT — READABLE TYPOGRAPHY
+   ============================================================ */
+
+.gemora-agent-label {
+  font-size: 11px;
+
+  letter-spacing: 1.6px;
+}
+
+
+.gemora-agent-status {
+  padding:
+    6px
+    10px;
+
+  font-size: 9px;
+}
+
+
+.gemora-agent-identity h2 {
+  font-size: 30px;
+}
+
+
+.gemora-agent-identity p {
+  max-width: 620px;
+
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+
+.gemora-agent-run-button {
+  min-height: 54px;
+
+  font-size: 12px;
+}
+
+
+.agent-role-number {
+  font-size: 10px;
+}
+
+
+.gemora-agent-role-grid strong {
+  font-size: 13px;
+}
+
+
+.gemora-agent-role-grid p {
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+
+.gemora-agent-processing span {
+  font-size: 9px;
+}
+
+
+.gemora-agent-processing h3 {
+  font-size: 16px;
+}
+
+
+.gemora-agent-processing p {
+  max-width: 620px;
+
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+
+.agent-section-heading span {
+  font-size: 9px;
+}
+
+
+.agent-section-heading h3 {
+  font-size: 18px;
+}
+
+
+.agent-section-heading small {
+  font-size: 10px;
+}
+
+
+.agent-timeline-content strong {
+  font-size: 12px;
+}
+
+
+.agent-timeline-content small {
+  margin-top: 4px;
+
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+
+.agent-result-summary span,
+.agent-findings-card > span {
+  font-size: 9px;
+}
+
+
+.agent-result-summary strong {
+  font-size: 22px;
+}
+
+
+.agent-findings-card p {
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+
+.agent-report-block h4 {
+  font-size: 14px;
+}
+
+
+.agent-report-block li {
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+
+.gemora-agent-human-boundary strong {
+  font-size: 12px;
+}
+
+
+.gemora-agent-human-boundary p {
+  max-width: 850px;
+
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+
+/* ============================================================
+   VERIFICATION DETAILS — READABLE TYPOGRAPHY
+   ============================================================ */
+
+.verification-back-link {
+  font-size: 12px;
+}
+
+
+.verification-details-header p {
+  font-size: 13px;
+}
+
+
+.verification-detail-status,
+.verification-detail-decision {
+  font-size: 10px;
+}
+
+
+.verification-panel-heading span,
+.verification-human-review-heading
+> div:first-child > span,
+.verification-ai-header
+> div:first-child > span {
+  font-size: 10px;
+}
+
+
+.verification-panel-heading h2,
+.verification-human-review-heading h2 {
+  font-size: 27px;
+}
+
+
+.verification-panel-heading a {
+  font-size: 12px;
+}
+
+
+.verification-detail-facts span,
+.verification-certificate-grid span,
+.verification-submission-meta span {
+  font-size: 10px;
+}
+
+
+.verification-detail-facts strong,
+.verification-certificate-grid strong,
+.verification-submission-meta strong {
+  margin-top: 7px;
+
+  font-size: 13px;
+}
+
+
+.verification-description > span {
+  font-size: 10px;
+}
+
+
+.verification-description p {
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+
+.verification-human-review-heading p {
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+
+.verification-human-badge {
+  padding:
+    9px
+    12px;
+
+  font-size: 10px;
+}
+
+
+.verification-review-notes label {
+  font-size: 12px;
+}
+
+
+.verification-review-notes textarea {
+  font-size: 14px;
+}
+
+
+.verification-note-footer {
+  font-size: 11px;
+}
+
+
+.verification-decision-buttons button {
+  min-height: 52px;
+
+  font-size: 12px;
+}
+
+
+/* ============================================================
+   RESPONSIVE TYPOGRAPHY
+   ============================================================ */
+
+@media (max-width: 760px) {
+
+  .gemologist-dashboard-hero h1 {
+    font-size:
+      clamp(38px, 10vw, 50px);
+  }
+
+
+  .gemologist-dashboard-hero p {
+    font-size: 14px;
+  }
+
+
+  .gemologist-stat-card > strong {
+    font-size: 38px;
+  }
+
+
+  .gemologist-section-heading h2,
+  .gemologist-panel-heading h2 {
+    font-size: 23px;
+  }
+
+
+  .gemora-agent-identity h2 {
+    font-size: 25px;
+  }
+
+
+  .gemora-agent-role-grid strong {
+    font-size: 12px;
+  }
+
+
+  .gemora-agent-role-grid p {
+    font-size: 11px;
+  }
+
+}
+/* ============================================================
+   GEMORA — GEMOLOGIST DASHBOARD COLOR UPGRADE
+   Keep at VERY BOTTOM of App.css
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   MAIN APPLICATION BACKGROUND
+   ------------------------------------------------------------ */
+
+.gemora-app-shell {
+  background:
+    radial-gradient(
+      circle at 8% 8%,
+      rgba(197, 151, 72, 0.08),
+      transparent 28rem
+    ),
+    radial-gradient(
+      circle at 92% 45%,
+      rgba(15, 90, 70, 0.06),
+      transparent 30rem
+    ),
+    linear-gradient(
+      180deg,
+      #f8f4eb 0%,
+      #f4efe5 55%,
+      #f8f5ef 100%
+    );
+}
+
+
+/* ------------------------------------------------------------
+   GEMOLOGIST PAGE
+   ------------------------------------------------------------ */
+
+.gemologist-dashboard-page {
+  position: relative;
+}
+
+
+/* ------------------------------------------------------------
+   HERO — STRONGER EMERALD
+   ------------------------------------------------------------ */
+
+.gemologist-dashboard-hero {
+  background:
+    radial-gradient(
+      circle at 88% 18%,
+      rgba(227, 175, 86, 0.17),
+      transparent 24%
+    ),
+    radial-gradient(
+      circle at 15% 110%,
+      rgba(25, 116, 88, 0.22),
+      transparent 35%
+    ),
+    linear-gradient(
+      135deg,
+      #073c31 0%,
+      #005647 55%,
+      #073e34 100%
+    );
+
+  border:
+    1px solid
+    rgba(215, 170, 91, 0.18);
+
+  box-shadow:
+    0 24px 55px
+    rgba(7, 55, 43, 0.16);
+}
+
+
+/* ------------------------------------------------------------
+   SECTION TITLES
+   ------------------------------------------------------------ */
+
+.gemologist-section-heading h2,
+.gemologist-panel-heading h2 {
+  color: #103b30;
+}
+
+
+.gemologist-section-heading span,
+.gemologist-panel-heading > div > span {
+  color: #b87928;
+}
+
+
+/* ------------------------------------------------------------
+   STATISTICS — GIVE EACH CARD CHARACTER
+   ------------------------------------------------------------ */
+
+.gemologist-stat-card {
+  border:
+    1px solid
+    rgba(178, 151, 104, 0.19);
+
+  background:
+    linear-gradient(
+      145deg,
+      #fffdf8,
+      #fbf6ec
+    );
+
+  box-shadow:
+    0 14px 35px
+    rgba(53, 45, 31, 0.055);
+}
+
+
+/* PENDING */
+
+.gemologist-stat-primary {
+  background:
+    radial-gradient(
+      circle at 100% 0%,
+      rgba(219, 170, 86, 0.13),
+      transparent 45%
+    ),
+    linear-gradient(
+      145deg,
+      #113c31,
+      #174d3f
+    );
+
+  border-color:
+    rgba(221, 178, 104, 0.2);
+}
+
+
+/* AI COMPLETED */
+
+.gemologist-stat-card:nth-child(2) {
+  background:
+    linear-gradient(
+      145deg,
+      #f0f8f3,
+      #f9fcfa
+    );
+
+  border-color:
+    #cfe4d7;
+}
+
+
+/* AI NOT STARTED */
+
+.gemologist-stat-card:nth-child(3) {
+  background:
+    linear-gradient(
+      145deg,
+      #fff8e9,
+      #fffdf7
+    );
+
+  border-color:
+    #ecd9b2;
+}
+
+
+/* ATTENTION */
+
+.gemologist-stat-card:nth-child(4) {
+  background:
+    linear-gradient(
+      145deg,
+      #fff2ee,
+      #fffaf8
+    );
+
+  border-color:
+    #ecd0c8;
+}
+
+
+/* ------------------------------------------------------------
+   STAT NUMBERS
+   ------------------------------------------------------------ */
+
+.gemologist-stat-card > strong {
+  color: #114233;
+}
+
+
+.gemologist-stat-primary > strong {
+  color: #edc575;
+}
+
+
+/* ------------------------------------------------------------
+   MAIN DASHBOARD PANELS
+   ------------------------------------------------------------ */
+
+.gemologist-dashboard-panel {
+  border:
+    1px solid
+    rgba(181, 153, 106, 0.2);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 253, 247, 0.98),
+      rgba(250, 245, 234, 0.98)
+    );
+
+  box-shadow:
+    0 18px 42px
+    rgba(58, 48, 31, 0.06);
+}
+
+
+/* ------------------------------------------------------------
+   PENDING ITEMS
+   ------------------------------------------------------------ */
+
+.gemologist-preview-item {
+  border:
+    1px solid
+    #e8dece;
+
+  background:
+    linear-gradient(
+      135deg,
+      #fffdf8,
+      #f7f2e8
+    );
+
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+
+.gemologist-preview-item:hover {
+  transform:
+    translateY(-2px);
+
+  border-color:
+    rgba(190, 143, 67, 0.45);
+
+  box-shadow:
+    0 12px 26px
+    rgba(62, 48, 27, 0.08);
+}
+
+
+/* ------------------------------------------------------------
+   ATTENTION PANEL ITEMS
+   ------------------------------------------------------------ */
+
+.gemologist-attention-item {
+  border:
+    1px solid
+    #ead1b8;
+
+  background:
+    linear-gradient(
+      135deg,
+      #fff6e9,
+      #fffaf2
+    );
+
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+
+.gemologist-attention-item:hover {
+  transform:
+    translateY(-2px);
+
+  border-color:
+    #d5a45f;
+
+  box-shadow:
+    0 12px 25px
+    rgba(121, 80, 30, 0.08);
+}
+
+
+/* ------------------------------------------------------------
+   WORKFLOW CARDS
+   ------------------------------------------------------------ */
+
+.gemologist-workflow-grid article {
+  position: relative;
+
+  overflow: hidden;
+
+  border:
+    1px solid
+    #e4dac9;
+
+  background:
+    linear-gradient(
+      145deg,
+      #fffdf8,
+      #f7f2e8
+    );
+
+  box-shadow:
+    0 10px 28px
+    rgba(49, 40, 26, 0.045);
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+
+.gemologist-workflow-grid article::after {
+  content: "";
+
+  position: absolute;
+
+  width: 95px;
+  height: 95px;
+
+  right: -35px;
+  bottom: -45px;
+
+  border:
+    1px solid
+    rgba(191, 144, 67, 0.12);
+
+  border-radius: 50%;
+}
+
+
+.gemologist-workflow-grid article:hover {
+  transform:
+    translateY(-4px);
+
+  border-color:
+    rgba(185, 137, 60, 0.42);
+
+  box-shadow:
+    0 18px 38px
+    rgba(49, 40, 26, 0.075);
+}
+
+
+/* DIFFERENT TINT FOR EACH STEP */
+
+.gemologist-workflow-grid
+article:nth-child(1) {
+  background:
+    linear-gradient(
+      145deg,
+      #fffaf1,
+      #fffdf9
+    );
+}
+
+
+.gemologist-workflow-grid
+article:nth-child(2) {
+  background:
+    linear-gradient(
+      145deg,
+      #edf8f3,
+      #fbfdfc
+    );
+
+  border-color:
+    #d3e7dc;
+}
+
+
+.gemologist-workflow-grid
+article:nth-child(3) {
+  background:
+    linear-gradient(
+      145deg,
+      #f5f0e7,
+      #fffdf8
+    );
+}
+
+
+/* ------------------------------------------------------------
+   HUMAN DECISION NOTICE
+   ------------------------------------------------------------ */
+
+.gemologist-human-notice {
+  border:
+    1px solid
+    #dfc496;
+
+  background:
+    radial-gradient(
+      circle at 95% 40%,
+      rgba(201, 153, 76, 0.09),
+      transparent 27%
+    ),
+    linear-gradient(
+      135deg,
+      #fff4df,
+      #fffaf1
+    );
+
+  box-shadow:
+    0 12px 30px
+    rgba(105, 73, 33, 0.055);
+}
+
+
+/* ------------------------------------------------------------
+   BUTTONS
+   ------------------------------------------------------------ */
+
+.gemologist-queue-button {
+  background:
+    linear-gradient(
+      135deg,
+      #f0b458,
+      #d99336
+    );
+
+  box-shadow:
+    0 12px 28px
+    rgba(204, 137, 49, 0.24);
+}
+
+
+.gemologist-preview-open {
+  background:
+    linear-gradient(
+      135deg,
+      #0d4134,
+      #145a48
+    );
+
+  box-shadow:
+    0 8px 18px
+    rgba(12, 73, 57, 0.12);
+}
+
+
+.gemologist-refresh-button {
+  border-color: #d9c9ae;
+
+  background:
+    linear-gradient(
+      145deg,
+      #fffdf8,
+      #f4ecdf
+    );
+
+  color: #755326;
+}
+
+
+/* ------------------------------------------------------------
+   EMPTY STATE
+   ------------------------------------------------------------ */
+
+.gemologist-panel-state {
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(252, 248, 239, 0.65),
+      rgba(255, 255, 255, 0.65)
+    );
+}
+/* ============================================================
+   GEMORA UNIVERSAL SECTION DESIGN SYSTEM
+   ============================================================ */
+
+.gemora-section {
+  width: 100%;
+  min-width: 0;
+
+  margin-top: 30px;
+
+  padding: 26px;
+
+  position: relative;
+
+  border-radius: 18px;
+
+  border:
+    1px solid
+    rgba(155, 126, 79, 0.18);
+
+  background:
+    linear-gradient(
+      145deg,
+      #fffdf8,
+      #faf5eb
+    );
+
+  box-shadow:
+    0 14px 36px
+    rgba(43, 37, 26, 0.045);
+}
+
+
+/* ============================================================
+   SECTION VISUAL ACCENT
+   ============================================================ */
+
+.gemora-section::before {
+  content: "";
+
+  position: absolute;
+
+  top: 25px;
+  left: 0;
+
+  width: 4px;
+  height: 54px;
+
+  border-radius:
+    0
+    6px
+    6px
+    0;
+
+  background:
+    linear-gradient(
+      180deg,
+      #dba552,
+      #b97729
+    );
+}
+
+
+/* ============================================================
+   SECTION HEADER
+   ============================================================ */
+
+.gemora-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 28px;
+
+  margin-bottom: 22px;
+
+  padding-bottom: 18px;
+
+  border-bottom:
+    1px solid
+    rgba(150, 124, 84, 0.14);
+}
+
+
+.gemora-section-heading {
+  min-width: 0;
+
+  max-width: 760px;
+}
+
+
+.gemora-section-eyebrow {
+  display: block;
+
+  margin-bottom: 6px;
+
+  color: #b7792c;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  letter-spacing: 1.5px;
+
+  text-transform: uppercase;
+}
+
+
+.gemora-section-heading h2 {
+  margin: 0;
+
+  color: #123b30;
+
+  font-family:
+    Georgia,
+    "Times New Roman",
+    serif;
+
+  font-size: 27px;
+  font-weight: 500;
+
+  line-height: 1.2;
+}
+
+
+.gemora-section-heading p {
+  max-width: 700px;
+
+  margin:
+    9px
+    0
+    0;
+
+  color: #687770;
+
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+
+.gemora-section-action {
+  flex-shrink: 0;
+}
+
+
+/* ============================================================
+   SECTION CONTENT
+   ============================================================ */
+
+.gemora-section-content {
+  width: 100%;
+  min-width: 0;
+}
+
+
+/* ============================================================
+   SECTION VARIANTS
+   ============================================================ */
+
+/* Normal working section */
+
+.gemora-section-default {
+  background:
+    linear-gradient(
+      145deg,
+      #fffdf8,
+      #faf5eb
+    );
+}
+
+
+/* Slight green section */
+
+.gemora-section-sage {
+  border-color:
+    rgba(74, 135, 105, 0.22);
+
+  background:
+    linear-gradient(
+      145deg,
+      #f0f8f4,
+      #fbfdfb
+    );
+}
+
+
+.gemora-section-sage::before {
+  background:
+    linear-gradient(
+      180deg,
+      #498a6d,
+      #27634d
+    );
+}
+
+
+/* Highlight section */
+
+.gemora-section-gold {
+  border-color:
+    rgba(191, 139, 57, 0.28);
+
+  background:
+    linear-gradient(
+      145deg,
+      #fff6e5,
+      #fffdf8
+    );
+}
+
+
+/* Attention / warning section */
+
+.gemora-section-warning {
+  border-color:
+    rgba(190, 113, 72, 0.24);
+
+  background:
+    linear-gradient(
+      145deg,
+      #fff3ed,
+      #fffaf7
+    );
+}
+
+
+.gemora-section-warning::before {
+  background:
+    linear-gradient(
+      180deg,
+      #d98753,
+      #b8563e
+    );
+}
+
+
+/* Important AI / premium section */
+
+.gemora-section-emerald {
+  border-color:
+    rgba(205, 160, 80, 0.2);
+
+  background:
+    radial-gradient(
+      circle at 95% 10%,
+      rgba(215, 168, 83, 0.12),
+      transparent 28%
+    ),
+    linear-gradient(
+      135deg,
+      #07382e,
+      #0b4a3c
+    );
+}
+
+
+.gemora-section-emerald::before {
+  background:
+    linear-gradient(
+      180deg,
+      #f0c06d,
+      #cf8d34
+    );
+}
+
+
+.gemora-section-emerald
+.gemora-section-heading h2 {
+  color: #ffffff;
+}
+
+
+.gemora-section-emerald
+.gemora-section-heading p {
+  color:
+    rgba(255, 255, 255, 0.65);
+}
+
+
+.gemora-section-emerald
+.gemora-section-eyebrow {
+  color: #e6b966;
+}
+
+
+.gemora-section-emerald
+.gemora-section-header {
+  border-bottom-color:
+    rgba(255, 255, 255, 0.1);
+}
+
+
+/* ============================================================
+   STANDARD INNER CARD
+   ============================================================ */
+
+.gemora-content-card {
+  min-width: 0;
+
+  padding: 20px;
+
+  border:
+    1px solid
+    rgba(145, 123, 91, 0.16);
+
+  border-radius: 14px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 8px 24px
+    rgba(40, 35, 26, 0.035);
+}
+
+
+.gemora-content-card h3 {
+  margin:
+    0
+    0
+    7px;
+
+  color: #153b31;
+
+  font-size: 17px;
+}
+
+
+.gemora-content-card p {
+  color: #6e7c76;
+
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+
+/* ============================================================
+   STANDARD GRID
+   ============================================================ */
+
+.gemora-section-grid {
+  width: 100%;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
+
+  gap: 16px;
+}
+
+
+/* ============================================================
+   SECTION NUMBER / STEP
+   ============================================================ */
+
+.gemora-section-number {
+  width: 34px;
+  height: 34px;
+
+  display: grid;
+  place-items: center;
+
+  margin-bottom: 13px;
+
+  border-radius: 9px;
+
+  background: #f5ead7;
+
+  color: #a96c26;
+
+  font-size: 11px;
+  font-weight: 900;
+}
+
+
+/* ============================================================
+   ACTION AREA
+   ============================================================ */
+
+.gemora-action-section {
+  margin-top: 28px;
+
+  padding: 22px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 24px;
+
+  border:
+    1px solid
+    #dfc89f;
+
+  border-radius: 16px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #fff4df,
+      #fffaf2
+    );
+}
+
+
+.gemora-action-section h3 {
+  margin:
+    0
+    0
+    5px;
+
+  color: #163b30;
+
+  font-size: 18px;
+}
+
+
+.gemora-action-section p {
+  color: #6f7e77;
+
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 950px) {
+
+  .gemora-section-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
+
+}
+
+
+@media (max-width: 700px) {
+
+  .gemora-section {
+    margin-top: 20px;
+
+    padding:
+      22px
+      18px;
+  }
+
+
+  .gemora-section::before {
+    top: 22px;
+  }
+
+
+  .gemora-section-header {
+    flex-direction: column;
+
+    gap: 14px;
+  }
+
+
+  .gemora-section-action {
+    width: 100%;
+  }
+
+
+  .gemora-section-action
+  > * {
+    width: 100%;
+  }
+
+
+  .gemora-section-grid {
+    grid-template-columns: 1fr;
+  }
+
+
+  .gemora-action-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+
+  .gemora-section-heading h2 {
+    font-size: 23px;
+  }
+
+}
+/* ============================================================
+   SHARED PROFILE MENU
+   ============================================================ */
+
+.gemora-dashboard-avatar {
+  flex-shrink: 0;
+
+  border:
+    1px solid
+    rgba(217, 188, 123, 0.42);
+
+  box-sizing: border-box;
+}
+
+.gemora-dashboard-avatar.gemora-user-avatar-image {
+  object-fit: cover;
+}
+
+.gemora-profile-menu-action {
+  width: 100%;
+
+  border: 0;
+
+  padding: 14px 20px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  background: transparent;
+
+  color: #213d35;
+
+  cursor: pointer;
+
+  font: inherit;
+
+  text-align: left;
+
+  transition:
+    background 0.2s ease;
+}
+
+.gemora-profile-menu-action:hover {
+  background: #f6f2e9;
+}
+
+.gemora-profile-menu-action > span {
+  color: #b9914b;
+
+  font-size: 18px;
+}
+
+.gemora-profile-menu-action > div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 2px;
+}
+
+.gemora-profile-menu-action strong {
+  color: #203c34;
+
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.gemora-profile-menu-action small {
+  color: #7b847f;
+
+  font-size: 10px;
+}
