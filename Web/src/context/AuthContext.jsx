@@ -14,33 +14,68 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   // ==========================================
-  // CHECK CURRENT USER
+  // LOAD CURRENT USER
   // ==========================================
 
   const loadCurrentUser = async () => {
-    const token = localStorage.getItem("gemora_token");
+    const token =
+      localStorage.getItem("gemora_token");
 
     if (!token) {
       setUser(null);
       setLoading(false);
-      return;
+      return null;
     }
 
     try {
-      const response = await api.get("/Auth/me");
+      const response =
+        await api.get("/Auth/me");
 
       setUser(response.data);
+
+      return response.data;
     } catch (error) {
       console.error(
         "Failed to load current user:",
         error
       );
 
-      localStorage.removeItem("gemora_token");
+      localStorage.removeItem(
+        "gemora_token"
+      );
 
       setUser(null);
+
+      return null;
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ==========================================
+  // REFRESH CURRENT USER
+  //
+  // Used after:
+  // - profile details update
+  // - profile photo upload
+  // - profile photo removal
+  // ==========================================
+
+  const refreshUser = async () => {
+    try {
+      const response =
+        await api.get("/Auth/me");
+
+      setUser(response.data);
+
+      return response.data;
+    } catch (error) {
+      console.error(
+        "Failed to refresh current user:",
+        error
+      );
+
+      throw error;
     }
   };
 
@@ -48,27 +83,33 @@ export function AuthProvider({ children }) {
   // LOGIN
   // ==========================================
 
-  const login = async (email, password) => {
-    const response = await api.post(
-      "/Auth/login",
-      {
-        email,
-        password,
-      }
-    );
+  const login = async (
+    email,
+    password
+  ) => {
+    const response =
+      await api.post(
+        "/Auth/login",
+        {
+          email,
+          password,
+        }
+      );
 
-    const token = response.data.token;
+    const token =
+      response.data.token;
 
     localStorage.setItem(
       "gemora_token",
       token
     );
 
-    // Get logged-in user's information
     const userResponse =
       await api.get("/Auth/me");
 
-    setUser(userResponse.data);
+    setUser(
+      userResponse.data
+    );
 
     return userResponse.data;
   };
@@ -78,7 +119,9 @@ export function AuthProvider({ children }) {
   // ==========================================
 
   const logout = () => {
-    localStorage.removeItem("gemora_token");
+    localStorage.removeItem(
+      "gemora_token"
+    );
 
     setUser(null);
   };
@@ -92,7 +135,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   // ==========================================
-  // PROVIDE AUTHENTICATION STATE
+  // AUTH CONTEXT
   // ==========================================
 
   return (
@@ -102,6 +145,7 @@ export function AuthProvider({ children }) {
         loading,
         login,
         logout,
+        refreshUser,
         isAuthenticated: !!user,
       }}
     >
@@ -111,9 +155,11 @@ export function AuthProvider({ children }) {
 }
 
 // ==========================================
-// CUSTOM AUTH HOOK
+// AUTH HOOK
 // ==========================================
 
 export function useAuth() {
-  return useContext(AuthContext);
+  return useContext(
+    AuthContext
+  );
 }

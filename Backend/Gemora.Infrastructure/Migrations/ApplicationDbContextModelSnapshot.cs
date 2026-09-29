@@ -268,6 +268,10 @@ namespace Gemora.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<string>("ProfileImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("Region")
                         .IsRequired()
                         .HasMaxLength(100)
