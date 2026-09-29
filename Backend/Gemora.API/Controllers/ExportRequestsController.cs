@@ -451,7 +451,7 @@ public class ExportRequestsController : ControllerBase
     public async Task<IActionResult> UploadComplianceDocumentFile(
         Guid id,
         Guid documentId,
-        [FromForm] IFormFile? file,
+        IFormFile? file,
         CancellationToken cancellationToken)
     {
         if (!TryGetCurrentUserId(out var userId))

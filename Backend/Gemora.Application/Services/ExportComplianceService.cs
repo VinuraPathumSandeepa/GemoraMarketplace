@@ -492,8 +492,12 @@ public class ExportComplianceService : IExportComplianceService
             DocumentType = dto.DocumentType.Trim(),
             DocumentNumber = string.IsNullOrWhiteSpace(dto.DocumentNumber) ? null : dto.DocumentNumber.Trim(),
             Issuer = string.IsNullOrWhiteSpace(dto.Issuer) ? null : dto.Issuer.Trim(),
-            IssueDate = dto.IssueDate,
-            ExpiryDate = dto.ExpiryDate,
+            IssueDate = dto.IssueDate.HasValue
+                ? DateTime.SpecifyKind(dto.IssueDate.Value, DateTimeKind.Utc)
+                : null,
+            ExpiryDate = dto.ExpiryDate.HasValue
+                ? DateTime.SpecifyKind(dto.ExpiryDate.Value, DateTimeKind.Utc)
+                : null,
             FileUrl = null,
             Status = ComplianceDocumentStatus.Pending,
             UploadedAt = DateTime.UtcNow
