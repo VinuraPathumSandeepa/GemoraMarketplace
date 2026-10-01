@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import gemListingService from "../../services/gemVerification/gemListingService";
 
-const API_ORIGIN = "https://gemora-api.onrender.com";
+const API_ORIGIN = "https://gemora-api.onrender.com/api";
 
 const FILTERS = [
   { value: "All", label: "All" },
