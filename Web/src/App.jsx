@@ -18,6 +18,9 @@ import AdminDashboard from "./pages/AdminDashboard";
 import GemologistDashboard from "./pages/GemologistDashboard";
 import ExportOfficerDashboard from "./pages/ExportOfficerDashboard";
 
+<<<<<<< Updated upstream
+// Route protection
+=======
 // ============================================================
 // COMPONENT 1 — SELLER GEM LISTING PAGES
 // ============================================================
@@ -50,6 +53,7 @@ import AdminShipments from "./pages/AdminShipments";
 // ROUTE PROTECTION
 // ============================================================
 
+>>>>>>> Stashed changes
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleProtectedRoute from "./routes/RoleProtectedRoute";
 
@@ -138,6 +142,9 @@ function App() {
       />
 
 
+<<<<<<< Updated upstream
+      {/* ==========================================
+=======
       {/* ======================================================
           COMPONENT 1 — SELLER: MY GEM LISTINGS
 
@@ -347,7 +354,8 @@ function App() {
       />
 
 
-      {/* ==========================================
+      {/* ======================================================
+>>>>>>> Stashed changes
           ADMIN DASHBOARD
       ========================================== */}
 
