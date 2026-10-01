@@ -41,7 +41,7 @@ public class Shipment
     public DateTime? ShippedAt { get; set; }
     public DateTime? DeliveredAt { get; set; }
     
-    // Navigation properties
+    // Navigation propertiess
     public User? Seller { get; set; }
     public User? Buyer { get; set; }
     public ShippingPlan? ShippingPlan { get; set; }
