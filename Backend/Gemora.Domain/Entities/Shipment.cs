@@ -41,10 +41,11 @@ public class Shipment
     public DateTime? ShippedAt { get; set; }
     public DateTime? DeliveredAt { get; set; }
     
-    // Navigation propertiess
+    // Navigation properties
     public User? Seller { get; set; }
     public User? Buyer { get; set; }
     public ShippingPlan? ShippingPlan { get; set; }
     public InsuranceRecord? InsuranceRecord { get; set; }
     public ICollection<ShipmentTrackingEvent>? TrackingEvents { get; set; }
 }
+
