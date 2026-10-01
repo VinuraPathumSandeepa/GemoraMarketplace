@@ -41,19 +41,14 @@ public static class DbSeeder
 
         var adminEmail = "admin@gemora.com";
 
-        var existingAdmin = await context.Users.FirstOrDefaultAsync(
-            u => u.Email == adminEmail);
+        var admin =
+            await context.Users
+                .FirstOrDefaultAsync(
+                    user =>
+                        user.Email == adminEmail
+                );
 
-        if (existingAdmin != null)
-        {
-            // Update password to ensure it matches current configuration
-            existingAdmin.PasswordHash =
-                BCrypt.Net.BCrypt.HashPassword(adminPassword);
-
-            existingAdmin.FullName = "Gemora Admin";
-            existingAdmin.Role = UserRoles.Admin;
-        }
-        else
+        if (admin == null)
         {
             context.Users.Add(new User
             {
@@ -65,6 +60,46 @@ public static class DbSeeder
                     BCrypt.Net.BCrypt.HashPassword(
                         adminPassword
                     ),
+
+                Role =
+                    UserRoles.Admin,
+
+                IsEmailVerified =
+                    true,
+
+                EmailVerifiedAt =
+                    DateTime.UtcNow,
+
+                CreatedAt =
+                    DateTime.UtcNow
+            };
+
+            context.Users.Add(admin);
+        }
+        else
+        {
+            /*
+             * Keep seeded development credentials
+             * synchronized with User Secrets.
+             *
+             * BCrypt hashes contain random salts,
+             * therefore we VERIFY instead of comparing
+             * hash strings.
+             */
+
+            var adminPasswordMatches =
+                BCrypt.Net.BCrypt.Verify(
+                    adminPassword,
+                    admin.PasswordHash
+                );
+
+            if (!adminPasswordMatches)
+            {
+                admin.PasswordHash =
+                    BCrypt.Net.BCrypt.HashPassword(
+                        adminPassword
+                    );
+            }
 
                 Role = UserRoles.Admin,
 
@@ -80,18 +115,15 @@ public static class DbSeeder
         var gemologistEmail =
             "gemologist@gemora.com";
 
-        var existingGemologist = await context.Users.FirstOrDefaultAsync(
-            u => u.Email == gemologistEmail);
+        var gemologist =
+            await context.Users
+                .FirstOrDefaultAsync(
+                    user =>
+                        user.Email ==
+                        gemologistEmail
+                );
 
-        if (existingGemologist != null)
-        {
-            existingGemologist.PasswordHash =
-                BCrypt.Net.BCrypt.HashPassword(gemologistPassword);
-
-            existingGemologist.FullName = "Gemora Gemologist";
-            existingGemologist.Role = UserRoles.Gemologist;
-        }
-        else
+        if (gemologist == null)
         {
             context.Users.Add(new User
             {
@@ -118,18 +150,15 @@ public static class DbSeeder
         var exportOfficerEmail =
             "export@gemora.com";
 
-        var existingExportOfficer = await context.Users.FirstOrDefaultAsync(
-            u => u.Email == exportOfficerEmail);
+        var exportOfficer =
+            await context.Users
+                .FirstOrDefaultAsync(
+                    user =>
+                        user.Email ==
+                        exportOfficerEmail
+                );
 
-        if (existingExportOfficer != null)
-        {
-            existingExportOfficer.PasswordHash =
-                BCrypt.Net.BCrypt.HashPassword(exportOfficerPassword);
-
-            existingExportOfficer.FullName = "Gemora Export Officer";
-            existingExportOfficer.Role = UserRoles.ExportOfficer;
-        }
-        else
+        if (exportOfficer == null)
         {
             context.Users.Add(new User
             {
@@ -149,36 +178,20 @@ public static class DbSeeder
         }
 
 
-        // ==========================================
-        // SELLER (for Component 3 shipping demo)
-        // ==========================================
+            exportOfficer.Role =
+                UserRoles.ExportOfficer;
 
-        var sellerEmail = "seller@gemora.com";
+            exportOfficer.IsEmailVerified =
+                true;
 
-        if (!await context.Users.AnyAsync(
-                u => u.Email == sellerEmail))
-        {
-            context.Users.Add(new User
-            {
-                FullName = "Demo Seller",
-
-                Email = sellerEmail,
-
-                PasswordHash =
-                    BCrypt.Net.BCrypt.HashPassword(
-                        "seller123"
-                    ),
-
-                Role = UserRoles.Seller,
-
-                CreatedAt = DateTime.UtcNow
-            });
+            exportOfficer.EmailVerifiedAt ??=
+                DateTime.UtcNow;
         }
 
 
-        // ==========================================
-        // BUYER (for Component 3 tracking demo)
-        // ==========================================
+        // ============================================================
+        // SAVE
+        // ============================================================
 
         var buyerEmail = "buyer@gemora.com";
 

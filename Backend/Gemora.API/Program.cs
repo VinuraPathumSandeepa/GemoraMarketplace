@@ -1,57 +1,83 @@
+using System.Text;
+
 using Gemora.API.Middleware;
+using Gemora.API.Services;
+
 using Gemora.Application.Interfaces;
 using Gemora.Application.Services;
+
+using Gemora.Domain.AI;
+using Gemora.Domain.Interfaces;
+
+using Gemora.Infrastructure.AI;
 using Gemora.Infrastructure.Data;
+using Gemora.Infrastructure.Services;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
-using System.Text;
-
 var builder = WebApplication.CreateBuilder(args);
 
 
-// ======================================================
-// 1. DATABASE - PostgreSQL + Entity Framework Core
-// ======================================================
-// The actual connection string is stored securely in
-// .NET User Secrets during local development.
-// ======================================================
+// ============================================================
+// DATABASE
+// ============================================================
 
 var connectionString =
-    builder.Configuration.GetConnectionString(
-        "DefaultConnection"
+    builder.Configuration
+        .GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException(
+        "Database connection string 'DefaultConnection' is not configured."
     );
-
-if (string.IsNullOrWhiteSpace(connectionString))
-{
-    throw new InvalidOperationException(
-        "Database connection string is not configured."
-    );
-}
 
 builder.Services.AddDbContext<ApplicationDbContext>(
     options =>
-        options.UseNpgsql(connectionString)
+    {
+        options.UseNpgsql(connectionString);
+    }
 );
 
 
-// ======================================================
-// 2. DEPENDENCY INJECTION
-// ======================================================
+// ============================================================
+// APPLICATION SERVICES
+// ============================================================
 
-builder.Services.AddScoped<IAuthService, AuthService>();
+// ------------------------------------------------------------
+// Authentication
+// ------------------------------------------------------------
+
+builder.Services.AddScoped<
+    IAuthService,
+    AuthService>();
+
+
+// ------------------------------------------------------------
+// Profile image storage
+// ------------------------------------------------------------
+
+builder.Services.AddScoped<
+    IProfileImageStorageService,
+    ProfileImageStorageService>();
+
+
+// ------------------------------------------------------------
+// Email verification / OTP
+// ------------------------------------------------------------
+
+builder.Services.AddScoped<
+    IEmailService,
+    SmtpEmailService>();
+
+
+// ------------------------------------------------------------
+// JWT token generation
+// ------------------------------------------------------------
 
 builder.Services.AddScoped<TokenService>();
 
 
-<<<<<<< Updated upstream
-// ======================================================
-// 3. CONTROLLERS
-// ======================================================
-=======
 // ------------------------------------------------------------
 // Gem listing management
 // ------------------------------------------------------------
@@ -100,19 +126,6 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<
     IGemVerificationAgent,
     GemVerificationAgent>();
-
-
-// ============================================================
-// SHIPPING & INSURANCE SERVICES
-// ============================================================
-
-builder.Services.AddScoped<
-    IShipmentService,
-    ShipmentService>();
-
-builder.Services.AddScoped<
-    IShippingAgentService,
-    ShippingAgentService>();
 
 
 // ============================================================
@@ -247,19 +260,10 @@ builder.Services.AddScoped<IGemImageReader>(
 // ============================================================
 // CONTROLLERS
 // ============================================================
->>>>>>> Stashed changes
 
 builder.Services.AddControllers();
 
 
-<<<<<<< Updated upstream
-// ======================================================
-// 4. JWT CONFIGURATION
-// ======================================================
-// JWT Key comes from .NET User Secrets.
-// Issuer and Audience come from appsettings.json.
-// ======================================================
-=======
 // ============================================================
 // CORS
 //
@@ -278,9 +282,10 @@ builder.Services.AddCors(
                     .WithOrigins(
                         "http://localhost:5173",
                         "https://localhost:5173",
+                        "https://localhost:5174",
                         "http://localhost:5174",
                         "http://localhost:5175",
-                        "http://localhost:5176")
+                        "https://localhost:5175")
                     .AllowAnyHeader()
                     .AllowAnyMethod();
             });
@@ -309,19 +314,13 @@ if (string.IsNullOrWhiteSpace(jwtKey))
     );
 }
 
-if (string.IsNullOrWhiteSpace(jwtIssuer))
-{
-    throw new InvalidOperationException(
-        "JWT Issuer is not configured."
-    );
-}
+var jwtIssuer =
+    builder.Configuration[
+        "Jwt:Issuer"];
 
-if (string.IsNullOrWhiteSpace(jwtAudience))
-{
-    throw new InvalidOperationException(
-        "JWT Audience is not configured."
-    );
-}
+var jwtAudience =
+    builder.Configuration[
+        "Jwt:Audience"];
 
 
 // ======================================================
@@ -330,15 +329,23 @@ if (string.IsNullOrWhiteSpace(jwtAudience))
 
 builder.Services
     .AddAuthentication(
-        JwtBearerDefaults.AuthenticationScheme
-    )
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters =
-            new TokenValidationParameters
-            {
-                // Verify who created the token
-                ValidateIssuer = true,
+        options =>
+        {
+            options.DefaultAuthenticateScheme =
+                JwtBearerDefaults
+                    .AuthenticationScheme;
+
+            options.DefaultChallengeScheme =
+                JwtBearerDefaults
+                    .AuthenticationScheme;
+        })
+    .AddJwtBearer(
+        options =>
+        {
+            options.TokenValidationParameters =
+                new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
 
                 // Verify who the token is intended for
                 ValidateAudience = true,
@@ -466,6 +473,8 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+app.UseMiddleware<
+    GlobalExceptionHandler>();
 
 // ======================================================
 // 10. SWAGGER
@@ -536,6 +545,9 @@ using (var scope = app.Services.CreateScope())
     );
 }
 
+        logger.LogError(
+            ex,
+            "An error occurred while seeding the Gemora database.");
 
 // ======================================================
 // 16. MAP CONTROLLERS

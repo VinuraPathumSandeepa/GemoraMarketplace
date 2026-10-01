@@ -4,35 +4,54 @@ import {
   useNavigate,
 } from "react-router-dom";
 
-import { useAuth } from "../context/AuthContext";
-import "../styles/DashboardLayout.css";
+import {
+  useAuth,
+} from "../context/AuthContext";
+
+import UserAvatar
+  from "../components/UserAvatar";
 
 function DashboardLayout({ children }) {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
 
-  const [profileOpen, setProfileOpen] =
-    useState(false);
+  const {
+    user,
+    logout,
+  } = useAuth();
 
-  const getInitials = () => {
-    if (!user?.fullName) {
-      return "GU";
-    }
+  const [
+    profileOpen,
+    setProfileOpen,
+  ] = useState(false);
 
-    return user.fullName
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((name) => name[0])
-      .join("")
-      .toUpperCase();
-  };
+
+  // ============================================================
+  // LOGOUT
+  // ============================================================
 
   const handleLogout = () => {
     setProfileOpen(false);
+
     logout();
+
     navigate("/login");
   };
+
+
+  // ============================================================
+  // OPEN PROFILE
+  // ============================================================
+
+  const handleOpenProfile = () => {
+    setProfileOpen(false);
+
+    navigate("/profile");
+  };
+
+
+  // ============================================================
+  // ROLE HOME ROUTE
+  // ============================================================
 
   const getHomeRoute = () => {
     switch (user?.role) {
@@ -56,8 +75,18 @@ function DashboardLayout({ children }) {
     }
   };
 
+
+  // ============================================================
+  // ROLE NAVIGATION
+  // ============================================================
+
   const renderRoleNavigation = () => {
     switch (user?.role) {
+
+      // ========================================================
+      // SELLER
+      // ========================================================
+
       case "Seller":
         return (
           <>
@@ -94,19 +123,13 @@ function DashboardLayout({ children }) {
             >
               Create Listing
             </NavLink>
-
-            <NavLink
-              to="/seller/shipments"
-              className={({ isActive }) =>
-                isActive
-                  ? "gemora-nav-link active"
-                  : "gemora-nav-link"
-              }
-            >
-              My Shipments
-            </NavLink>
           </>
         );
+
+
+      // ========================================================
+      // GEMOLOGIST
+      // ========================================================
 
       case "Gemologist":
         return (
@@ -122,8 +145,24 @@ function DashboardLayout({ children }) {
             >
               Dashboard
             </NavLink>
+
+            <NavLink
+              to="/gemologist/verifications"
+              className={({ isActive }) =>
+                isActive
+                  ? "gemora-nav-link active"
+                  : "gemora-nav-link"
+              }
+            >
+              Verification Queue
+            </NavLink>
           </>
         );
+
+
+      // ========================================================
+      // BUYER
+      // ========================================================
 
       case "Buyer":
         return (
@@ -139,19 +178,13 @@ function DashboardLayout({ children }) {
             >
               Dashboard
             </NavLink>
-
-            <NavLink
-              to="/buyer/shipments"
-              className={({ isActive }) =>
-                isActive
-                  ? "gemora-nav-link active"
-                  : "gemora-nav-link"
-              }
-            >
-              My Shipments
-            </NavLink>
           </>
         );
+
+
+      // ========================================================
+      // ADMIN
+      // ========================================================
 
       case "Admin":
         return (
@@ -167,19 +200,13 @@ function DashboardLayout({ children }) {
             >
               Dashboard
             </NavLink>
-
-            <NavLink
-              to="/admin/shipments"
-              className={({ isActive }) =>
-                isActive
-                  ? "gemora-nav-link active"
-                  : "gemora-nav-link"
-              }
-            >
-              Manage Shipments
-            </NavLink>
           </>
         );
+
+
+      // ========================================================
+      // EXPORT OFFICER
+      // ========================================================
 
       case "ExportOfficer":
         return (
@@ -198,10 +225,16 @@ function DashboardLayout({ children }) {
           </>
         );
 
+
       default:
         return null;
     }
   };
+
+
+  // ============================================================
+  // UI
+  // ============================================================
 
   return (
     <div className="gemora-app-shell">
@@ -214,46 +247,69 @@ function DashboardLayout({ children }) {
 
         <div className="gemora-topbar-inner">
 
-          {/* BRAND */}
+          {/* ==================================================
+              BRAND
+              ================================================== */}
 
           <button
             type="button"
             className="gemora-brand"
             onClick={() =>
-              navigate(getHomeRoute())
+              navigate(
+                getHomeRoute()
+              )
             }
             aria-label="Gemora home"
           >
             <div className="gemora-brand-symbol">
-              <span>G</span>
+              <span>
+                G
+              </span>
             </div>
 
             <div className="gemora-brand-copy">
-              <strong>GEMORA</strong>
+
+              <strong>
+                GEMORA
+              </strong>
 
               <small>
                 CEYLON GEM MARKETPLACE
               </small>
+
             </div>
           </button>
 
 
-          {/* DESKTOP NAVIGATION */}
+          {/* ==================================================
+              DESKTOP NAVIGATION
+              ================================================== */}
 
           <nav className="gemora-main-nav">
+
             {renderRoleNavigation()}
+
           </nav>
 
 
-          {/* USER AREA */}
+          {/* ==================================================
+              USER AREA
+              ================================================== */}
 
           <div className="gemora-user-area">
 
+            {/* ROLE */}
+
             <div className="gemora-role-chip">
+
               <span className="gemora-role-dot" />
 
               {user?.role || "User"}
+
             </div>
+
+
+            {/* PROFILE */}
 
             <div className="gemora-profile-wrapper">
 
@@ -262,46 +318,70 @@ function DashboardLayout({ children }) {
                 className="gemora-profile-button"
                 onClick={() =>
                   setProfileOpen(
-                    (previous) => !previous
+                    (previous) =>
+                      !previous
                   )
                 }
-                aria-expanded={profileOpen}
+                aria-expanded={
+                  profileOpen
+                }
+                aria-label="Open account menu"
               >
-                <div className="gemora-avatar">
-                  {getInitials()}
-                </div>
+
+                <UserAvatar
+                  user={user}
+                  size={37}
+                  className="gemora-dashboard-avatar"
+                />
+
 
                 <div className="gemora-profile-copy">
+
                   <strong>
-                    {user?.fullName || "Gemora User"}
+                    {user?.fullName ||
+                      "Gemora User"}
                   </strong>
 
                   <span>
                     {user?.email || ""}
                   </span>
+
                 </div>
+
 
                 <span
                   className={`gemora-profile-chevron ${
-                    profileOpen ? "open" : ""
+                    profileOpen
+                      ? "open"
+                      : ""
                   }`}
                 >
                   ▾
                 </span>
+
               </button>
 
 
-              {/* PROFILE DROPDOWN */}
+              {/* ==============================================
+                  PROFILE DROPDOWN
+                  ============================================== */}
 
               {profileOpen && (
+
                 <div className="gemora-profile-menu">
 
+                  {/* USER DETAILS */}
+
                   <div className="gemora-profile-menu-header">
-                    <div className="gemora-avatar large">
-                      {getInitials()}
-                    </div>
+
+                    <UserAvatar
+                      user={user}
+                      size={45}
+                      className="gemora-dashboard-avatar"
+                    />
 
                     <div>
+
                       <strong>
                         {user?.fullName ||
                           "Gemora User"}
@@ -310,26 +390,69 @@ function DashboardLayout({ children }) {
                       <span>
                         {user?.email || ""}
                       </span>
+
                     </div>
+
                   </div>
 
+
+                  {/* ROLE */}
+
                   <div className="gemora-profile-menu-role">
+
                     Signed in as{" "}
+
                     <strong>
-                      {user?.role || "User"}
+                      {user?.role ||
+                        "User"}
                     </strong>
+
                   </div>
+
+
+                  {/* MY PROFILE */}
+
+                  <button
+                    type="button"
+                    className="gemora-profile-menu-action"
+                    onClick={
+                      handleOpenProfile
+                    }
+                  >
+                    <span>
+                      ◇
+                    </span>
+
+                    <div>
+                      <strong>
+                        My Profile
+                      </strong>
+
+                      <small>
+                        Personal details and photo
+                      </small>
+                    </div>
+                  </button>
+
+
+                  {/* SIGN OUT */}
 
                   <button
                     type="button"
                     className="gemora-logout-button"
-                    onClick={handleLogout}
+                    onClick={
+                      handleLogout
+                    }
                   >
-                    <span>↗</span>
+                    <span>
+                      ↗
+                    </span>
+
                     Sign Out
                   </button>
 
                 </div>
+
               )}
 
             </div>
@@ -346,7 +469,9 @@ function DashboardLayout({ children }) {
           ====================================================== */}
 
       <div className="gemora-mobile-nav">
+
         {renderRoleNavigation()}
+
       </div>
 
 
@@ -355,7 +480,9 @@ function DashboardLayout({ children }) {
           ====================================================== */}
 
       <main className="gemora-main-content">
+
         {children}
+
       </main>
 
     </div>

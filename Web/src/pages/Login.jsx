@@ -1,11 +1,11 @@
 import { useState } from "react";
 import {
   Link,
+  useLocation,
   useNavigate,
 } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
-import "../styles/Login.css";
 
 function Login() {
   // ==========================================
@@ -18,10 +18,33 @@ function Login() {
   const [submitting, setSubmitting] = useState(false);
 
   const { login } = useAuth();
+
   const navigate = useNavigate();
+  const location = useLocation();
 
+  const verifiedEmail =
+    location.state?.email || "";
 
-  // ==========================================
+  const [email, setEmail] =
+    useState(verifiedEmail);
+
+  const [password, setPassword] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  const [success, setSuccess] =
+    useState(
+      location.state?.verified
+        ? "Email verified successfully. You can now sign in."
+        : ""
+    );
+
+  const [submitting, setSubmitting] =
+    useState(false);
+
+  // ============================================================
   // HANDLE LOGIN
   // ==========================================
 
@@ -29,6 +52,24 @@ function Login() {
     event.preventDefault();
 
     setError("");
+    setSuccess("");
+
+    if (!email.trim()) {
+      setError(
+        "Please enter your email address."
+      );
+
+      return;
+    }
+
+    if (!password) {
+      setError(
+        "Please enter your password."
+      );
+
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -39,45 +80,70 @@ function Login() {
 
     } catch (error) {
       console.error("Login failed:", error);
-      
+
       setError(
         error.response?.data?.message ||
-          "Unable to connect to the server. Please ensure the backend is running."
+          "Invalid email or password."
       );
+
     } finally {
       setSubmitting(false);
     }
   };
 
-
-  // ==========================================
+  // ============================================================
   // PAGE
-  // ==========================================
+  // ============================================================
 
   return (
     <div className="login-page">
 
       <div className="login-card">
 
-        {/* GEMORA TITLE */}
+        {/* BRAND */}
 
-        <h1>
-          Gemora
-        </h1>
+        <div className="auth-brand">
+          <h1>
+            Gemora
+          </h1>
 
-        <p className="login-subtitle">
-          Gem Marketplace Management System
-        </p>
-
-
-        {/* LOGIN TITLE */}
-
-        <h2>
-          Sign In
-        </h2>
+          <p>
+            Secure Gemstone Marketplace
+          </p>
+        </div>
 
 
-        {/* ERROR MESSAGE */}
+        {/* HEADING */}
+
+        <div className="auth-heading">
+
+          <span>
+            WELCOME BACK
+          </span>
+
+          <h2>
+            Sign in to Gemora
+          </h2>
+
+          <p>
+            Access your marketplace workspace,
+            gemstone listings, and verification
+            activities securely.
+          </p>
+
+        </div>
+
+
+        {/* SUCCESS */}
+
+        {success && (
+          <div className="success-message">
+            {success}
+          </div>
+        )}
+
+
+        {/* ERROR */}
 
         {error && (
           <div className="error-message">
@@ -101,14 +167,17 @@ function Login() {
             <input
               id="email"
               type="email"
-              placeholder="Enter your email"
+              placeholder="you@example.com"
               value={email}
-              onChange={(event) =>
+              onChange={(event) => {
                 setEmail(
                   event.target.value
-                )
-              }
+                );
+
+                setError("");
+              }}
               required
+              autoComplete="email"
             />
 
           </div>
