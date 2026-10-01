@@ -5,7 +5,7 @@ import DashboardLayout from "../../layouts/DashboardLayout";
 import gemListingService from "../../services/gemVerification/gemListingService";
 import api from "../../services/api";
 
-const API_ORIGIN = "http://localhost:5198";
+const API_ORIGIN = "https://gemora-api.onrender.com";
 
 const STATUS_CONFIG = {
   Draft: {
