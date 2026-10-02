@@ -139,7 +139,7 @@ function ExportOfficerDashboard() {
       // Refresh request detail and queue
       const updated = await getRequestDetail(selectedRequestId);
       setRequestDetail(updated.request);
-      fetchQueue();
+      await fetchQueue();
     } catch (err) {
       console.error("Failed to start review:", err);
       handleActionError(err);
@@ -188,7 +188,7 @@ function ExportOfficerDashboard() {
       // Refresh request detail and queue
       const updated = await getRequestDetail(selectedRequestId);
       setRequestDetail(updated.request);
-      fetchQueue();
+      await fetchQueue();
     } catch (err) {
       console.error(`Failed to submit decision (${decisionStr}):`, err);
       handleActionError(err);
@@ -312,7 +312,9 @@ function ExportOfficerDashboard() {
   const underReviewCount = queue.filter(
     (r) => r.status === "UnderComplianceReview" || r.status === "UnderOfficerReview"
   ).length;
-  const revisionCount = queue.filter((r) => r.status === "RevisionRequired").length;
+  const revisionCount = queue.filter(
+    (r) => r.status === "RevisionRequired" || r.status === "RevisionRequested"
+  ).length;
   const approvedCount = queue.filter((r) => r.status === "Approved").length;
 
   // Filter & Sort Logic
@@ -327,8 +329,18 @@ function ExportOfficerDashboard() {
     }
 
     // Status filter matching
-    if (statusFilter !== "all" && req.status !== statusFilter) {
-      return false;
+    if (statusFilter !== "all") {
+      if (statusFilter === "underReview") {
+        if (req.status !== "UnderComplianceReview" && req.status !== "UnderOfficerReview") {
+          return false;
+        }
+      } else if (statusFilter === "RevisionRequired") {
+        if (req.status !== "RevisionRequired" && req.status !== "RevisionRequested") {
+          return false;
+        }
+      } else if (req.status !== statusFilter) {
+        return false;
+      }
     }
 
     return true;
@@ -496,12 +508,14 @@ function ExportOfficerDashboard() {
 
                   <div
                     className={`summary-card ${
-                      statusFilter === "UnderOfficerReview" || statusFilter === "UnderComplianceReview"
+                      statusFilter === "underReview" ||
+                      statusFilter === "UnderOfficerReview" ||
+                      statusFilter === "UnderComplianceReview"
                         ? "active"
                         : ""
                     }`}
-                    onClick={() => handleCardClick("UnderOfficerReview")}
-                    title="Click to filter by Under Officer Review"
+                    onClick={() => handleCardClick("underReview")}
+                    title="Click to filter by Under Review"
                   >
                     <span className="card-title">Under Review</span>
                     <span className="card-value" style={{ color: "#d97706" }}>
@@ -554,6 +568,7 @@ function ExportOfficerDashboard() {
                     >
                       <option value="all">All Statuses</option>
                       <option value="Submitted">Submitted</option>
+                      <option value="underReview">Under Review (All)</option>
                       <option value="UnderComplianceReview">Under Compliance Review</option>
                       <option value="UnderOfficerReview">Under Officer Review</option>
                       <option value="RevisionRequired">Revision Required</option>
@@ -1079,7 +1094,14 @@ function ExportOfficerDashboard() {
                                     ? new Date(doc.expiryDate).toLocaleDateString()
                                     : "Not provided"}
                                 </td>
-                                <td>{renderStatusBadge(doc.status)}</td>
+                                <td>
+                                  {renderStatusBadge(doc.effectiveStatus || doc.status)}
+                                  {doc.effectiveStatusReason && (
+                                    <div style={{ fontSize: "11px", color: "#d9534f", marginTop: "2px", fontStyle: "italic" }}>
+                                      {doc.effectiveStatusReason}
+                                    </div>
+                                  )}
+                                </td>
                                 <td>
                                   {hasFile ? (
                                     <span className="badge badge-approved" style={{ fontSize: "11px", padding: "2px 8px" }}>
@@ -1264,7 +1286,7 @@ function ExportOfficerDashboard() {
 
                         <div className="info-grid" style={{ marginBottom: "16px" }}>
                           <div className="info-item">
-                            <span className="info-label">Confidence Score</span>
+                            <span className="info-label">AI Confidence</span>
                             <span className="info-value">
                               {(requestDetail.agentWorkflow.assessment.confidence * 100).toFixed(0)}%
                             </span>
