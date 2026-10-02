@@ -313,8 +313,36 @@ class _ExportRequestDetailScreenState
     }
   }
 
+  bool _isRetryEligible(ExportRequestModel req) {
+    final statusLower = req.status.toLowerCase();
+    if (statusLower == 'approved' ||
+        statusLower == 'rejected' ||
+        statusLower == 'cancelled') {
+      return false;
+    }
+
+    if (_recentAnalysisResult == null) {
+      return false;
+    }
+
+    if (_recentAnalysisResult!.success) {
+      return false;
+    }
+
+    final code = _recentAnalysisResult!.errorCode?.toUpperCase() ?? '';
+
+    const retryableErrorCodes = {
+      'AI_PROVIDER_UNAVAILABLE',
+      'AI_RATE_LIMITED',
+      'AI_TIMEOUT',
+      'AI_PROVIDER_ERROR',
+    };
+
+    return retryableErrorCodes.contains(code);
+  }
+
   Future<void> _confirmAndRunComplianceAnalysis() async {
-    if (_isSubmitting || _isRunningAnalysis) return;
+    if (_isSubmitting || _isRunningAnalysis || _isRetryingAnalysis) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -340,7 +368,6 @@ class _ExportRequestDetailScreenState
 
     setState(() {
       _isRunningAnalysis = true;
-      _recentAnalysisResult = null;
     });
 
     try {
@@ -349,11 +376,11 @@ class _ExportRequestDetailScreenState
 
       if (!mounted) return;
 
-      if (result.success) {
-        setState(() {
-          _recentAnalysisResult = result;
-        });
+      setState(() {
+        _recentAnalysisResult = result;
+      });
 
+      if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -362,27 +389,37 @@ class _ExportRequestDetailScreenState
             backgroundColor: Colors.green,
           ),
         );
+      } else {
+        final msgLower = result.message.toLowerCase();
+        final codeUpper = result.errorCode?.toUpperCase() ?? '';
+
+        if (codeUpper.contains('WORKFLOW_ALREADY_ACTIVE') ||
+            msgLower.contains('active export compliance workflow') ||
+            msgLower.contains('already exists')) {
+          _showErrorSnackBar(
+            'An AI compliance assessment is already active or has progressed to officer review. Refresh the request to see the latest status.',
+          );
+        } else {
+          _showErrorSnackBar(result.message);
+        }
       }
 
       _loadData();
     } catch (err) {
       if (!mounted) return;
       final errorMessage = err.toString().replaceAll('Exception: ', '');
+      final errLower = errorMessage.toLowerCase();
+
+      if (errLower.contains('active export compliance workflow') ||
+          errLower.contains('already exists')) {
+        _showErrorSnackBar(
+          'An AI compliance assessment is already active or has progressed to officer review. Refresh the request to see the latest status.',
+        );
+      } else {
+        _showErrorSnackBar(errorMessage);
+      }
 
       _loadData();
-
-      try {
-        final refreshedReq =
-            await _exportService.getExportRequestById(widget.requestId);
-        if (refreshedReq.status.toLowerCase() == 'undercompliancereview') {
-          _showErrorSnackBar(
-            'Automated compliance analysis could not be completed. Your request remains in compliance review and can continue to Export Officer review.',
-          );
-          return;
-        }
-      } catch (_) {}
-
-      _showErrorSnackBar(errorMessage);
     } finally {
       if (mounted) {
         setState(() {
@@ -428,7 +465,6 @@ class _ExportRequestDetailScreenState
 
     setState(() {
       _isRetryingAnalysis = true;
-      _recentAnalysisResult = null;
     });
 
     try {
@@ -437,11 +473,11 @@ class _ExportRequestDetailScreenState
 
       if (!mounted) return;
 
-      if (result.success) {
-        setState(() {
-          _recentAnalysisResult = result;
-        });
+      setState(() {
+        _recentAnalysisResult = result;
+      });
 
+      if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -450,12 +486,36 @@ class _ExportRequestDetailScreenState
             backgroundColor: Colors.green,
           ),
         );
+      } else {
+        final msgLower = result.message.toLowerCase();
+        final codeUpper = result.errorCode?.toUpperCase() ?? '';
+
+        if (codeUpper.contains('WORKFLOW_ALREADY_ACTIVE') ||
+            msgLower.contains('active export compliance workflow') ||
+            msgLower.contains('already exists')) {
+          _showErrorSnackBar(
+            'An AI compliance assessment is already active or has progressed to officer review. Refresh the request to see the latest status.',
+          );
+        } else {
+          _showErrorSnackBar(result.message);
+        }
       }
 
       _loadData();
     } catch (err) {
       if (!mounted) return;
-      _showErrorSnackBar(err.toString().replaceAll('Exception: ', ''));
+      final errorMessage = err.toString().replaceAll('Exception: ', '');
+      final errLower = errorMessage.toLowerCase();
+
+      if (errLower.contains('active export compliance workflow') ||
+          errLower.contains('already exists')) {
+        _showErrorSnackBar(
+          'An AI compliance assessment is already active or has progressed to officer review. Refresh the request to see the latest status.',
+        );
+      } else {
+        _showErrorSnackBar(errorMessage);
+      }
+
       _loadData();
     } finally {
       if (mounted) {
@@ -644,7 +704,33 @@ class _ExportRequestDetailScreenState
     );
   }
 
-  Widget _buildUnderComplianceReviewSection() {
+  Widget _buildUnderComplianceReviewSection(ExportRequestModel req) {
+    final isRetryEligible = _isRetryEligible(req);
+
+    String title;
+    String text;
+    IconData icon;
+    Color iconColor;
+
+    if (_isRunningAnalysis) {
+      title = 'Compliance Review in Progress';
+      text = 'Automated compliance analysis is currently running.';
+      icon = Icons.sync_rounded;
+      iconColor = Colors.purple.shade700;
+    } else if (isRetryEligible) {
+      title = 'AI Assessment Temporarily Unavailable';
+      text =
+          'The deterministic compliance check completed, but the AI assessment could not be completed. You may retry the AI assessment.';
+      icon = Icons.warning_amber_rounded;
+      iconColor = Colors.orange.shade800;
+    } else {
+      title = 'Ready for Export Officer Review';
+      text =
+          'Automated compliance assessment completed successfully. Your request is now waiting for an authorized Export Officer decision.';
+      icon = Icons.verified_user_rounded;
+      iconColor = Colors.purple.shade700;
+    }
+
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -654,48 +740,55 @@ class _ExportRequestDetailScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.hourglass_top_rounded, color: Colors.purple.shade700, size: 28),
+                Icon(icon, color: iconColor, size: 28),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Compliance Review in Progress',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      Text(
+                        title,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Your request is in compliance review and is ready for Export Officer evaluation.',
-                        style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+                        text,
+                        style: TextStyle(
+                            fontSize: 13, color: Colors.grey.shade800),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _isRetryingAnalysis || _isRunningAnalysis || _isSubmitting
-                    ? null
-                    : _confirmAndRetryComplianceAnalysis,
-                icon: _isRetryingAnalysis
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.refresh),
-                label: Text(
-                  _isRetryingAnalysis
-                      ? 'Retrying AI analysis...'
-                      : 'Retry AI Compliance Assessment',
+            if (isRetryEligible) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _isRetryingAnalysis ||
+                          _isRunningAnalysis ||
+                          _isSubmitting
+                      ? null
+                      : _confirmAndRetryComplianceAnalysis,
+                  icon: _isRetryingAnalysis
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh),
+                  label: Text(
+                    _isRetryingAnalysis
+                        ? 'Retrying AI analysis...'
+                        : 'Retry AI Compliance Assessment',
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -1070,7 +1163,7 @@ class _ExportRequestDetailScreenState
                   _buildSubmittedActionSection(),
                   const SizedBox(height: 20),
                 ] else if (statusLower == 'undercompliancereview') ...[
-                  _buildUnderComplianceReviewSection(),
+                  _buildUnderComplianceReviewSection(req),
                   const SizedBox(height: 20),
                 ] else if (statusLower == 'underofficerreview') ...[
                   _buildUnderOfficerReviewSection(),
@@ -1153,100 +1246,60 @@ class _ExportRequestDetailScreenState
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Compliance Documents',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
+                    child: FutureBuilder<List<ComplianceDocumentModel>>(
+                      future: _documentsFuture,
+                      builder: (context, docSnapshot) {
+                        final docs = docSnapshot.data ?? [];
+                        final hasDocs = docs.isNotEmpty;
+
+                        Widget docsContent;
+                        if (docSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          docsContent = const Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        } else if (docSnapshot.hasError) {
+                          docsContent = Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Text(
+                              'Error loading documents: ${docSnapshot.error.toString().replaceAll('Exception: ', '')}',
+                              style: const TextStyle(color: Colors.red),
                             ),
-                            if (canEdit)
-                              OutlinedButton.icon(
-                                onPressed: _isSubmitting || _isUploadingFile
-                                    ? null
-                                    : _openAddDocumentDialog,
-                                icon: const Icon(Icons.add, size: 18),
-                                label: const Text('Add Document'),
-                              ),
-                          ],
-                        ),
-                        if (statusLower == 'revisionrequired') ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            'Update the requested information or provide corrected documents before resubmitting.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.amber.shade900,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                        const Divider(height: 24),
-                        FutureBuilder<List<ComplianceDocumentModel>>(
-                          future: _documentsFuture,
-                          builder: (context, docSnapshot) {
-                            if (docSnapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const Padding(
-                                padding: EdgeInsets.all(16.0),
-                                child: Center(
-                                    child: CircularProgressIndicator()),
-                              );
-                            }
-
-                            if (docSnapshot.hasError) {
-                              return Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Text(
-                                  'Error loading documents: ${docSnapshot.error.toString().replaceAll('Exception: ', '')}',
-                                  style: const TextStyle(color: Colors.red),
-                                ),
-                              );
-                            }
-
-                            final docs = docSnapshot.data ?? [];
-
-                            if (docs.isEmpty) {
-                              return Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                child: Column(
-                                  children: [
-                                    const Center(
-                                      child: Text(
-                                        'No compliance documents have been added yet.',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
+                          );
+                        } else if (!hasDocs) {
+                          docsContent = Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: Column(
+                              children: [
+                                const Center(
+                                  child: Text(
+                                    'No compliance documents have been added yet.',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.w500,
                                     ),
-                                    if (canEdit) ...[
-                                      const SizedBox(height: 12),
-                                      Center(
-                                        child: FilledButton.icon(
-                                          onPressed: _isSubmitting || _isUploadingFile
-                                              ? null
-                                              : _openAddDocumentDialog,
-                                          icon: const Icon(Icons.add),
-                                          label: const Text(
-                                              'Add Compliance Document'),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
+                                  ),
                                 ),
-                              );
-                            }
-
-                            return ListView.separated(
+                                if (canEdit) ...[
+                                  const SizedBox(height: 12),
+                                  Center(
+                                    child: FilledButton.icon(
+                                      onPressed: _isSubmitting || _isUploadingFile
+                                          ? null
+                                          : _openAddDocumentDialog,
+                                      icon: const Icon(Icons.add),
+                                      label: const Text(
+                                          'Add Compliance Document'),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          );
+                        } else {
+                          docsContent = ListView.separated(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: docs.length,
@@ -1439,9 +1492,50 @@ class _ExportRequestDetailScreenState
                                 );
                               },
                             );
-                          },
-                        ),
-                      ],
+                          }
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Wrap(
+                                alignment: WrapAlignment.spaceBetween,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  const Text(
+                                    'Compliance Documents',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (canEdit && hasDocs)
+                                    OutlinedButton.icon(
+                                      onPressed: _isSubmitting || _isUploadingFile
+                                          ? null
+                                          : _openAddDocumentDialog,
+                                      icon: const Icon(Icons.add, size: 18),
+                                      label: const Text('Add Document'),
+                                    ),
+                                ],
+                              ),
+                              if (statusLower == 'revisionrequired') ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Update the requested information or provide corrected documents before resubmitting.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.amber.shade900,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                              const Divider(height: 24),
+                              docsContent,
+                            ],
+                          );
+                        },
                     ),
                   ),
                 ),

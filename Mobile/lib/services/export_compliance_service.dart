@@ -372,7 +372,6 @@ class ExportComplianceService {
       return ComplianceWorkflowAnalysisResultModel.fromJson(data);
     }
 
-    // Handle error codes safely
     String? errorCode;
     String? serverMessage;
 
@@ -384,58 +383,17 @@ class ExportComplianceService {
       }
     } catch (_) {}
 
-    if (errorCode == 'INVALID_EXPORT_STATUS' ||
-        errorCode == 'WORKFLOW_ALREADY_ACTIVE' ||
-        errorCode == 'WORKFLOW_STATE_INVALID' ||
-        response.statusCode == 409) {
-      throw Exception('The request state has changed. Refreshing the latest information.');
-    }
-
-    if (errorCode == 'AI_NOT_CONFIGURED') {
-      throw Exception(
-        'Automated compliance analysis is temporarily unavailable. Your request status has been refreshed.',
-      );
-    }
-    if (errorCode == 'AI_TIMEOUT') {
-      throw Exception(
-        'The automated compliance analysis timed out. Your request status has been refreshed.',
-      );
-    }
-    if (errorCode == 'AI_RATE_LIMITED') {
-      throw Exception(
-        'Automated compliance analysis is temporarily busy. Your request status has been refreshed.',
-      );
-    }
-    if (errorCode == 'AI_PROVIDER_ERROR') {
-      throw Exception(
-        'The automated compliance service could not complete the analysis. Your request status has been refreshed.',
-      );
-    }
-    if (errorCode == 'AI_INVALID_RESPONSE' ||
-        errorCode == 'AI_VALIDATION_FAILED' ||
-        errorCode == 'AI_WORKFLOW_VALIDATION_FAILED' ||
-        errorCode == 'AI_ANALYSIS_FAILED') {
-      throw Exception(
-        'The automated assessment could not be completed safely. Your request status has been refreshed.',
-      );
-    }
-
     if (response.statusCode == 401) {
       throw Exception('Your session has expired. Please sign in again.');
     }
     if (response.statusCode == 403) {
-      throw Exception('You don\'t have permission to perform compliance analysis on this export request.');
-    }
-    if (response.statusCode == 404) {
-      throw Exception('This export request could not be found.');
+      throw Exception("You don't have permission to perform compliance analysis on this export request.");
     }
 
-    if (serverMessage != null && serverMessage.trim().isNotEmpty) {
-      throw Exception(serverMessage);
-    }
-
-    throw Exception(
-      'The automated compliance service could not complete the analysis. Your request status has been refreshed.',
+    return ComplianceWorkflowAnalysisResultModel(
+      success: false,
+      message: serverMessage ?? "The automated compliance service could not complete the analysis.",
+      errorCode: errorCode ?? 'AI_PROVIDER_ERROR',
     );
   }
 
@@ -457,21 +415,28 @@ class ExportComplianceService {
       return ComplianceWorkflowAnalysisResultModel.fromJson(data);
     }
 
+    String? errorCode;
     String? serverMessage;
 
     try {
       if (response.body.isNotEmpty) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
+        errorCode = data['errorCode']?.toString();
         serverMessage = data['message']?.toString();
       }
     } catch (_) {}
 
-    if (serverMessage != null && serverMessage.trim().isNotEmpty) {
-      throw Exception(serverMessage);
+    if (response.statusCode == 401) {
+      throw Exception('Your session has expired. Please sign in again.');
+    }
+    if (response.statusCode == 403) {
+      throw Exception("You don't have permission to retry compliance analysis on this export request.");
     }
 
-    throw Exception(
-      'AI assessment retry could not be completed at this time. Please try again later.',
+    return ComplianceWorkflowAnalysisResultModel(
+      success: false,
+      message: serverMessage ?? "AI assessment retry could not be completed at this time.",
+      errorCode: errorCode ?? 'AI_PROVIDER_ERROR',
     );
   }
 
