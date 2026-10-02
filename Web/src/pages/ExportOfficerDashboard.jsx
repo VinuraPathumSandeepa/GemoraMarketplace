@@ -235,11 +235,127 @@ function ExportOfficerDashboard() {
     }
   };
 
+  // Search, Filter, Sort & Pagination state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortOption, setSortOption] = useState("newest");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Calculate Summary Metric Counts
+  const totalCount = queue.length;
+  const submittedCount = queue.filter((r) => r.status === "Submitted").length;
+  const underReviewCount = queue.filter(
+    (r) => r.status === "UnderComplianceReview" || r.status === "UnderOfficerReview"
+  ).length;
+  const revisionCount = queue.filter((r) => r.status === "RevisionRequired").length;
+  const approvedCount = queue.filter((r) => r.status === "Approved").length;
+
+  // Filter & Sort Logic
+  const filteredAndSortedQueue = queue.filter((req) => {
+    // Search matching: ID, requester full name, email
+    if (searchTerm.trim()) {
+      const term = searchTerm.trim().toLowerCase();
+      const idMatch = (req.id || "").toLowerCase().includes(term);
+      const nameMatch = (req.requesterName || "").toLowerCase().includes(term);
+      const emailMatch = (req.requesterEmail || "").toLowerCase().includes(term);
+      if (!idMatch && !nameMatch && !emailMatch) return false;
+    }
+
+    // Status filter matching
+    if (statusFilter !== "all" && req.status !== statusFilter) {
+      return false;
+    }
+
+    return true;
+  }).sort((a, b) => {
+    if (sortOption === "newest") {
+      const dateA = new Date(a.submittedAt || a.createdAt || 0);
+      const dateB = new Date(b.submittedAt || b.createdAt || 0);
+      return dateB - dateA;
+    }
+    if (sortOption === "oldest") {
+      const dateA = new Date(a.submittedAt || a.createdAt || 0);
+      const dateB = new Date(b.submittedAt || b.createdAt || 0);
+      return dateA - dateB;
+    }
+    if (sortOption === "value-high-low") {
+      return (b.declaredValue || 0) - (a.declaredValue || 0);
+    }
+    if (sortOption === "value-low-high") {
+      return (a.declaredValue || 0) - (b.declaredValue || 0);
+    }
+    if (sortOption === "requester-az") {
+      return (a.requesterName || "").localeCompare(b.requesterName || "");
+    }
+    return 0;
+  });
+
+  // Pagination calculation
+  const totalPages = Math.ceil(filteredAndSortedQueue.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedQueue = filteredAndSortedQueue.slice(startIndex, startIndex + itemsPerPage);
+
+  // Handlers for controls
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (e) => {
+    setStatusFilter(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleSortChange = (e) => {
+    setSortOption(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleCardClick = (statusValue) => {
+    if (statusFilter === statusValue) {
+      setStatusFilter("all");
+    } else {
+      setStatusFilter(statusValue);
+    }
+    setCurrentPage(1);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setSortOption("newest");
+    setCurrentPage(1);
+  };
+
+  // Status Label Helper
+  const getStatusLabel = (status) => {
+    if (!status) return "";
+    switch (status) {
+      case "Submitted":
+        return "Submitted";
+      case "UnderComplianceReview":
+        return "Under Compliance Review";
+      case "UnderOfficerReview":
+        return "Under Officer Review";
+      case "RevisionRequired":
+      case "RevisionRequested":
+        return "Revision Required";
+      case "Approved":
+        return "Approved";
+      case "Rejected":
+        return "Rejected";
+      default:
+        return status;
+    }
+  };
+
   // Status Badge Helper
   const renderStatusBadge = (status) => {
     if (!status) return null;
     const cleanStatus = status.toLowerCase();
-    return <span className={`badge badge-${cleanStatus}`}>{status}</span>;
+    const label = getStatusLabel(status);
+    return <span className={`badge badge-${cleanStatus}`}>{label}</span>;
   };
 
   // Actor Badge Helper
@@ -250,7 +366,10 @@ function ExportOfficerDashboard() {
   };
 
   return (
-    <DashboardLayout title="Export Officer Dashboard">
+    <DashboardLayout
+      title="Export Officer Dashboard"
+      subtitle="Review export compliance requests and AI-assisted assessments."
+    >
       <div className="export-officer-container">
         {/* PAGE HEADER */}
         <div className="dashboard-header">
@@ -287,61 +406,229 @@ function ExportOfficerDashboard() {
               </div>
             )}
 
-            {!loadingQueue && !queueError && queue.length === 0 && (
-              <div className="alert-box alert-info">
-                No export requests are currently waiting for review.
-              </div>
-            )}
+            {!loadingQueue && !queueError && (
+              <>
+                {/* SUMMARY METRIC CARDS */}
+                <div className="summary-cards-grid">
+                  <div
+                    className={`summary-card ${statusFilter === "all" ? "active" : ""}`}
+                    onClick={() => handleCardClick("all")}
+                    title="Click to view all requests"
+                  >
+                    <span className="card-title">Total Requests</span>
+                    <span className="card-value">{totalCount}</span>
+                  </div>
 
-            {!loadingQueue && !queueError && queue.length > 0 && (
-              <div className="queue-card">
-                <div className="table-responsive">
-                  <table className="queue-table">
-                    <thead>
-                      <tr>
-                        <th>Request ID</th>
-                        <th>Requester</th>
-                        <th>Origin / Destination</th>
-                        <th>Declared Value</th>
-                        <th>Status</th>
-                        <th>Submitted Date</th>
-                        <th>Docs</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {queue.map((req) => (
-                        <tr
-                          key={req.id}
-                          className="queue-row"
-                          onClick={() => handleSelectRequest(req.id)}
-                        >
-                          <td>
-                            <code>{req.id ? req.id.substring(0, 8) + "..." : "-"}</code>
-                          </td>
-                          <td>
-                            <div>{req.requesterName || "N/A"}</div>
-                            <div className="info-label">{req.requesterEmail || ""}</div>
-                          </td>
-                          <td>
-                            {req.originCountry} &rarr; {req.destinationCountry}
-                          </td>
-                          <td>
-                            {req.declaredValue?.toLocaleString()}{" "}
-                            {req.currency}
-                          </td>
-                          <td>{renderStatusBadge(req.status)}</td>
-                          <td>
-                            {req.submittedAt
-                              ? new Date(req.submittedAt).toLocaleDateString()
-                              : "-"}
-                          </td>
-                          <td>{req.documents?.length || 0}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div
+                    className={`summary-card ${statusFilter === "Submitted" ? "active" : ""}`}
+                    onClick={() => handleCardClick("Submitted")}
+                    title="Click to filter by Submitted"
+                  >
+                    <span className="card-title">Submitted</span>
+                    <span className="card-value" style={{ color: "#2563eb" }}>
+                      {submittedCount}
+                    </span>
+                  </div>
+
+                  <div
+                    className={`summary-card ${
+                      statusFilter === "UnderOfficerReview" || statusFilter === "UnderComplianceReview"
+                        ? "active"
+                        : ""
+                    }`}
+                    onClick={() => handleCardClick("UnderOfficerReview")}
+                    title="Click to filter by Under Officer Review"
+                  >
+                    <span className="card-title">Under Review</span>
+                    <span className="card-value" style={{ color: "#d97706" }}>
+                      {underReviewCount}
+                    </span>
+                  </div>
+
+                  <div
+                    className={`summary-card ${statusFilter === "RevisionRequired" ? "active" : ""}`}
+                    onClick={() => handleCardClick("RevisionRequired")}
+                    title="Click to filter by Revision Required"
+                  >
+                    <span className="card-title">Revision Required</span>
+                    <span className="card-value" style={{ color: "#ca8a04" }}>
+                      {revisionCount}
+                    </span>
+                  </div>
+
+                  <div
+                    className={`summary-card ${statusFilter === "Approved" ? "active" : ""}`}
+                    onClick={() => handleCardClick("Approved")}
+                    title="Click to filter by Approved"
+                  >
+                    <span className="card-title">Approved</span>
+                    <span className="card-value" style={{ color: "#059669" }}>
+                      {approvedCount}
+                    </span>
+                  </div>
                 </div>
-              </div>
+
+                {/* CONTROLS BAR: SEARCH, FILTERS & SORTING */}
+                <div className="controls-bar">
+                  <div className="search-input-wrapper">
+                    <input
+                      type="text"
+                      className="search-input"
+                      placeholder="Search by Request ID, Requester Name, or Email..."
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                    />
+                  </div>
+
+                  <div className="filters-wrapper">
+                    {/* Status Filter */}
+                    <select
+                      className="filter-select"
+                      value={statusFilter}
+                      onChange={handleStatusFilterChange}
+                      aria-label="Filter by Status"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="Submitted">Submitted</option>
+                      <option value="UnderComplianceReview">Under Compliance Review</option>
+                      <option value="UnderOfficerReview">Under Officer Review</option>
+                      <option value="RevisionRequired">Revision Required</option>
+                      <option value="Approved">Approved</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
+
+                    {/* Sorting Dropdown */}
+                    <select
+                      className="filter-select"
+                      value={sortOption}
+                      onChange={handleSortChange}
+                      aria-label="Sort requests"
+                    >
+                      <option value="newest">Newest Submitted</option>
+                      <option value="oldest">Oldest Submitted</option>
+                      <option value="value-high-low">Declared Value: High to Low</option>
+                      <option value="value-low-high">Declared Value: Low to High</option>
+                      <option value="requester-az">Requester Name A-Z</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* EMPTY QUEUE STATE */}
+                {queue.length === 0 && (
+                  <div className="alert-box alert-info">
+                    No export requests are currently waiting for review.
+                  </div>
+                )}
+
+                {/* EMPTY FILTERED STATE */}
+                {queue.length > 0 && filteredAndSortedQueue.length === 0 && (
+                  <div className="empty-filtered-state">
+                    <p>No export requests match the selected filters.</p>
+                    <button className="btn-retry" style={{ marginTop: "12px" }} onClick={clearFilters}>
+                      Clear Filters
+                    </button>
+                  </div>
+                )}
+
+                {/* REQUESTS TABLE */}
+                {filteredAndSortedQueue.length > 0 && (
+                  <div className="queue-card">
+                    <div className="table-responsive">
+                      <table className="queue-table">
+                        <thead>
+                          <tr>
+                            <th>Request</th>
+                            <th>Requester</th>
+                            <th>Route</th>
+                            <th>Declared Value</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                            <th>Docs</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedQueue.map((req) => {
+                            const isReviewable =
+                              req.status === "Submitted" ||
+                              req.status === "UnderComplianceReview" ||
+                              req.status === "UnderOfficerReview";
+
+                            return (
+                              <tr
+                                key={req.id}
+                                className="queue-row"
+                                onClick={() => handleSelectRequest(req.id)}
+                              >
+                                <td>
+                                  <code title={req.id}>
+                                    {req.id ? req.id.substring(0, 8) + "..." : "-"}
+                                  </code>
+                                </td>
+                                <td>
+                                  <div className="requester-name">{req.requesterName || "N/A"}</div>
+                                  <div className="requester-email">{req.requesterEmail || ""}</div>
+                                </td>
+                                <td>
+                                  {req.originCountry} &rarr; {req.destinationCountry}
+                                </td>
+                                <td>
+                                  {req.declaredValue?.toLocaleString()}{" "}
+                                  {req.currency}
+                                </td>
+                                <td>{renderStatusBadge(req.status)}</td>
+                                <td>
+                                  {req.submittedAt
+                                    ? new Date(req.submittedAt).toLocaleDateString()
+                                    : "-"}
+                                </td>
+                                <td>{req.documents?.length || 0}</td>
+                                <td>
+                                  <button
+                                    className={`btn-table-action ${isReviewable ? "btn-review" : "btn-view"}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectRequest(req.id);
+                                    }}
+                                  >
+                                    {isReviewable ? "Review" : "View"}
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* PAGINATION CONTROLS */}
+                    <div className="pagination-bar">
+                      <div className="pagination-info">
+                        Showing {startIndex + 1}–
+                        {Math.min(startIndex + itemsPerPage, filteredAndSortedQueue.length)} of{" "}
+                        {filteredAndSortedQueue.length} request{filteredAndSortedQueue.length === 1 ? "" : "s"} (Page {currentPage} of {totalPages})
+                      </div>
+
+                      <div className="pagination-buttons">
+                        <button
+                          className="btn-page"
+                          disabled={currentPage === 1}
+                          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                        >
+                          &larr; Previous
+                        </button>
+                        <button
+                          className="btn-page"
+                          disabled={currentPage >= totalPages}
+                          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                        >
+                          Next &rarr;
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

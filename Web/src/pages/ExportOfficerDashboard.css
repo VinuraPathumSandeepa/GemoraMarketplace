@@ -1,30 +1,238 @@
-/* Export Officer Dashboard Styles */
+#root:has(.export-officer-container) {
+  width: 1400px;
+  max-width: 94vw;
+}
 
 .export-officer-container {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
   text-align: left;
-  max-width: 1200px;
+  max-width: 1400px;
+  width: 100%;
   margin: 0 auto;
-  padding: 20px;
+  padding: 0;
   box-sizing: border-box;
 }
 
 .dashboard-header {
   border-bottom: 1px solid var(--border);
-  padding-bottom: 16px;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .dashboard-header h2 {
-  font-size: 28px;
+  font-size: 18px;
   color: var(--text-h);
-  margin-bottom: 6px;
+  margin-bottom: 2px;
 }
 
 .subtitle {
   color: var(--text);
+  font-size: 14px;
+}
+
+/* ==========================================
+   SUMMARY METRIC CARDS
+========================================== */
+.summary-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.summary-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.summary-card:hover {
+  border-color: var(--accent);
+}
+
+.summary-card.active {
+  border-color: var(--accent);
+  background-color: var(--accent-bg);
+}
+
+.summary-card .card-title {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summary-card .card-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+/* ==========================================
+   CONTROLS BAR: SEARCH & FILTERS
+========================================== */
+.controls-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  background: var(--bg);
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.search-input-wrapper {
+  flex: 1;
+  min-width: 260px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+  color: var(--text-h);
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.search-input:focus {
+  outline: 2px solid var(--accent);
+  border-color: transparent;
+}
+
+.filters-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.filter-select {
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+  color: var(--text-h);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.filter-select:focus {
+  outline: 2px solid var(--accent);
+  border-color: transparent;
+}
+
+/* Empty Filtered State */
+.empty-filtered-state {
+  padding: 32px 20px;
+  text-align: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
   font-size: 15px;
+}
+
+/* Pagination Bar */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pagination-info {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.pagination-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-page {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+  color: var(--text-h);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-page:hover:not(:disabled) {
+  background: var(--border);
+}
+
+.btn-page:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Table Requester & Action Buttons */
+.requester-name {
+  font-weight: 600;
+  color: var(--text-h);
+  font-size: 14px;
+}
+
+.requester-email {
+  font-size: 12px;
+  color: var(--text);
+  margin-top: 2px;
+}
+
+.btn-table-action {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-table-action.btn-review {
+  background-color: var(--accent);
+  color: #ffffff;
+}
+
+.btn-table-action.btn-review:hover {
+  opacity: 0.9;
+}
+
+.btn-table-action.btn-view {
+  background-color: var(--code-bg);
+  color: var(--text-h);
+  border: 1px solid var(--border);
+}
+
+.btn-table-action.btn-view:hover {
+  background-color: var(--border);
 }
 
 /* Alert / State Boxes */
