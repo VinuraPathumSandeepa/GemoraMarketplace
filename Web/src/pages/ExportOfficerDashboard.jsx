@@ -34,6 +34,10 @@ function ExportOfficerDashboard() {
   // Expandable state for tool calls
   const [showToolCalls, setShowToolCalls] = useState(false);
 
+  // Document action & error states
+  const [documentActionState, setDocumentActionState] = useState({}); // { [docId]: 'viewing' | 'downloading' }
+  const [documentErrorMessage, setDocumentErrorMessage] = useState("");
+
   // ==========================================
   // FETCH REVIEW QUEUE
   // ==========================================
@@ -81,6 +85,8 @@ function ExportOfficerDashboard() {
     setNotesValidationError("");
     setActionSuccessMessage("");
     setActionErrorMessage("");
+    setDocumentActionState({});
+    setDocumentErrorMessage("");
 
     try {
       const data = await getRequestDetail(requestId);
@@ -111,6 +117,8 @@ function ExportOfficerDashboard() {
     setNotesValidationError("");
     setActionSuccessMessage("");
     setActionErrorMessage("");
+    setDocumentActionState({});
+    setDocumentErrorMessage("");
   };
 
   // ==========================================
@@ -127,7 +135,7 @@ function ExportOfficerDashboard() {
     try {
       await startReview(selectedRequestId);
       setActionSuccessMessage("Human review started successfully.");
-      
+
       // Refresh request detail and queue
       const updated = await getRequestDetail(selectedRequestId);
       setRequestDetail(updated.request);
@@ -213,25 +221,81 @@ function ExportOfficerDashboard() {
   };
 
   // ==========================================
-  // VIEW / DOWNLOAD DOCUMENT
+  // VIEW / DOWNLOAD DOCUMENT HANDLERS
   // ==========================================
-  const handleViewDocument = async (documentId, fileName) => {
-    if (!selectedRequestId || !documentId) return;
+  const handleViewDocument = async (doc) => {
+    if (!selectedRequestId || !doc || !doc.id) return;
+
+    setDocumentErrorMessage("");
+    setDocumentActionState((prev) => ({ ...prev, [doc.id]: "viewing" }));
 
     try {
-      const blob = await downloadComplianceDocument(selectedRequestId, documentId);
-      const url = window.URL.createObjectURL(blob);
+      const blob = await downloadComplianceDocument(selectedRequestId, doc.id);
+      const objectUrl = window.URL.createObjectURL(blob);
+      const newTab = window.open(objectUrl, "_blank");
+
+      if (!newTab) {
+        setDocumentErrorMessage("Pop-up window was blocked. Please allow pop-ups for this site to view the document.");
+      }
+
+      setTimeout(() => {
+        window.URL.revokeObjectURL(objectUrl);
+      }, 60000);
+    } catch (err) {
+      console.error("Failed to view compliance document:", err);
+      handleDocumentError(err);
+    } finally {
+      setDocumentActionState((prev) => ({ ...prev, [doc.id]: null }));
+    }
+  };
+
+  const handleDownloadDocument = async (doc) => {
+    if (!selectedRequestId || !doc || !doc.id) return;
+
+    setDocumentErrorMessage("");
+    setDocumentActionState((prev) => ({ ...prev, [doc.id]: "downloading" }));
+
+    try {
+      const blob = await downloadComplianceDocument(selectedRequestId, doc.id);
+
+      let extension = "";
+      if (blob.type === "application/pdf") extension = ".pdf";
+      else if (blob.type === "image/png") extension = ".png";
+      else if (blob.type === "image/jpeg") extension = ".jpeg";
+
+      const docTypeClean = (doc.documentType || "document").toLowerCase().replace(/[^a-z0-9]/g, "_");
+      const docNumClean = (doc.documentNumber || doc.id.substring(0, 8)).toLowerCase().replace(/[^a-z0-9]/g, "_");
+      const safeFileName = `${docTypeClean}_${docNumClean}${extension}`;
+
+      const objectUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = url;
-      link.target = "_blank";
-      link.download = fileName || `document-${documentId}.pdf`;
+      link.href = objectUrl;
+      link.download = safeFileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+
+      setTimeout(() => {
+        window.URL.revokeObjectURL(objectUrl);
+      }, 1000);
     } catch (err) {
       console.error("Failed to download compliance document:", err);
-      alert(err.response?.data?.message || "Failed to download document file.");
+      handleDocumentError(err);
+    } finally {
+      setDocumentActionState((prev) => ({ ...prev, [doc.id]: null }));
+    }
+  };
+
+  const handleDocumentError = (err) => {
+    const status = err.response?.status;
+    if (status === 401) {
+      setDocumentErrorMessage("Your session has expired. Please sign in again.");
+    } else if (status === 403) {
+      setDocumentErrorMessage("You are not authorized to access this compliance document.");
+    } else if (status === 404) {
+      setDocumentErrorMessage("The requested compliance document file was not found.");
+    } else {
+      setDocumentErrorMessage(err.response?.data?.message || "Unable to load this compliance document. Please try again.");
     }
   };
 
@@ -969,6 +1033,13 @@ function ExportOfficerDashboard() {
                 {/* SECTION B: DOCUMENTS METADATA */}
                 <div className="section-card">
                   <h3>Compliance Documents ({requestDetail.documents?.length || 0})</h3>
+
+                  {documentErrorMessage && (
+                    <div className="alert-box alert-error" role="alert" aria-live="assertive" style={{ marginBottom: "16px" }}>
+                      {documentErrorMessage}
+                    </div>
+                  )}
+
                   {(!requestDetail.documents || requestDetail.documents.length === 0) ? (
                     <p className="subtitle">No compliance documents attached.</p>
                   ) : (
@@ -976,47 +1047,77 @@ function ExportOfficerDashboard() {
                       <table className="queue-table">
                         <thead>
                           <tr>
-                            <th>Type</th>
-                            <th>Number</th>
+                            <th>Document Type</th>
+                            <th>Document Number</th>
                             <th>Issuer</th>
                             <th>Issue Date</th>
                             <th>Expiry Date</th>
                             <th>Status</th>
-                            <th>Action</th>
+                            <th>File</th>
+                            <th>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {requestDetail.documents.map((doc) => (
-                            <tr key={doc.id}>
-                              <td><strong>{doc.documentType}</strong></td>
-                              <td>{doc.documentNumber || "N/A"}</td>
-                              <td>{doc.issuer || "N/A"}</td>
-                              <td>
-                                {doc.issueDate
-                                  ? new Date(doc.issueDate).toLocaleDateString()
-                                  : "-"}
-                              </td>
-                              <td>
-                                {doc.expiryDate
-                                  ? new Date(doc.expiryDate).toLocaleDateString()
-                                  : "-"}
-                              </td>
-                              <td>{renderStatusBadge(doc.status)}</td>
-                              <td>
-                                {doc.fileUrl ? (
-                                  <button
-                                    className="btn-back"
-                                    style={{ margin: 0, padding: "4px 8px", fontSize: "12px" }}
-                                    onClick={() => handleViewDocument(doc.id, `doc-${doc.id}.pdf`)}
-                                  >
-                                    View File
-                                  </button>
-                                ) : (
-                                  <span className="info-label">No File</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
+                          {requestDetail.documents.map((doc) => {
+                            const hasFile = Boolean(doc.fileUrl);
+                            const isViewing = documentActionState[doc.id] === "viewing";
+                            const isDownloading = documentActionState[doc.id] === "downloading";
+                            const isBusy = isViewing || isDownloading;
+
+                            return (
+                              <tr key={doc.id}>
+                                <td><strong>{doc.documentType || "Not provided"}</strong></td>
+                                <td>{doc.documentNumber || "Not provided"}</td>
+                                <td>{doc.issuer || "Not provided"}</td>
+                                <td>
+                                  {doc.issueDate
+                                    ? new Date(doc.issueDate).toLocaleDateString()
+                                    : "Not provided"}
+                                </td>
+                                <td>
+                                  {doc.expiryDate
+                                    ? new Date(doc.expiryDate).toLocaleDateString()
+                                    : "Not provided"}
+                                </td>
+                                <td>{renderStatusBadge(doc.status)}</td>
+                                <td>
+                                  {hasFile ? (
+                                    <span className="badge badge-approved" style={{ fontSize: "11px", padding: "2px 8px" }}>
+                                      Attached
+                                    </span>
+                                  ) : (
+                                    <span className="badge badge-system" style={{ fontSize: "11px", padding: "2px 8px" }}>
+                                      No File
+                                    </span>
+                                  )}
+                                </td>
+                                <td>
+                                  {hasFile ? (
+                                    <div className="doc-actions-cell">
+                                      <button
+                                        className="btn-doc-action btn-doc-view"
+                                        disabled={isBusy}
+                                        onClick={() => handleViewDocument(doc)}
+                                      >
+                                        {isViewing ? "Opening..." : "View Document"}
+                                      </button>
+                                      <button
+                                        className="btn-doc-action btn-doc-download"
+                                        disabled={isBusy}
+                                        onClick={() => handleDownloadDocument(doc)}
+                                      >
+                                        {isDownloading ? "Downloading..." : "Download"}
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="info-label" style={{ fontSize: "12px" }}>
+                                      No File Attached
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

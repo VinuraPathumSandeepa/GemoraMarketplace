@@ -705,3 +705,48 @@
   outline: 2px solid var(--accent);
   border-color: transparent;
 }
+
+/* Compliance Document Action Buttons */
+.doc-actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-doc-action {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: background-color 0.2s, opacity 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-doc-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-doc-view {
+  background-color: var(--code-bg);
+  color: var(--text-h);
+}
+
+.btn-doc-view:hover:not(:disabled) {
+  background-color: var(--border);
+}
+
+.btn-doc-download {
+  background-color: var(--accent);
+  color: #ffffff;
+  border: none;
+}
+
+.btn-doc-download:hover:not(:disabled) {
+  opacity: 0.9;
+}
