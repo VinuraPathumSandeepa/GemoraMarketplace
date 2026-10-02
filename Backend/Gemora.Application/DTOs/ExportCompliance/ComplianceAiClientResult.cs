@@ -13,4 +13,6 @@ public class ComplianceAiClientResult
     public string? ModelName { get; set; }
 
     public long DurationMs { get; set; }
+
+    public bool IsTransientFailure { get; set; }
 }
