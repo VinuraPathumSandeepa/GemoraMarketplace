@@ -816,4 +816,139 @@ public class ComplianceWorkflowService : IComplianceWorkflowService
 
         return null;
     }
+
+    // ======================================================
+    // RETRY COMPLIANCE ANALYSIS (STEP 2 RETRY MECHANISM)
+    // ======================================================
+    public async Task<ComplianceWorkflowAnalysisResultDto> RetryComplianceAnalysisAsync(
+        Guid triggeredByUserId,
+        Guid exportRequestId,
+        CancellationToken cancellationToken = default)
+    {
+        if (triggeredByUserId == Guid.Empty)
+        {
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = "INVALID_USER",
+                Message = "Authenticated user is invalid."
+            };
+        }
+
+        if (exportRequestId == Guid.Empty)
+        {
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = "INVALID_REQUEST",
+                Message = "Export request ID is invalid."
+            };
+        }
+
+        // 1. Ownership & Existence Check
+        var exportRequest = await _context.ExportRequests
+            .FirstOrDefaultAsync(r => r.Id == exportRequestId && r.RequestedByUserId == triggeredByUserId, cancellationToken);
+
+        if (exportRequest == null)
+        {
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = "REQUEST_NOT_FOUND",
+                Message = "Export request was not found."
+            };
+        }
+
+        // 2. Reject retry after final decision or cancellation
+        if (exportRequest.Status == ExportRequestStatus.Approved ||
+            exportRequest.Status == ExportRequestStatus.Rejected ||
+            exportRequest.Status == ExportRequestStatus.Cancelled)
+        {
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = "RETRY_NOT_ELIGIBLE",
+                Message = $"Cannot retry AI assessment for export request in status '{exportRequest.Status}'."
+            };
+        }
+
+        // 3. Reject retry when active workflow exists
+        var activeStatuses = new[]
+        {
+            AgentWorkflowStatus.Pending,
+            AgentWorkflowStatus.Planning,
+            AgentWorkflowStatus.Running,
+            AgentWorkflowStatus.WaitingForApproval
+        };
+
+        var activeWorkflow = await _context.AgentWorkflows
+            .AsNoTracking()
+            .FirstOrDefaultAsync(w =>
+                w.WorkflowType == "ExportCompliance" &&
+                w.RootEntityType == "ExportRequest" &&
+                w.RootEntityId == exportRequestId &&
+                activeStatuses.Contains(w.Status),
+                cancellationToken);
+
+        if (activeWorkflow != null)
+        {
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = "WORKFLOW_ALREADY_ACTIVE",
+                Message = $"An active export compliance workflow ({activeWorkflow.Id}) already exists for this export request.",
+                WorkflowId = activeWorkflow.Id
+            };
+        }
+
+        // 4. Retrieve latest workflow to inspect failure reason
+        var latestWorkflow = await _context.AgentWorkflows
+            .AsNoTracking()
+            .Where(w =>
+                w.WorkflowType == "ExportCompliance" &&
+                w.RootEntityType == "ExportRequest" &&
+                w.RootEntityId == exportRequestId)
+            .OrderByDescending(w => w.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (latestWorkflow == null || latestWorkflow.Status != AgentWorkflowStatus.Failed)
+        {
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = "RETRY_NOT_ELIGIBLE",
+                Message = "No failed AI assessment workflow was found to retry."
+            };
+        }
+
+        // 5. Ensure failure was caused by a retryable AI/provider condition
+        var retryableErrorCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "AI_PROVIDER_ERROR",
+            "AI_PROVIDER_UNAVAILABLE",
+            "AI_TIMEOUT",
+            "AI_RATE_LIMITED"
+        };
+
+        if (string.IsNullOrWhiteSpace(latestWorkflow.ErrorCode) || !retryableErrorCodes.Contains(latestWorkflow.ErrorCode))
+        {
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = "RETRY_NOT_ELIGIBLE",
+                Message = $"Latest workflow failure reason '{latestWorkflow.ErrorCode}' is not eligible for AI retry."
+            };
+        }
+
+        // 6. Transition status back to Submitted so RunComplianceAnalysisAsync can create a NEW workflow
+        if (exportRequest.Status == ExportRequestStatus.UnderComplianceReview)
+        {
+            exportRequest.Status = ExportRequestStatus.Submitted;
+            exportRequest.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        // 7. Execute clean compliance analysis workflow (spawns a brand NEW AgentWorkflow record)
+        return await RunComplianceAnalysisAsync(triggeredByUserId, exportRequestId, cancellationToken);
+    }
 }

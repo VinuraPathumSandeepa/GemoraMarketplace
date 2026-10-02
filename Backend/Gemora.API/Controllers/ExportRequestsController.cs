@@ -610,7 +610,63 @@ public class ExportRequestsController : ControllerBase
                 "AI_NOT_CONFIGURED" => StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = result.Message }),
                 "AI_TIMEOUT" => StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = result.Message }),
                 "AI_RATE_LIMITED" => StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = result.Message }),
+                "AI_PROVIDER_UNAVAILABLE" => StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = result.Message }),
                 "AI_PROVIDER_ERROR" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
+                "AI_BAD_REQUEST" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
+                "AI_AUTH_ERROR" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
+                "AI_INVALID_RESPONSE" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
+                "AI_VALIDATION_FAILED" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
+                "AI_WORKFLOW_VALIDATION_FAILED" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
+                "AI_ANALYSIS_FAILED" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
+                "WORKFLOW_EXECUTION_FAILED" => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.Message }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.Message })
+            };
+        }
+
+        return Ok(result);
+    }
+
+    // ==========================================
+    // 12. RETRY COMPLIANCE ANALYSIS
+    // POST: /api/ExportRequests/{id}/compliance-analysis/retry
+    // ==========================================
+    [HttpPost("{id}/compliance-analysis/retry")]
+    public async Task<IActionResult> RetryComplianceAnalysis(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Authenticated user is invalid."
+            });
+        }
+
+        var result = await _complianceWorkflowService.RetryComplianceAnalysisAsync(
+            userId,
+            id,
+            cancellationToken
+        );
+
+        if (!result.Success)
+        {
+            return result.ErrorCode switch
+            {
+                "INVALID_USER" => Unauthorized(new { message = result.Message }),
+                "INVALID_REQUEST" => BadRequest(new { message = result.Message }),
+                "REQUEST_NOT_FOUND" => NotFound(new { message = result.Message }),
+                "RETRY_NOT_ELIGIBLE" => Conflict(new { message = result.Message }),
+                "INVALID_EXPORT_STATUS" => Conflict(new { message = result.Message }),
+                "WORKFLOW_ALREADY_ACTIVE" => Conflict(new { message = result.Message }),
+                "WORKFLOW_STATE_INVALID" => Conflict(new { message = result.Message }),
+                "AI_NOT_CONFIGURED" => StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = result.Message }),
+                "AI_TIMEOUT" => StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = result.Message }),
+                "AI_RATE_LIMITED" => StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = result.Message }),
+                "AI_PROVIDER_UNAVAILABLE" => StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = result.Message }),
+                "AI_PROVIDER_ERROR" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
+                "AI_BAD_REQUEST" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
+                "AI_AUTH_ERROR" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
                 "AI_INVALID_RESPONSE" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
                 "AI_VALIDATION_FAILED" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),
                 "AI_WORKFLOW_VALIDATION_FAILED" => StatusCode(StatusCodes.Status502BadGateway, new { message = result.Message }),

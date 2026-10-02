@@ -221,7 +221,7 @@ public class GeminiComplianceAiClientTests
         var result = await client.AnalyzeAsync(context);
 
         Assert.False(result.Success);
-        Assert.Equal("AI_PROVIDER_ERROR", result.ErrorCode);
+        Assert.Equal("AI_PROVIDER_UNAVAILABLE", result.ErrorCode);
         Assert.True(result.IsTransientFailure);
         Assert.Equal(6, handler.Requests.Count);
     }
@@ -246,7 +246,32 @@ public class GeminiComplianceAiClientTests
         var result = await client.AnalyzeAsync(context);
 
         Assert.False(result.Success);
-        Assert.Equal("AI_PROVIDER_ERROR", result.ErrorCode);
+        Assert.Equal("AI_BAD_REQUEST", result.ErrorCode);
+        Assert.False(result.IsTransientFailure);
+        Assert.Single(handler.Requests);
+    }
+
+    // E2. HTTP 401/403 is NOT transient
+    [Fact]
+    public async Task AnalyzeAsync_Http401_ReturnsAuthErrorAndIsNotTransient()
+    {
+        var handler = new FakeHttpMessageHandler();
+        handler.QueueResponse(HttpStatusCode.Unauthorized, "{\"error\": {\"code\": 401, \"message\": \"API Key Invalid\", \"status\": \"UNAUTHENTICATED\"}}");
+
+        var options = new GeminiComplianceOptions
+        {
+            ApiKey = "fake-api-key",
+            Model = "gemini-3.8-flash",
+            FallbackModel = "gemini-3.5-flash-lite"
+        };
+
+        var client = CreateClient(handler, options);
+        var context = CreateValidContext();
+
+        var result = await client.AnalyzeAsync(context);
+
+        Assert.False(result.Success);
+        Assert.Equal("AI_AUTH_ERROR", result.ErrorCode);
         Assert.False(result.IsTransientFailure);
         Assert.Single(handler.Requests);
     }

@@ -40,7 +40,10 @@ public class ExportOfficerService : IExportOfficerService
         {
             ExportRequestStatus.Submitted,
             ExportRequestStatus.UnderComplianceReview,
-            ExportRequestStatus.UnderOfficerReview
+            ExportRequestStatus.UnderOfficerReview,
+            ExportRequestStatus.RevisionRequired,
+            ExportRequestStatus.Approved,
+            ExportRequestStatus.Rejected
         };
 
         var requests = await _context.ExportRequests
@@ -511,18 +514,24 @@ public class ExportOfficerService : IExportOfficerService
     private static OfficerExportRequestResponseDto MapToOfficerExportRequestResponseDto(ExportRequest entity)
     {
         var mappedDocuments = entity.ComplianceDocuments?
-            .Select(d => new ComplianceDocumentResponseDto
+            .Select(d =>
             {
-                Id = d.Id,
-                ExportRequestId = d.ExportRequestId,
-                DocumentType = d.DocumentType,
-                DocumentNumber = d.DocumentNumber,
-                Issuer = d.Issuer,
-                IssueDate = d.IssueDate,
-                ExpiryDate = d.ExpiryDate,
-                FileUrl = d.FileUrl,
-                Status = d.Status.ToString(),
-                UploadedAt = d.UploadedAt
+                var (effStatus, effReason) = Gemora.Domain.Helpers.ComplianceDocumentStatusHelper.CalculateEffectiveStatus(d);
+                return new ComplianceDocumentResponseDto
+                {
+                    Id = d.Id,
+                    ExportRequestId = d.ExportRequestId,
+                    DocumentType = d.DocumentType,
+                    DocumentNumber = d.DocumentNumber,
+                    Issuer = d.Issuer,
+                    IssueDate = d.IssueDate,
+                    ExpiryDate = d.ExpiryDate,
+                    FileUrl = d.FileUrl,
+                    Status = d.Status.ToString(),
+                    EffectiveStatus = effStatus,
+                    EffectiveStatusReason = effReason,
+                    UploadedAt = d.UploadedAt
+                };
             })
             .ToList() ?? new List<ComplianceDocumentResponseDto>();
 

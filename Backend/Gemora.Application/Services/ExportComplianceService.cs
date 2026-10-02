@@ -1047,6 +1047,8 @@ public class ExportComplianceService : IExportComplianceService
 
     private static ComplianceDocumentResponseDto MapToComplianceDocumentResponseDto(ComplianceDocument entity)
     {
+        var (effectiveStatus, effectiveReason) = Gemora.Domain.Helpers.ComplianceDocumentStatusHelper.CalculateEffectiveStatus(entity);
+
         return new ComplianceDocumentResponseDto
         {
             Id = entity.Id,
@@ -1058,6 +1060,8 @@ public class ExportComplianceService : IExportComplianceService
             ExpiryDate = entity.ExpiryDate,
             FileUrl = entity.FileUrl,
             Status = entity.Status.ToString(),
+            EffectiveStatus = effectiveStatus,
+            EffectiveStatusReason = effectiveReason,
             UploadedAt = entity.UploadedAt
         };
     }

@@ -16,5 +16,9 @@ public class ComplianceAgentDocumentDto
 
     public string Status { get; set; } = string.Empty;
 
+    public string EffectiveStatus { get; set; } = string.Empty;
+
+    public string? EffectiveStatusReason { get; set; }
+
     public bool HasUploadedFile { get; set; }
 }

@@ -20,5 +20,9 @@ public class ComplianceDocumentResponseDto
 
     public string Status { get; set; } = string.Empty;
 
+    public string EffectiveStatus { get; set; } = string.Empty;
+
+    public string? EffectiveStatusReason { get; set; }
+
     public DateTime UploadedAt { get; set; }
 }

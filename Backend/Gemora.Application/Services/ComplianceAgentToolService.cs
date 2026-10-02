@@ -108,16 +108,22 @@ public class ComplianceAgentToolService : IComplianceAgentToolService
             .ThenBy(d => d.Id)
             .ToListAsync(cancellationToken);
 
-        var mapped = documents.Select(d => new ComplianceAgentDocumentDto
+        var mapped = documents.Select(d =>
         {
-            DocumentId = d.Id,
-            DocumentType = d.DocumentType,
-            DocumentNumber = d.DocumentNumber,
-            Issuer = d.Issuer,
-            IssueDate = d.IssueDate,
-            ExpiryDate = d.ExpiryDate,
-            Status = d.Status.ToString(),
-            HasUploadedFile = !string.IsNullOrWhiteSpace(d.FileUrl)
+            var (effStatus, effReason) = Gemora.Domain.Helpers.ComplianceDocumentStatusHelper.CalculateEffectiveStatus(d);
+            return new ComplianceAgentDocumentDto
+            {
+                DocumentId = d.Id,
+                DocumentType = d.DocumentType,
+                DocumentNumber = d.DocumentNumber,
+                Issuer = d.Issuer,
+                IssueDate = d.IssueDate,
+                ExpiryDate = d.ExpiryDate,
+                Status = d.Status.ToString(),
+                EffectiveStatus = effStatus,
+                EffectiveStatusReason = effReason,
+                HasUploadedFile = !string.IsNullOrWhiteSpace(d.FileUrl)
+            };
         }).ToList();
 
         return new AgentToolResult<IReadOnlyList<ComplianceAgentDocumentDto>>

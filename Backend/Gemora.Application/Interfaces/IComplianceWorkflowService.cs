@@ -13,4 +13,9 @@ public interface IComplianceWorkflowService
         Guid triggeredByUserId,
         Guid exportRequestId,
         CancellationToken cancellationToken = default);
+
+    Task<ComplianceWorkflowAnalysisResultDto> RetryComplianceAnalysisAsync(
+        Guid triggeredByUserId,
+        Guid exportRequestId,
+        CancellationToken cancellationToken = default);
 }

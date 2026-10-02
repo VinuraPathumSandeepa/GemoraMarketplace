@@ -1,5 +1,6 @@
 using Gemora.Application.DTOs.ExportCompliance;
 using Gemora.Application.Interfaces;
+using Gemora.Domain.Constants;
 using Gemora.Domain.Enums;
 using Gemora.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -93,25 +94,38 @@ public class ComplianceRulesService : IComplianceRulesService
             // 7. Per-document deterministic checks
             foreach (var document in exportRequest.ComplianceDocuments)
             {
-                // A. Missing DocumentType
-                if (string.IsNullOrWhiteSpace(document.DocumentType))
+                // A. Document Type Allow-list Check
+                if (string.IsNullOrWhiteSpace(document.DocumentType) ||
+                    !ComplianceConstants.SupportedDocumentTypes.Any(t => string.Equals(t, document.DocumentType.Trim(), StringComparison.OrdinalIgnoreCase)))
                 {
-                    check.InvalidDocuments.Add($"Document {document.Id} has no document type.");
+                    check.InvalidDocuments.Add("Unsupported compliance document type.");
                 }
 
-                // B. Invalid date sequence
+                // B. Issuer Check
+                if (string.IsNullOrWhiteSpace(document.Issuer))
+                {
+                    check.InvalidDocuments.Add("Certificate issuer is required.");
+                }
+
+                // C. Document Number Check
+                if (string.IsNullOrWhiteSpace(document.DocumentNumber))
+                {
+                    check.InvalidDocuments.Add("Certificate document number is required.");
+                }
+
+                // D. Invalid date sequence
                 if (document.IssueDate.HasValue && document.ExpiryDate.HasValue && document.ExpiryDate.Value < document.IssueDate.Value)
                 {
-                    check.InvalidDocuments.Add($"Document {document.Id} has an expiry date earlier than its issue date.");
+                    check.InvalidDocuments.Add("Certificate expiry date cannot be earlier than issue date.");
                 }
 
-                // C. Expired document
+                // E. Expired document
                 if (document.ExpiryDate.HasValue && document.ExpiryDate.Value.Date < todayUtc)
                 {
-                    check.InvalidDocuments.Add($"Document {document.Id} is expired.");
+                    check.InvalidDocuments.Add($"Certificate expired on {document.ExpiryDate.Value:dd/MM/yyyy}.");
                 }
 
-                // D. FileUrl warning (non-blocking)
+                // F. FileUrl warning (non-blocking)
                 if (string.IsNullOrWhiteSpace(document.FileUrl))
                 {
                     check.Warnings.Add($"Document {document.Id} does not yet have an uploaded file.");

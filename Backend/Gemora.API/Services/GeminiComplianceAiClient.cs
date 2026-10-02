@@ -326,7 +326,13 @@ public class GeminiComplianceAiClient : IComplianceAiClient
                         providerStatus ?? "N/A",
                         providerMessage ?? "N/A");
 
-                    var errorCode = statusCode == HttpStatusCode.TooManyRequests ? "AI_RATE_LIMITED" : "AI_PROVIDER_ERROR";
+                    string errorCode = statusCode switch
+                    {
+                        HttpStatusCode.TooManyRequests => "AI_RATE_LIMITED",
+                        HttpStatusCode.ServiceUnavailable => "AI_PROVIDER_UNAVAILABLE",
+                        _ => "AI_PROVIDER_ERROR"
+                    };
+
                     lastTransientResult = new ComplianceAiClientResult
                     {
                         Success = false,
@@ -356,11 +362,19 @@ public class GeminiComplianceAiClient : IComplianceAiClient
                     providerStatus ?? "N/A",
                     providerMessage ?? "N/A");
 
+                string nonTransientErrorCode = statusCode switch
+                {
+                    HttpStatusCode.BadRequest => "AI_BAD_REQUEST",
+                    HttpStatusCode.Unauthorized => "AI_AUTH_ERROR",
+                    HttpStatusCode.Forbidden => "AI_AUTH_ERROR",
+                    _ => "AI_BAD_REQUEST"
+                };
+
                 sw.Stop();
                 return new ComplianceAiClientResult
                 {
                     Success = false,
-                    ErrorCode = "AI_PROVIDER_ERROR",
+                    ErrorCode = nonTransientErrorCode,
                     Message = $"Gemini API returned HTTP status {(int)statusCode}.",
                     ModelName = modelName,
                     DurationMs = sw.ElapsedMilliseconds,
