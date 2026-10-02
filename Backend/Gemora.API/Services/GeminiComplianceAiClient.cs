@@ -60,7 +60,7 @@ public class GeminiComplianceAiClient : IComplianceAiClient
         }
 
         var primaryModel = string.IsNullOrWhiteSpace(_options.Model) ? "gemini-3.8-flash" : _options.Model;
-        var fallbackModel = string.IsNullOrWhiteSpace(_options.FallbackModel) ? "gemini-3.7-flash" : _options.FallbackModel;
+        var fallbackModel = string.IsNullOrWhiteSpace(_options.FallbackModel) ? "gemini-3.5-flash-lite" : _options.FallbackModel;
         var thinkingLevel = string.IsNullOrWhiteSpace(_options.ThinkingLevel) ? "high" : _options.ThinkingLevel;
         var timeoutSeconds = _options.TimeoutSeconds > 0 ? _options.TimeoutSeconds : 45;
         const int maxAttemptsPerModel = 3;

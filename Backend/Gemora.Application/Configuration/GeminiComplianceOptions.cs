@@ -8,7 +8,7 @@ public class GeminiComplianceOptions
 
     public string Model { get; set; } = "gemini-3.8-flash";
 
-    public string FallbackModel { get; set; } = "gemini-3.7-flash";
+    public string FallbackModel { get; set; } = "gemini-3.5-flash-lite";
 
     public string ThinkingLevel { get; set; } = "high";
 

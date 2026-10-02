@@ -120,7 +120,7 @@ public class GeminiComplianceAiClientTests
         {
             ApiKey = "fake-api-key",
             Model = "gemini-3.8-flash",
-            FallbackModel = "gemini-3.7-flash"
+            FallbackModel = "gemini-3.5-flash-lite"
         };
 
         var client = CreateClient(handler, options);
@@ -146,7 +146,7 @@ public class GeminiComplianceAiClientTests
         {
             ApiKey = "fake-api-key",
             Model = "gemini-3.8-flash",
-            FallbackModel = "gemini-3.7-flash"
+            FallbackModel = "gemini-3.5-flash-lite"
         };
 
         var client = CreateClient(handler, options);
@@ -177,7 +177,7 @@ public class GeminiComplianceAiClientTests
         {
             ApiKey = "fake-api-key",
             Model = "gemini-3.8-flash",
-            FallbackModel = "gemini-3.7-flash"
+            FallbackModel = "gemini-3.5-flash-lite"
         };
 
         var client = CreateClient(handler, options);
@@ -186,12 +186,12 @@ public class GeminiComplianceAiClientTests
         var result = await client.AnalyzeAsync(context);
 
         Assert.True(result.Success);
-        Assert.Equal("gemini-3.7-flash", result.ModelName);
+        Assert.Equal("gemini-3.5-flash-lite", result.ModelName);
         Assert.Equal(4, handler.Requests.Count);
         Assert.Contains("models/gemini-3.8-flash:generateContent", handler.Requests[0].RequestUri?.ToString());
         Assert.Contains("models/gemini-3.8-flash:generateContent", handler.Requests[1].RequestUri?.ToString());
         Assert.Contains("models/gemini-3.8-flash:generateContent", handler.Requests[2].RequestUri?.ToString());
-        Assert.Contains("models/gemini-3.7-flash:generateContent", handler.Requests[3].RequestUri?.ToString());
+        Assert.Contains("models/gemini-3.5-flash-lite:generateContent", handler.Requests[3].RequestUri?.ToString());
     }
 
     // D. Both primary and fallback repeatedly return 503 -> safe provider failure
@@ -212,7 +212,7 @@ public class GeminiComplianceAiClientTests
         {
             ApiKey = "fake-api-key",
             Model = "gemini-3.8-flash",
-            FallbackModel = "gemini-3.7-flash"
+            FallbackModel = "gemini-3.5-flash-lite"
         };
 
         var client = CreateClient(handler, options);
@@ -237,7 +237,7 @@ public class GeminiComplianceAiClientTests
         {
             ApiKey = "fake-api-key",
             Model = "gemini-3.8-flash",
-            FallbackModel = "gemini-3.7-flash"
+            FallbackModel = "gemini-3.5-flash-lite"
         };
 
         var client = CreateClient(handler, options);
@@ -279,7 +279,7 @@ public class GeminiComplianceAiClientTests
         {
             ApiKey = "fake-api-key",
             Model = "gemini-3.8-flash",
-            FallbackModel = "gemini-3.7-flash"
+            FallbackModel = "gemini-3.5-flash-lite"
         };
 
         var client = CreateClient(handler, options);
@@ -304,7 +304,7 @@ public class GeminiComplianceAiClientTests
         {
             ApiKey = "fake-api-key",
             Model = "gemini-3.8-flash",
-            FallbackModel = "gemini-3.7-flash"
+            FallbackModel = "gemini-3.5-flash-lite"
         };
 
         var client = CreateClient(handler, options);
