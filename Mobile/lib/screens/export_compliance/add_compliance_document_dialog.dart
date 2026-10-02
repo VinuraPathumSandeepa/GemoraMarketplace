@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../../constants/compliance_constants.dart';
 import '../../models/compliance_document_model.dart';
 import '../../services/export_compliance_service.dart';
 
@@ -23,7 +24,7 @@ class _AddComplianceDocumentDialogState
   final _formKey = GlobalKey<FormState>();
   final _exportService = ExportComplianceService();
 
-  final _typeController = TextEditingController();
+  String _selectedDocumentType = ComplianceConstants.supportedDocumentTypes.first;
   final _numberController = TextEditingController();
   final _issuerController = TextEditingController();
 
@@ -40,7 +41,6 @@ class _AddComplianceDocumentDialogState
 
   @override
   void dispose() {
-    _typeController.dispose();
     _numberController.dispose();
     _issuerController.dispose();
     super.dispose();
@@ -140,7 +140,7 @@ class _AddComplianceDocumentDialogState
     try {
       createdDoc = await _exportService.addComplianceDocument(
         widget.exportRequestId,
-        documentType: _typeController.text,
+        documentType: _selectedDocumentType,
         documentNumber: _numberController.text,
         issuer: _issuerController.text,
         issueDate: _issueDate,
@@ -252,16 +252,30 @@ class _AddComplianceDocumentDialogState
                 const SizedBox(height: 12),
               ],
 
-              // DOCUMENT TYPE
-              TextFormField(
-                controller: _typeController,
+              // DOCUMENT TYPE DROPDOWN
+              DropdownButtonFormField<String>(
+                initialValue: _selectedDocumentType,
                 decoration: const InputDecoration(
                   labelText: 'Document Type *',
-                  hintText: 'e.g. GemologyCertificate, ExportPermit',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                items: ComplianceConstants.supportedDocumentTypes.map((type) {
+                  return DropdownMenuItem<String>(
+                    value: type,
+                    child: Text(type),
+                  );
+                }).toList(),
+                onChanged: _isSaving
+                    ? null
+                    : (val) {
+                        if (val != null) {
+                          setState(() {
+                            _selectedDocumentType = val;
+                          });
+                        }
+                      },
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
                     return 'Document type is required.';
                   }
                   return null;
@@ -273,10 +287,16 @@ class _AddComplianceDocumentDialogState
               TextFormField(
                 controller: _numberController,
                 decoration: const InputDecoration(
-                  labelText: 'Document Number (optional)',
+                  labelText: 'Document Number *',
                   hintText: 'e.g. GEM-998877',
                   border: OutlineInputBorder(),
                 ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Certificate document number is required.';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 12),
 
@@ -284,10 +304,16 @@ class _AddComplianceDocumentDialogState
               TextFormField(
                 controller: _issuerController,
                 decoration: const InputDecoration(
-                  labelText: 'Issuer (optional)',
-                  hintText: 'e.g. NGJA',
+                  labelText: 'Issuer *',
+                  hintText: 'e.g. National Gem and Jewellery Authority',
                   border: OutlineInputBorder(),
                 ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Certificate issuer is required.';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 12),
 

@@ -440,6 +440,42 @@ class ExportComplianceService {
   }
 
   // ==========================================
+  // RETRY COMPLIANCE ANALYSIS
+  // ==========================================
+  Future<ComplianceWorkflowAnalysisResultModel> retryComplianceAnalysis(
+    String requestId,
+  ) async {
+    final headers = await _getHeaders();
+
+    final response = await http.post(
+      Uri.parse('${ApiConfig.exportRequests}/$requestId/compliance-analysis/retry'),
+      headers: headers,
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return ComplianceWorkflowAnalysisResultModel.fromJson(data);
+    }
+
+    String? serverMessage;
+
+    try {
+      if (response.body.isNotEmpty) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        serverMessage = data['message']?.toString();
+      }
+    } catch (_) {}
+
+    if (serverMessage != null && serverMessage.trim().isNotEmpty) {
+      throw Exception(serverMessage);
+    }
+
+    throw Exception(
+      'AI assessment retry could not be completed at this time. Please try again later.',
+    );
+  }
+
+  // ==========================================
   // UPDATE EXPORT REQUEST
   // ==========================================
   Future<ExportRequestModel> updateExportRequest(

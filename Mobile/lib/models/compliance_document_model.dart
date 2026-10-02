@@ -8,6 +8,8 @@ class ComplianceDocumentModel {
   final DateTime? expiryDate;
   final bool hasUploadedFile;
   final String status;
+  final String effectiveStatus;
+  final String? effectiveStatusReason;
   final DateTime uploadedAt;
 
   ComplianceDocumentModel({
@@ -20,11 +22,15 @@ class ComplianceDocumentModel {
     this.expiryDate,
     required this.hasUploadedFile,
     required this.status,
+    required this.effectiveStatus,
+    this.effectiveStatusReason,
     required this.uploadedAt,
   });
 
   factory ComplianceDocumentModel.fromJson(Map<String, dynamic> json) {
     final fileUrlStr = json['fileUrl']?.toString();
+    final rawStatus = json['status']?.toString() ?? 'Pending';
+    final effStatus = json['effectiveStatus']?.toString() ?? rawStatus;
     return ComplianceDocumentModel(
       id: json['id']?.toString() ?? '',
       exportRequestId: json['exportRequestId']?.toString() ?? '',
@@ -38,7 +44,9 @@ class ComplianceDocumentModel {
           ? DateTime.tryParse(json['expiryDate'].toString())
           : null,
       hasUploadedFile: fileUrlStr != null && fileUrlStr.trim().isNotEmpty,
-      status: json['status']?.toString() ?? 'Pending',
+      status: rawStatus,
+      effectiveStatus: effStatus,
+      effectiveStatusReason: json['effectiveStatusReason']?.toString(),
       uploadedAt: json['uploadedAt'] != null
           ? DateTime.tryParse(json['uploadedAt'].toString()) ?? DateTime.now()
           : DateTime.now(),
@@ -56,6 +64,8 @@ class ComplianceDocumentModel {
       'expiryDate': expiryDate?.toIso8601String(),
       'hasUploadedFile': hasUploadedFile,
       'status': status,
+      'effectiveStatus': effectiveStatus,
+      'effectiveStatusReason': effectiveStatusReason,
       'uploadedAt': uploadedAt.toIso8601String(),
     };
   }

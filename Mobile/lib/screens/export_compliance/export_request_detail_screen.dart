@@ -33,6 +33,7 @@ class _ExportRequestDetailScreenState
 
   bool _isSubmitting = false;
   bool _isRunningAnalysis = false;
+  bool _isRetryingAnalysis = false;
   ComplianceWorkflowAnalysisResultModel? _recentAnalysisResult;
 
   @override
@@ -400,6 +401,71 @@ class _ExportRequestDetailScreenState
     );
   }
 
+  Future<void> _confirmAndRetryComplianceAnalysis() async {
+    if (_isSubmitting || _isRunningAnalysis || _isRetryingAnalysis) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Retry compliance analysis?'),
+        content: const Text(
+          'This will trigger a new AI compliance analysis attempt for this request.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Retry Analysis'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isRetryingAnalysis = true;
+      _recentAnalysisResult = null;
+    });
+
+    try {
+      final result =
+          await _exportService.retryComplianceAnalysis(widget.requestId);
+
+      if (!mounted) return;
+
+      if (result.success) {
+        setState(() {
+          _recentAnalysisResult = result;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Compliance analysis retried successfully.',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      _loadData();
+    } catch (err) {
+      if (!mounted) return;
+      _showErrorSnackBar(err.toString().replaceAll('Exception: ', ''));
+      _loadData();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRetryingAnalysis = false;
+        });
+      }
+    }
+  }
+
   Widget _buildDetailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -584,24 +650,50 @@ class _ExportRequestDetailScreenState
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.hourglass_top_rounded, color: Colors.purple.shade700, size: 28),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Compliance Review in Progress',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                Icon(Icons.hourglass_top_rounded, color: Colors.purple.shade700, size: 28),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Compliance Review in Progress',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Your request is in compliance review and is ready for Export Officer evaluation.',
+                        style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Your request is in compliance review and is ready for Export Officer evaluation.',
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
-                  ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _isRetryingAnalysis || _isRunningAnalysis || _isSubmitting
+                    ? null
+                    : _confirmAndRetryComplianceAnalysis,
+                icon: _isRetryingAnalysis
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                label: Text(
+                  _isRetryingAnalysis
+                      ? 'Retrying AI analysis...'
+                      : 'Retry AI Compliance Assessment',
+                ),
               ),
             ),
           ],
@@ -821,17 +913,19 @@ class _ExportRequestDetailScreenState
               style: const TextStyle(fontSize: 14, height: 1.4),
             ),
             const SizedBox(height: 12),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Chip(
                   avatar: const Icon(Icons.speed, size: 16),
                   label: Text(
-                    'Confidence: ${(assessment.confidence * 100).toStringAsFixed(0)}%',
+                    'AI Confidence: ${(assessment.confidence * 100).toStringAsFixed(0)}%',
                     style: const TextStyle(fontSize: 12),
                   ),
                   backgroundColor: Colors.grey.shade200,
                 ),
-                const SizedBox(width: 8),
                 if (assessment.requiresOfficerAttention)
                   Chip(
                     avatar: const Icon(Icons.warning, size: 16, color: Colors.orange),
@@ -1160,8 +1254,12 @@ class _ExportRequestDetailScreenState
                                   const SizedBox(height: 10),
                               itemBuilder: (context, index) {
                                 final doc = docs[index];
+                                final displayStatus =
+                                    doc.effectiveStatus.isNotEmpty
+                                        ? doc.effectiveStatus
+                                        : doc.status;
                                 final docStatusColor =
-                                    _getDocStatusColor(doc.status);
+                                    _getDocStatusColor(displayStatus);
                                 final isThisDocUploading = _isUploadingFile &&
                                     _uploadingDocId == doc.id;
 
@@ -1192,7 +1290,7 @@ class _ExportRequestDetailScreenState
                                           ),
                                           Chip(
                                             label: Text(
-                                              doc.status,
+                                              displayStatus,
                                               style: const TextStyle(
                                                 color: Colors.white,
                                                 fontSize: 11,
@@ -1207,6 +1305,20 @@ class _ExportRequestDetailScreenState
                                           ),
                                         ],
                                       ),
+                                      if (doc.effectiveStatusReason != null &&
+                                          doc.effectiveStatusReason!.isNotEmpty)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 4),
+                                          child: Text(
+                                            doc.effectiveStatusReason!,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.red.shade700,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                          ),
+                                        ),
                                       if (doc.documentNumber != null &&
                                           doc.documentNumber!.isNotEmpty)
                                         Padding(

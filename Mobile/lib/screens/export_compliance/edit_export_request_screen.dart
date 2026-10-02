@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../constants/compliance_constants.dart';
 import '../../models/export_request_model.dart';
 import '../../services/export_compliance_service.dart';
 
@@ -20,8 +21,8 @@ class _EditExportRequestScreenState extends State<EditExportRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   final _exportService = ExportComplianceService();
 
-  late TextEditingController _originController;
-  late TextEditingController _destinationController;
+  late String _originCountry;
+  late String _destinationCountry;
   late TextEditingController _declaredValueController;
   late TextEditingController _currencyController;
   late TextEditingController _purposeController;
@@ -32,10 +33,12 @@ class _EditExportRequestScreenState extends State<EditExportRequestScreen> {
   @override
   void initState() {
     super.initState();
-    _originController =
-        TextEditingController(text: widget.request.originCountry);
-    _destinationController =
-        TextEditingController(text: widget.request.destinationCountry);
+    _originCountry = ComplianceConstants.supportedCountries.contains(widget.request.originCountry)
+        ? widget.request.originCountry
+        : ComplianceConstants.supportedCountries.first;
+    _destinationCountry = ComplianceConstants.supportedCountries.contains(widget.request.destinationCountry)
+        ? widget.request.destinationCountry
+        : ComplianceConstants.supportedCountries[1];
     _declaredValueController =
         TextEditingController(text: widget.request.declaredValue.toString());
     _currencyController =
@@ -46,8 +49,6 @@ class _EditExportRequestScreenState extends State<EditExportRequestScreen> {
 
   @override
   void dispose() {
-    _originController.dispose();
-    _destinationController.dispose();
     _declaredValueController.dispose();
     _currencyController.dispose();
     _purposeController.dispose();
@@ -67,8 +68,8 @@ class _EditExportRequestScreenState extends State<EditExportRequestScreen> {
     try {
       await _exportService.updateExportRequest(
         widget.request.id,
-        originCountry: _originController.text,
-        destinationCountry: _destinationController.text,
+        originCountry: _originCountry,
+        destinationCountry: _destinationCountry,
         declaredValue: declaredValue,
         currency: _currencyController.text,
         purpose: _purposeController.text,
@@ -126,16 +127,30 @@ class _EditExportRequestScreenState extends State<EditExportRequestScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // ORIGIN COUNTRY
-              TextFormField(
-                controller: _originController,
+              // ORIGIN COUNTRY DROPDOWN
+              DropdownButtonFormField<String>(
+                initialValue: _originCountry,
                 decoration: const InputDecoration(
                   labelText: 'Origin Country *',
-                  hintText: 'e.g. Sri Lanka',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                items: ComplianceConstants.supportedCountries.map((c) {
+                  return DropdownMenuItem<String>(
+                    value: c,
+                    child: Text(c),
+                  );
+                }).toList(),
+                onChanged: _isSaving
+                    ? null
+                    : (val) {
+                        if (val != null) {
+                          setState(() {
+                            _originCountry = val;
+                          });
+                        }
+                      },
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
                     return 'Origin country is required.';
                   }
                   return null;
@@ -143,16 +158,30 @@ class _EditExportRequestScreenState extends State<EditExportRequestScreen> {
               ),
               const SizedBox(height: 16),
 
-              // DESTINATION COUNTRY
-              TextFormField(
-                controller: _destinationController,
+              // DESTINATION COUNTRY DROPDOWN
+              DropdownButtonFormField<String>(
+                initialValue: _destinationCountry,
                 decoration: const InputDecoration(
                   labelText: 'Destination Country *',
-                  hintText: 'e.g. United States',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                items: ComplianceConstants.supportedCountries.map((c) {
+                  return DropdownMenuItem<String>(
+                    value: c,
+                    child: Text(c),
+                  );
+                }).toList(),
+                onChanged: _isSaving
+                    ? null
+                    : (val) {
+                        if (val != null) {
+                          setState(() {
+                            _destinationCountry = val;
+                          });
+                        }
+                      },
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
                     return 'Destination country is required.';
                   }
                   return null;

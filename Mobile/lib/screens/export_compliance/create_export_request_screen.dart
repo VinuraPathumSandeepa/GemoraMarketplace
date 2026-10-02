@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../constants/compliance_constants.dart';
 import '../../services/export_compliance_service.dart';
 import 'export_request_detail_screen.dart';
 
@@ -15,8 +16,8 @@ class _CreateExportRequestScreenState extends State<CreateExportRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   final _exportService = ExportComplianceService();
 
-  final _originController = TextEditingController();
-  final _destinationController = TextEditingController();
+  String _originCountry = 'Sri Lanka';
+  String _destinationCountry = 'United States';
   final _declaredValueController = TextEditingController();
   final _currencyController = TextEditingController(text: 'USD');
   final _purposeController = TextEditingController();
@@ -26,8 +27,6 @@ class _CreateExportRequestScreenState extends State<CreateExportRequestScreen> {
 
   @override
   void dispose() {
-    _originController.dispose();
-    _destinationController.dispose();
     _declaredValueController.dispose();
     _currencyController.dispose();
     _purposeController.dispose();
@@ -46,8 +45,8 @@ class _CreateExportRequestScreenState extends State<CreateExportRequestScreen> {
 
     try {
       final newRequest = await _exportService.createExportRequest(
-        originCountry: _originController.text,
-        destinationCountry: _destinationController.text,
+        originCountry: _originCountry,
+        destinationCountry: _destinationCountry,
         declaredValue: declaredValue,
         currency: _currencyController.text,
         purpose: _purposeController.text,
@@ -110,16 +109,30 @@ class _CreateExportRequestScreenState extends State<CreateExportRequestScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // ORIGIN COUNTRY
-              TextFormField(
-                controller: _originController,
+              // ORIGIN COUNTRY DROPDOWN
+              DropdownButtonFormField<String>(
+                initialValue: _originCountry,
                 decoration: const InputDecoration(
                   labelText: 'Origin Country *',
-                  hintText: 'e.g. Sri Lanka',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                items: ComplianceConstants.supportedCountries.map((c) {
+                  return DropdownMenuItem<String>(
+                    value: c,
+                    child: Text(c),
+                  );
+                }).toList(),
+                onChanged: _isSubmitting
+                    ? null
+                    : (val) {
+                        if (val != null) {
+                          setState(() {
+                            _originCountry = val;
+                          });
+                        }
+                      },
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
                     return 'Origin country is required.';
                   }
                   return null;
@@ -127,16 +140,30 @@ class _CreateExportRequestScreenState extends State<CreateExportRequestScreen> {
               ),
               const SizedBox(height: 16),
 
-              // DESTINATION COUNTRY
-              TextFormField(
-                controller: _destinationController,
+              // DESTINATION COUNTRY DROPDOWN
+              DropdownButtonFormField<String>(
+                initialValue: _destinationCountry,
                 decoration: const InputDecoration(
                   labelText: 'Destination Country *',
-                  hintText: 'e.g. United States',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                items: ComplianceConstants.supportedCountries.map((c) {
+                  return DropdownMenuItem<String>(
+                    value: c,
+                    child: Text(c),
+                  );
+                }).toList(),
+                onChanged: _isSubmitting
+                    ? null
+                    : (val) {
+                        if (val != null) {
+                          setState(() {
+                            _destinationCountry = val;
+                          });
+                        }
+                      },
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
                     return 'Destination country is required.';
                   }
                   return null;
