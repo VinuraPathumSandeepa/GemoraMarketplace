@@ -21,7 +21,7 @@ class _EditExportRequestScreenState extends State<EditExportRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   final _exportService = ExportComplianceService();
 
-  late String _originCountry;
+  final String _originCountry = 'Sri Lanka';
   late String _destinationCountry;
   late TextEditingController _declaredValueController;
   late TextEditingController _currencyController;
@@ -33,12 +33,9 @@ class _EditExportRequestScreenState extends State<EditExportRequestScreen> {
   @override
   void initState() {
     super.initState();
-    _originCountry = ComplianceConstants.supportedCountries.contains(widget.request.originCountry)
-        ? widget.request.originCountry
-        : ComplianceConstants.supportedCountries.first;
     _destinationCountry = ComplianceConstants.supportedCountries.contains(widget.request.destinationCountry)
         ? widget.request.destinationCountry
-        : ComplianceConstants.supportedCountries[1];
+        : ComplianceConstants.supportedCountries.first;
     _declaredValueController =
         TextEditingController(text: widget.request.declaredValue.toString());
     _currencyController =
@@ -127,34 +124,17 @@ class _EditExportRequestScreenState extends State<EditExportRequestScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // ORIGIN COUNTRY DROPDOWN
-              DropdownButtonFormField<String>(
-                initialValue: _originCountry,
+              // ORIGIN COUNTRY (READ-ONLY FIXED AS SRI LANKA)
+              TextFormField(
+                initialValue: 'Sri Lanka',
+                readOnly: true,
+                enabled: false,
                 decoration: const InputDecoration(
                   labelText: 'Origin Country *',
+                  helperText: 'Gemora export requests must originate from Sri Lanka',
                   border: OutlineInputBorder(),
+                  filled: true,
                 ),
-                items: ComplianceConstants.supportedCountries.map((c) {
-                  return DropdownMenuItem<String>(
-                    value: c,
-                    child: Text(c),
-                  );
-                }).toList(),
-                onChanged: _isSaving
-                    ? null
-                    : (val) {
-                        if (val != null) {
-                          setState(() {
-                            _originCountry = val;
-                          });
-                        }
-                      },
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Origin country is required.';
-                  }
-                  return null;
-                },
               ),
               const SizedBox(height: 16),
 

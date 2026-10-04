@@ -16,7 +16,7 @@ class _CreateExportRequestScreenState extends State<CreateExportRequestScreen> {
   final _formKey = GlobalKey<FormState>();
   final _exportService = ExportComplianceService();
 
-  String _originCountry = 'Sri Lanka';
+  final String _originCountry = 'Sri Lanka';
   String _destinationCountry = 'United States';
   final _declaredValueController = TextEditingController();
   final _currencyController = TextEditingController(text: 'USD');
@@ -109,34 +109,17 @@ class _CreateExportRequestScreenState extends State<CreateExportRequestScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // ORIGIN COUNTRY DROPDOWN
-              DropdownButtonFormField<String>(
-                initialValue: _originCountry,
+              // ORIGIN COUNTRY (READ-ONLY FIXED AS SRI LANKA)
+              TextFormField(
+                initialValue: 'Sri Lanka',
+                readOnly: true,
+                enabled: false,
                 decoration: const InputDecoration(
                   labelText: 'Origin Country *',
+                  helperText: 'Gemora export requests must originate from Sri Lanka',
                   border: OutlineInputBorder(),
+                  filled: true,
                 ),
-                items: ComplianceConstants.supportedCountries.map((c) {
-                  return DropdownMenuItem<String>(
-                    value: c,
-                    child: Text(c),
-                  );
-                }).toList(),
-                onChanged: _isSubmitting
-                    ? null
-                    : (val) {
-                        if (val != null) {
-                          setState(() {
-                            _originCountry = val;
-                          });
-                        }
-                      },
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Origin country is required.';
-                  }
-                  return null;
-                },
               ),
               const SizedBox(height: 16),
 
