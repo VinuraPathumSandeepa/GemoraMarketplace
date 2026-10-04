@@ -8,10 +8,6 @@ import {
 import { useAuth } from "../context/AuthContext";
 
 function Login() {
-  // ==========================================
-  // STATE
-  // ==========================================
-
   const { login } = useAuth();
 
   const navigate = useNavigate();
@@ -41,7 +37,7 @@ function Login() {
 
   // ============================================================
   // HANDLE LOGIN
-  // ==========================================
+  // ============================================================
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -68,19 +64,59 @@ function Login() {
     setSubmitting(true);
 
     try {
-      // Try to login with backend first
-      const user = await login(email, password);
-      console.log("Logged in user:", user);
-      navigate("/dashboard");
+      const user =
+        await login(
+          email
+            .trim()
+            .toLowerCase(),
+          password
+        );
 
+      console.log(
+        "Logged in user:",
+        user
+      );
+
+      navigate(
+        "/dashboard",
+        {
+          replace: true,
+        }
+      );
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error(
+        "Login failed:",
+        error
+      );
+
+      const errorCode =
+        error.response?.data?.errorCode;
+
+      if (
+        errorCode ===
+        "EMAIL_NOT_VERIFIED"
+      ) {
+        const normalizedEmail =
+          email
+            .trim()
+            .toLowerCase();
+
+        sessionStorage.setItem(
+          "gemora_pending_verification_email",
+          normalizedEmail
+        );
+
+        setError(
+          "Your email has not been verified yet. Verify your email before signing in."
+        );
+
+        return;
+      }
 
       setError(
         error.response?.data?.message ||
           "Invalid email or password."
       );
-
     } finally {
       setSubmitting(false);
     }
@@ -191,42 +227,92 @@ function Login() {
               type="password"
               placeholder="Enter your password"
               value={password}
-              onChange={(event) =>
+              onChange={(event) => {
                 setPassword(
                   event.target.value
-                )
-              }
+                );
+
+                setError("");
+              }}
               required
+              autoComplete="current-password"
             />
 
           </div>
 
 
-          {/* LOGIN BUTTON */}
+          {/* SIGN IN BUTTON */}
 
           <button
             type="submit"
             disabled={submitting}
+            className="auth-primary-button"
           >
-
             {submitting
-              ? "Signing in..."
-              : "Sign In"}
-
+              ? "Signing In..."
+              : "Sign In →"}
           </button>
 
         </form>
 
 
-        {/* REGISTER LINK */}
+        {/* UNVERIFIED EMAIL HELP */}
 
-        <p>
-          Don't have an account?{" "}
+        {error &&
+          error
+            .toLowerCase()
+            .includes("verify") && (
+            <div className="login-verification-help">
 
-          <Link to="/register">
-            Create Account
-          </Link>
-        </p>
+              <p>
+                Still waiting to verify
+                your account?
+              </p>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const normalizedEmail =
+                    email
+                      .trim()
+                      .toLowerCase();
+
+                  sessionStorage.setItem(
+                    "gemora_pending_verification_email",
+                    normalizedEmail
+                  );
+
+                  navigate(
+                    "/verify-email",
+                    {
+                      state: {
+                        email:
+                          normalizedEmail,
+                      },
+                    }
+                  );
+                }}
+              >
+                Go to Email Verification →
+              </button>
+
+            </div>
+          )}
+
+
+        {/* FOOTER */}
+
+        <div className="auth-footer">
+
+          <p>
+            Don't have an account?{" "}
+
+            <Link to="/register">
+              Create Account
+            </Link>
+          </p>
+
+        </div>
 
       </div>
 
