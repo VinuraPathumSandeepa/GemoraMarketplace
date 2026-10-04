@@ -11,10 +11,9 @@ public static class DbSeeder
         ApplicationDbContext context,
         IConfiguration configuration)
     {
-        // ==========================================
+        // ============================================================
         // READ DEVELOPMENT PASSWORDS
-        // FROM SECURE CONFIGURATION
-        // ==========================================
+        // ============================================================
 
         var adminPassword =
             configuration["SeedUsers:AdminPassword"];
@@ -25,9 +24,11 @@ public static class DbSeeder
         var exportOfficerPassword =
             configuration["SeedUsers:ExportOfficerPassword"];
 
-        if (string.IsNullOrWhiteSpace(adminPassword) ||
+        if (
+            string.IsNullOrWhiteSpace(adminPassword) ||
             string.IsNullOrWhiteSpace(gemologistPassword) ||
-            string.IsNullOrWhiteSpace(exportOfficerPassword))
+            string.IsNullOrWhiteSpace(exportOfficerPassword)
+        )
         {
             throw new InvalidOperationException(
                 "Seed user passwords are not configured."
@@ -35,92 +36,245 @@ public static class DbSeeder
         }
 
 
-        // ==========================================
+        // ============================================================
         // ADMIN
-        // ==========================================
+        // ============================================================
 
-        var adminEmail = "admin@gemora.com";
+        var adminEmail =
+            "admin@gemora.com";
 
-        if (!await context.Users.AnyAsync(
-                u => u.Email == adminEmail))
+        var admin =
+            await context.Users
+                .FirstOrDefaultAsync(
+                    user =>
+                        user.Email == adminEmail
+                );
+
+        if (admin == null)
         {
-            context.Users.Add(new User
+            admin = new User
             {
-                FullName = "Gemora Admin",
+                FullName =
+                    "Gemora Admin",
 
-                Email = adminEmail,
+                Email =
+                    adminEmail,
 
                 PasswordHash =
                     BCrypt.Net.BCrypt.HashPassword(
                         adminPassword
                     ),
 
-                Role = UserRoles.Admin,
+                Role =
+                    UserRoles.Admin,
 
-                CreatedAt = DateTime.UtcNow
-            });
+                IsEmailVerified =
+                    true,
+
+                EmailVerifiedAt =
+                    DateTime.UtcNow,
+
+                CreatedAt =
+                    DateTime.UtcNow
+            };
+
+            context.Users.Add(admin);
+        }
+        else
+        {
+            /*
+             * Keep seeded development credentials
+             * synchronized with User Secrets.
+             *
+             * BCrypt hashes contain random salts,
+             * therefore we VERIFY instead of comparing
+             * hash strings.
+             */
+
+            var adminPasswordMatches =
+                BCrypt.Net.BCrypt.Verify(
+                    adminPassword,
+                    admin.PasswordHash
+                );
+
+            if (!adminPasswordMatches)
+            {
+                admin.PasswordHash =
+                    BCrypt.Net.BCrypt.HashPassword(
+                        adminPassword
+                    );
+            }
+
+            admin.Role =
+                UserRoles.Admin;
+
+            admin.IsEmailVerified =
+                true;
+
+            admin.EmailVerifiedAt ??=
+                DateTime.UtcNow;
         }
 
 
-        // ==========================================
+        // ============================================================
         // GEMOLOGIST
-        // ==========================================
+        // ============================================================
 
         var gemologistEmail =
             "gemologist@gemora.com";
 
-        if (!await context.Users.AnyAsync(
-                u => u.Email == gemologistEmail))
-        {
-            context.Users.Add(new User
-            {
-                FullName = "Gemora Gemologist",
+        var gemologist =
+            await context.Users
+                .FirstOrDefaultAsync(
+                    user =>
+                        user.Email ==
+                        gemologistEmail
+                );
 
-                Email = gemologistEmail,
+        if (gemologist == null)
+        {
+            gemologist = new User
+            {
+                FullName =
+                    "Gemora Gemologist",
+
+                Email =
+                    gemologistEmail,
 
                 PasswordHash =
                     BCrypt.Net.BCrypt.HashPassword(
                         gemologistPassword
                     ),
 
-                Role = UserRoles.Gemologist,
+                Role =
+                    UserRoles.Gemologist,
 
-                CreatedAt = DateTime.UtcNow
-            });
+                IsEmailVerified =
+                    true,
+
+                EmailVerifiedAt =
+                    DateTime.UtcNow,
+
+                CreatedAt =
+                    DateTime.UtcNow
+            };
+
+            context.Users.Add(
+                gemologist
+            );
+        }
+        else
+        {
+            /*
+             * Do NOT delete or recreate the existing
+             * Gemologist.
+             *
+             * Existing User Id and all related
+             * GemVerification records remain intact.
+             */
+
+            var gemologistPasswordMatches =
+                BCrypt.Net.BCrypt.Verify(
+                    gemologistPassword,
+                    gemologist.PasswordHash
+                );
+
+            if (!gemologistPasswordMatches)
+            {
+                gemologist.PasswordHash =
+                    BCrypt.Net.BCrypt.HashPassword(
+                        gemologistPassword
+                    );
+            }
+
+            gemologist.Role =
+                UserRoles.Gemologist;
+
+            gemologist.IsEmailVerified =
+                true;
+
+            gemologist.EmailVerifiedAt ??=
+                DateTime.UtcNow;
         }
 
 
-        // ==========================================
+        // ============================================================
         // EXPORT OFFICER
-        // ==========================================
+        // ============================================================
 
         var exportOfficerEmail =
             "export@gemora.com";
 
-        if (!await context.Users.AnyAsync(
-                u => u.Email == exportOfficerEmail))
-        {
-            context.Users.Add(new User
-            {
-                FullName = "Gemora Export Officer",
+        var exportOfficer =
+            await context.Users
+                .FirstOrDefaultAsync(
+                    user =>
+                        user.Email ==
+                        exportOfficerEmail
+                );
 
-                Email = exportOfficerEmail,
+        if (exportOfficer == null)
+        {
+            exportOfficer = new User
+            {
+                FullName =
+                    "Gemora Export Officer",
+
+                Email =
+                    exportOfficerEmail,
 
                 PasswordHash =
                     BCrypt.Net.BCrypt.HashPassword(
                         exportOfficerPassword
                     ),
 
-                Role = UserRoles.ExportOfficer,
+                Role =
+                    UserRoles.ExportOfficer,
 
-                CreatedAt = DateTime.UtcNow
-            });
+                IsEmailVerified =
+                    true,
+
+                EmailVerifiedAt =
+                    DateTime.UtcNow,
+
+                CreatedAt =
+                    DateTime.UtcNow
+            };
+
+            context.Users.Add(
+                exportOfficer
+            );
+        }
+        else
+        {
+            var exportOfficerPasswordMatches =
+                BCrypt.Net.BCrypt.Verify(
+                    exportOfficerPassword,
+                    exportOfficer.PasswordHash
+                );
+
+            if (!exportOfficerPasswordMatches)
+            {
+                exportOfficer.PasswordHash =
+                    BCrypt.Net.BCrypt.HashPassword(
+                        exportOfficerPassword
+                    );
+            }
+
+            exportOfficer.Role =
+                UserRoles.ExportOfficer;
+
+            exportOfficer.IsEmailVerified =
+                true;
+
+            exportOfficer.EmailVerifiedAt ??=
+                DateTime.UtcNow;
         }
 
 
-        // ==========================================
-        // SAVE CHANGES
-        // ==========================================
+        // ============================================================
+        // SAVE
+        // ============================================================
 
         await context.SaveChangesAsync();
     }

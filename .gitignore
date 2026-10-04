@@ -27,3 +27,6 @@ Mobile/.flutter-plugins-dependencies
 
 # Runtime uploaded files
 Backend/Gemora.API/App_Data/
+
+# Local Gemora uploaded files
+Backend/Gemora.API/wwwroot/uploads/

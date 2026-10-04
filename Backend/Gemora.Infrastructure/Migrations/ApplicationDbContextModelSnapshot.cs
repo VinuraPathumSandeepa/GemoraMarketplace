@@ -257,6 +257,41 @@ namespace Gemora.Infrastructure.Migrations
                     b.ToTable("ComplianceDocuments");
                 });
 
+            modelBuilder.Entity("Gemora.Domain.Entities.EmailVerificationCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("EmailVerificationCodes", (string)null);
+                });
+
             modelBuilder.Entity("Gemora.Domain.Entities.ExportRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -324,11 +359,188 @@ namespace Gemora.Infrastructure.Migrations
                     b.ToTable("ExportRequests");
                 });
 
+            modelBuilder.Entity("Gemora.Domain.Entities.GemListing", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("CaratWeight")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<string>("CertificateAuthority")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CertificateNumber")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CertificateUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Clarity")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Cut")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("GemType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("PrimaryImageUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Region")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("SellerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CertificateNumber");
+
+                    b.HasIndex("CountryCode");
+
+                    b.HasIndex("SellerId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("CountryCode", "Region");
+
+                    b.ToTable("GemListings", (string)null);
+                });
+
+            modelBuilder.Entity("Gemora.Domain.Entities.GemVerification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("AiConfidenceScore")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<string>("AiFindings")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTime?>("AiProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AiRiskFlags")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("AiStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("AiSuggestedGemType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("GemListingId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("GemologistId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AiStatus");
+
+                    b.HasIndex("Decision");
+
+                    b.HasIndex("GemListingId");
+
+                    b.HasIndex("GemologistId");
+
+                    b.ToTable("GemVerifications", (string)null);
+                });
+
             modelBuilder.Entity("Gemora.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -338,14 +550,34 @@ namespace Gemora.Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<DateTime?>("EmailVerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<bool>("IsEmailVerified")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ProfileImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Region")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Role")
                         .IsRequired()
@@ -357,7 +589,9 @@ namespace Gemora.Infrastructure.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.HasIndex("PhoneNumber");
+
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("Gemora.Domain.Entities.AgentToolCall", b =>
@@ -412,6 +646,17 @@ namespace Gemora.Infrastructure.Migrations
                     b.Navigation("UploadedByUser");
                 });
 
+            modelBuilder.Entity("Gemora.Domain.Entities.EmailVerificationCode", b =>
+                {
+                    b.HasOne("Gemora.Domain.Entities.User", "User")
+                        .WithMany("EmailVerificationCodes")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Gemora.Domain.Entities.ExportRequest", b =>
                 {
                     b.HasOne("Gemora.Domain.Entities.User", "RequestedByUser")
@@ -430,6 +675,35 @@ namespace Gemora.Infrastructure.Migrations
                     b.Navigation("ReviewedByUser");
                 });
 
+            modelBuilder.Entity("Gemora.Domain.Entities.GemListing", b =>
+                {
+                    b.HasOne("Gemora.Domain.Entities.User", "Seller")
+                        .WithMany("GemListings")
+                        .HasForeignKey("SellerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Seller");
+                });
+
+            modelBuilder.Entity("Gemora.Domain.Entities.GemVerification", b =>
+                {
+                    b.HasOne("Gemora.Domain.Entities.GemListing", "GemListing")
+                        .WithMany("Verifications")
+                        .HasForeignKey("GemListingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Gemora.Domain.Entities.User", "Gemologist")
+                        .WithMany("GemVerifications")
+                        .HasForeignKey("GemologistId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("GemListing");
+
+                    b.Navigation("Gemologist");
+                });
+
             modelBuilder.Entity("Gemora.Domain.Entities.AgentWorkflow", b =>
                 {
                     b.Navigation("Steps");
@@ -443,6 +717,20 @@ namespace Gemora.Infrastructure.Migrations
             modelBuilder.Entity("Gemora.Domain.Entities.ExportRequest", b =>
                 {
                     b.Navigation("ComplianceDocuments");
+                });
+
+            modelBuilder.Entity("Gemora.Domain.Entities.GemListing", b =>
+                {
+                    b.Navigation("Verifications");
+                });
+
+            modelBuilder.Entity("Gemora.Domain.Entities.User", b =>
+                {
+                    b.Navigation("EmailVerificationCodes");
+
+                    b.Navigation("GemListings");
+
+                    b.Navigation("GemVerifications");
                 });
 #pragma warning restore 612, 618
         }
