@@ -1,5 +1,6 @@
 using Gemora.Application.DTOs.ExportCompliance;
 using Gemora.Application.Interfaces;
+using Gemora.Domain.Constants;
 using Gemora.Domain.Entities;
 using Gemora.Domain.Enums;
 using Gemora.Infrastructure.Data;
@@ -50,22 +51,24 @@ public class ExportComplianceService : IExportComplianceService
             };
         }
 
-        if (string.IsNullOrWhiteSpace(dto.OriginCountry))
+        if (string.IsNullOrWhiteSpace(dto.OriginCountry) ||
+            !string.Equals(dto.OriginCountry.Trim(), "Sri Lanka", StringComparison.OrdinalIgnoreCase))
         {
             return new ExportRequestOperationResult
             {
                 Success = false,
-                Message = "Origin country is required.",
-                ErrorCode = "INVALID_REQUEST"
+                Message = "Export requests must originate from Sri Lanka.",
+                ErrorCode = "INVALID_ORIGIN_COUNTRY"
             };
         }
 
-        if (string.IsNullOrWhiteSpace(dto.DestinationCountry))
+        if (string.IsNullOrWhiteSpace(dto.DestinationCountry) ||
+            !ComplianceConstants.SupportedCountries.Any(c => string.Equals(c, dto.DestinationCountry.Trim(), StringComparison.OrdinalIgnoreCase)))
         {
             return new ExportRequestOperationResult
             {
                 Success = false,
-                Message = "Destination country is required.",
+                Message = "Destination country is required and must be a valid supported country.",
                 ErrorCode = "INVALID_REQUEST"
             };
         }
@@ -249,22 +252,24 @@ public class ExportComplianceService : IExportComplianceService
             };
         }
 
-        if (string.IsNullOrWhiteSpace(dto.OriginCountry))
+        if (string.IsNullOrWhiteSpace(dto.OriginCountry) ||
+            !string.Equals(dto.OriginCountry.Trim(), "Sri Lanka", StringComparison.OrdinalIgnoreCase))
         {
             return new ExportRequestOperationResult
             {
                 Success = false,
-                Message = "Origin country is required.",
-                ErrorCode = "INVALID_REQUEST"
+                Message = "Export requests must originate from Sri Lanka.",
+                ErrorCode = "INVALID_ORIGIN_COUNTRY"
             };
         }
 
-        if (string.IsNullOrWhiteSpace(dto.DestinationCountry))
+        if (string.IsNullOrWhiteSpace(dto.DestinationCountry) ||
+            !ComplianceConstants.SupportedCountries.Any(c => string.Equals(c, dto.DestinationCountry.Trim(), StringComparison.OrdinalIgnoreCase)))
         {
             return new ExportRequestOperationResult
             {
                 Success = false,
-                Message = "Destination country is required.",
+                Message = "Destination country is required and must be a valid supported country.",
                 ErrorCode = "INVALID_REQUEST"
             };
         }
@@ -471,6 +476,19 @@ public class ExportComplianceService : IExportComplianceService
                 Success = false,
                 Message = "Document type is required.",
                 ErrorCode = "INVALID_REQUEST"
+            };
+        }
+
+        var isSupportedType = ComplianceConstants.SupportedDocumentTypes.Any(t =>
+            string.Equals(t, dto.DocumentType.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        if (!isSupportedType)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                Message = "Unsupported document type. Selected document category is not supported.",
+                ErrorCode = "UNSUPPORTED_DOCUMENT_TYPE"
             };
         }
 

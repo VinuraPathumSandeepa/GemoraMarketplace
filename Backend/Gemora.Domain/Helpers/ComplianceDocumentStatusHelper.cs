@@ -31,7 +31,7 @@ public static class ComplianceDocumentStatusHelper
         if (string.IsNullOrWhiteSpace(document.DocumentType) ||
             !ComplianceConstants.SupportedDocumentTypes.Any(t => string.Equals(t, document.DocumentType.Trim(), StringComparison.OrdinalIgnoreCase)))
         {
-            return ("Invalid", "Unsupported compliance document type.");
+            return ("Invalid", "This document uses an older unsupported document type. Add a new document using one of the supported compliance categories.");
         }
 
         // 4. Required metadata check

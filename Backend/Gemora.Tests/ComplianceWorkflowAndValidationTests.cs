@@ -698,4 +698,173 @@ public class ComplianceWorkflowAndValidationTests
         Assert.True(retryResult.Success);
         Assert.NotEqual(Guid.Empty, retryResult.WorkflowId);
     }
+
+    // 19. Create export request with Sri Lanka origin -> accepted
+    [Fact]
+    public async Task Test19_CreateExportRequest_SriLankaOrigin_Accepted()
+    {
+        using var context = CreateDbContext();
+        var (requester, _) = SeedUsers(context);
+        var fileStorage = new FakeFileStorageService();
+        var service = new ExportComplianceService(context, fileStorage);
+
+        var dto = new CreateExportRequestDto
+        {
+            OriginCountry = "Sri Lanka",
+            DestinationCountry = "United States",
+            DeclaredValue = 10000,
+            Currency = "USD",
+            Purpose = "Gem trade"
+        };
+
+        var result = await service.CreateExportRequestAsync(requester.Id, dto);
+
+        Assert.True(result.Success);
+        Assert.Equal("Sri Lanka", result.Request!.OriginCountry);
+        Assert.Equal("United States", result.Request.DestinationCountry);
+    }
+
+    // 20. Create export request with another origin -> rejected
+    [Theory]
+    [InlineData("Australia")]
+    [InlineData("Afghanistan")]
+    [InlineData("United States")]
+    public async Task Test20_CreateExportRequest_NonSriLankaOrigin_Rejected(string nonSriLankaOrigin)
+    {
+        using var context = CreateDbContext();
+        var (requester, _) = SeedUsers(context);
+        var fileStorage = new FakeFileStorageService();
+        var service = new ExportComplianceService(context, fileStorage);
+
+        var dto = new CreateExportRequestDto
+        {
+            OriginCountry = nonSriLankaOrigin,
+            DestinationCountry = "United States",
+            DeclaredValue = 5000,
+            Currency = "USD"
+        };
+
+        var result = await service.CreateExportRequestAsync(requester.Id, dto);
+
+        Assert.False(result.Success);
+        Assert.Equal("INVALID_ORIGIN_COUNTRY", result.ErrorCode);
+        Assert.Equal("Export requests must originate from Sri Lanka.", result.Message);
+    }
+
+    // 21. Update export request with another origin -> rejected
+    [Fact]
+    public async Task Test21_UpdateExportRequest_NonSriLankaOrigin_Rejected()
+    {
+        using var context = CreateDbContext();
+        var (requester, _) = SeedUsers(context);
+        var request = SeedExportRequest(context, requester, ExportRequestStatus.Draft);
+        var fileStorage = new FakeFileStorageService();
+        var service = new ExportComplianceService(context, fileStorage);
+
+        var dto = new UpdateExportRequestDto
+        {
+            OriginCountry = "Australia",
+            DestinationCountry = "Japan",
+            DeclaredValue = 7500,
+            Currency = "USD"
+        };
+
+        var result = await service.UpdateExportRequestAsync(requester.Id, request.Id, dto);
+
+        Assert.False(result.Success);
+        Assert.Equal("INVALID_ORIGIN_COUNTRY", result.ErrorCode);
+        Assert.Equal("Export requests must originate from Sri Lanka.", result.Message);
+    }
+
+    // 22. Destination valid ISO country -> accepted
+    [Fact]
+    public async Task Test22_CreateExportRequest_ValidDestinationIsoCountry_Accepted()
+    {
+        using var context = CreateDbContext();
+        var (requester, _) = SeedUsers(context);
+        var fileStorage = new FakeFileStorageService();
+        var service = new ExportComplianceService(context, fileStorage);
+
+        var dto = new CreateExportRequestDto
+        {
+            OriginCountry = "Sri Lanka",
+            DestinationCountry = "Japan",
+            DeclaredValue = 12000,
+            Currency = "USD"
+        };
+
+        var result = await service.CreateExportRequestAsync(requester.Id, dto);
+
+        Assert.True(result.Success);
+        Assert.Equal("Japan", result.Request!.DestinationCountry);
+    }
+
+    // 23. Unsupported new document type "Certificate" -> rejected
+    [Fact]
+    public async Task Test23_AddComplianceDocument_UnsupportedDocumentType_Rejected()
+    {
+        using var context = CreateDbContext();
+        var (requester, _) = SeedUsers(context);
+        var request = SeedExportRequest(context, requester, ExportRequestStatus.Draft);
+        var fileStorage = new FakeFileStorageService();
+        var service = new ExportComplianceService(context, fileStorage);
+
+        var dto = new CreateComplianceDocumentDto
+        {
+            DocumentType = "Certificate",
+            DocumentNumber = "CERT-12345",
+            Issuer = "Generic Lab"
+        };
+
+        var result = await service.AddComplianceDocumentAsync(requester.Id, request.Id, dto);
+
+        Assert.False(result.Success);
+        Assert.Equal("UNSUPPORTED_DOCUMENT_TYPE", result.ErrorCode);
+    }
+
+    // 24. Supported document type -> accepted
+    [Fact]
+    public async Task Test24_AddComplianceDocument_SupportedDocumentType_Accepted()
+    {
+        using var context = CreateDbContext();
+        var (requester, _) = SeedUsers(context);
+        var request = SeedExportRequest(context, requester, ExportRequestStatus.Draft);
+        var fileStorage = new FakeFileStorageService();
+        var service = new ExportComplianceService(context, fileStorage);
+
+        var dto = new CreateComplianceDocumentDto
+        {
+            DocumentType = "GemologyCertificate",
+            DocumentNumber = "GIA-998877",
+            Issuer = "GIA Gemological Institute",
+            IssueDate = DateTime.UtcNow.AddMonths(-1),
+            ExpiryDate = DateTime.UtcNow.AddYears(2)
+        };
+
+        var result = await service.AddComplianceDocumentAsync(requester.Id, request.Id, dto);
+
+        Assert.True(result.Success);
+        Assert.Equal("GemologyCertificate", result.Document!.DocumentType);
+    }
+
+    // 25. Legacy Certificate document returns clear user-facing reason
+    [Fact]
+    public void Test25_CalculateEffectiveStatus_LegacyCertificateDocument_ReturnsClearUserReason()
+    {
+        var legacyDoc = new ComplianceDocument
+        {
+            Id = Guid.NewGuid(),
+            DocumentType = "Certificate",
+            DocumentNumber = "OLD-123",
+            Issuer = "Legacy Issuer",
+            Status = ComplianceDocumentStatus.Pending
+        };
+
+        var (status, reason) = ComplianceDocumentStatusHelper.CalculateEffectiveStatus(legacyDoc);
+
+        Assert.Equal("Invalid", status);
+        Assert.Equal(
+            "This document uses an older unsupported document type. Add a new document using one of the supported compliance categories.",
+            reason);
+    }
 }
