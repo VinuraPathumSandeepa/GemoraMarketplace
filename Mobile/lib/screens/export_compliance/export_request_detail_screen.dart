@@ -1,9 +1,11 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/compliance_analysis_result_model.dart';
 import '../../models/compliance_document_model.dart';
 import '../../models/export_request_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/export_compliance_service.dart';
 import 'add_compliance_document_dialog.dart';
 import 'edit_export_request_screen.dart';
@@ -1050,11 +1052,38 @@ class _ExportRequestDetailScreenState
     );
   }
 
+  String _getBuyerFriendlyStage(String status) {
+    switch (status.toLowerCase()) {
+      case 'draft':
+        return 'Preparing Export';
+      case 'submitted':
+        return 'Submitted';
+      case 'undercompliancereview':
+        return 'Compliance Review';
+      case 'underofficerreview':
+      case 'waitingforapproval':
+        return 'Waiting for Export Officer';
+      case 'revisionrequired':
+        return 'Revision Required';
+      case 'approved':
+        return 'Approved';
+      case 'rejected':
+        return 'Rejected';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    final isBuyer = user?.role.trim().toLowerCase() == 'buyer';
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Export Request Details'),
+        title: Text(isBuyer ? 'Export Tracking' : 'Export Request Details'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -1101,7 +1130,7 @@ class _ExportRequestDetailScreenState
           final req = reqSnapshot.data!;
           final statusColor = _getStatusColor(req.status);
           final explanation = _getStatusExplanation(req.status);
-          final canEdit = _isEditableStatus(req.status);
+          final canEdit = !isBuyer && _isEditableStatus(req.status);
           final statusLower = req.status.toLowerCase();
 
           return SingleChildScrollView(
@@ -1132,7 +1161,7 @@ class _ExportRequestDetailScreenState
                             ),
                             Chip(
                               label: Text(
-                                req.status,
+                                isBuyer ? _getBuyerFriendlyStage(req.status) : req.status,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -1158,28 +1187,29 @@ class _ExportRequestDetailScreenState
                 ),
                 const SizedBox(height: 20),
 
-                // PHASE 3 & PHASE 4 ACTION SECTIONS BASED ON STATUS
-                if (statusLower == 'draft') ...[
-                  _buildDraftActionSection(canEdit),
-                  const SizedBox(height: 20),
-                ] else if (statusLower == 'submitted') ...[
-                  _buildSubmittedActionSection(),
-                  const SizedBox(height: 20),
-                ] else if (statusLower == 'undercompliancereview') ...[
-                  _buildUnderComplianceReviewSection(req),
-                  const SizedBox(height: 20),
-                ] else if (statusLower == 'underofficerreview') ...[
-                  _buildUnderOfficerReviewSection(),
-                  const SizedBox(height: 20),
-                ] else if (statusLower == 'revisionrequired') ...[
-                  _buildRevisionRequiredSection(req),
-                  const SizedBox(height: 20),
-                ],
+                // PHASE 3 & PHASE 4 ACTION SECTIONS (SELLER ONLY)
+                if (!isBuyer) ...[
+                  if (statusLower == 'draft') ...[
+                    _buildDraftActionSection(canEdit),
+                    const SizedBox(height: 20),
+                  ] else if (statusLower == 'submitted') ...[
+                    _buildSubmittedActionSection(),
+                    const SizedBox(height: 20),
+                  ] else if (statusLower == 'undercompliancereview') ...[
+                    _buildUnderComplianceReviewSection(req),
+                    const SizedBox(height: 20),
+                  ] else if (statusLower == 'underofficerreview') ...[
+                    _buildUnderOfficerReviewSection(),
+                    const SizedBox(height: 20),
+                  ] else if (statusLower == 'revisionrequired') ...[
+                    _buildRevisionRequiredSection(req),
+                    const SizedBox(height: 20),
+                  ],
 
-                // ADVISORY ASSESSMENT SUMMARY (Current session if available)
-                if (_recentAnalysisResult?.assessment != null) ...[
-                  _buildAssessmentSummaryCard(_recentAnalysisResult!.assessment!),
-                  const SizedBox(height: 20),
+                  if (_recentAnalysisResult?.assessment != null) ...[
+                    _buildAssessmentSummaryCard(_recentAnalysisResult!.assessment!),
+                    const SizedBox(height: 20),
+                  ],
                 ],
 
                 // DETAILS CARD

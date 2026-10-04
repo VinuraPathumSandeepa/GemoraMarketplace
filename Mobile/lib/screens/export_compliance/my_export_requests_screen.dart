@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/export_request_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/export_compliance_service.dart';
 import 'create_export_request_screen.dart';
 import 'export_request_detail_screen.dart';
@@ -60,8 +62,75 @@ class _MyExportRequestsScreenState extends State<MyExportRequestsScreen> {
     ).then((_) => _loadRequests());
   }
 
+  Widget _buildBuyerPlaceholder() {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.local_shipping_outlined,
+                  size: 72,
+                  color: Colors.blue,
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Track My Exports',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Export tracking will appear here for purchases linked to your account.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.black87,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Export compliance tracking is automatically enabled when eligible gemstone purchases require international export clearance.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    final isBuyer = user?.role.trim().toLowerCase() == 'buyer';
+
+    if (isBuyer) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Track My Exports'),
+        ),
+        body: _buildBuyerPlaceholder(),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Export Requests'),

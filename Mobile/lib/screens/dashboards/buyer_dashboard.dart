@@ -68,7 +68,7 @@ class BuyerDashboard extends StatelessWidget {
                   );
                 },
                 icon: const Icon(Icons.flight_takeoff),
-                label: const Text('Export Compliance'),
+                label: const Text('Track My Exports'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,

@@ -68,7 +68,7 @@ class SellerDashboard extends StatelessWidget {
                   );
                 },
                 icon: const Icon(Icons.flight_takeoff),
-                label: const Text('Export Compliance'),
+                label: const Text('My Export Requests'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
