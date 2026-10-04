@@ -1,5 +1,6 @@
 using Gemora.Application.DTOs.ExportCompliance;
 using Gemora.Application.Interfaces;
+using Gemora.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -8,7 +9,7 @@ namespace Gemora.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Roles = UserRoles.Seller)]
 public class ExportRequestsController : ControllerBase
 {
     private readonly IExportComplianceService _exportComplianceService;
@@ -44,6 +45,11 @@ public class ExportRequestsController : ControllerBase
 
         if (!result.Success)
         {
+            if (result.ErrorCode == "FORBIDDEN")
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = result.Message });
+            }
+
             if (result.ErrorCode == "INVALID_USER" || result.ErrorCode == "USER_NOT_FOUND")
             {
                 return Unauthorized(new
@@ -87,6 +93,11 @@ public class ExportRequestsController : ControllerBase
 
         if (!result.Success)
         {
+            if (result.ErrorCode == "FORBIDDEN")
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = result.Message });
+            }
+
             if (result.ErrorCode == "INVALID_USER")
             {
                 return Unauthorized(new
@@ -127,6 +138,11 @@ public class ExportRequestsController : ControllerBase
 
         if (!result.Success)
         {
+            if (result.ErrorCode == "FORBIDDEN")
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = result.Message });
+            }
+
             if (result.ErrorCode == "REQUEST_NOT_FOUND")
             {
                 return NotFound(new
@@ -175,6 +191,11 @@ public class ExportRequestsController : ControllerBase
 
         if (!result.Success)
         {
+            if (result.ErrorCode == "FORBIDDEN")
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = result.Message });
+            }
+
             if (result.ErrorCode == "REQUEST_NOT_FOUND")
             {
                 return NotFound(new
@@ -231,6 +252,11 @@ public class ExportRequestsController : ControllerBase
 
         if (!result.Success)
         {
+            if (result.ErrorCode == "FORBIDDEN")
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = result.Message });
+            }
+
             if (result.ErrorCode == "REQUEST_NOT_FOUND")
             {
                 return NotFound(new
@@ -291,6 +317,11 @@ public class ExportRequestsController : ControllerBase
 
         if (!result.Success)
         {
+            if (result.ErrorCode == "FORBIDDEN")
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = result.Message });
+            }
+
             if (result.ErrorCode == "REQUEST_NOT_FOUND")
             {
                 return NotFound(new
@@ -353,6 +384,11 @@ public class ExportRequestsController : ControllerBase
 
         if (!result.Success)
         {
+            if (result.ErrorCode == "FORBIDDEN")
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = result.Message });
+            }
+
             if (result.ErrorCode == "REQUEST_NOT_FOUND")
             {
                 return NotFound(new
@@ -404,6 +440,11 @@ public class ExportRequestsController : ControllerBase
 
         if (!result.Success)
         {
+            if (result.ErrorCode == "FORBIDDEN")
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = result.Message });
+            }
+
             if (result.ErrorCode == "INVALID_USER")
             {
                 return Unauthorized(new
@@ -488,6 +529,7 @@ public class ExportRequestsController : ControllerBase
         {
             return result.ErrorCode switch
             {
+                "FORBIDDEN" => StatusCode(StatusCodes.Status403Forbidden, new { message = result.Message }),
                 "INVALID_USER" => Unauthorized(new { message = result.Message }),
                 "REQUEST_NOT_FOUND" => NotFound(new { message = result.Message }),
                 "DOCUMENT_NOT_FOUND" => NotFound(new { message = result.Message }),
@@ -538,6 +580,7 @@ public class ExportRequestsController : ControllerBase
         {
             return result.ErrorCode switch
             {
+                "FORBIDDEN" => StatusCode(StatusCodes.Status403Forbidden, new { message = result.Message }),
                 "INVALID_USER" => Unauthorized(new { message = result.Message }),
                 "REQUEST_NOT_FOUND" => NotFound(new { message = result.Message }),
                 "DOCUMENT_NOT_FOUND" => NotFound(new { message = result.Message }),
@@ -601,6 +644,7 @@ public class ExportRequestsController : ControllerBase
         {
             return result.ErrorCode switch
             {
+                "FORBIDDEN" => StatusCode(StatusCodes.Status403Forbidden, new { message = result.Message }),
                 "INVALID_USER" => Unauthorized(new { message = result.Message }),
                 "INVALID_REQUEST" => BadRequest(new { message = result.Message }),
                 "REQUEST_NOT_FOUND" => NotFound(new { message = result.Message }),
@@ -653,6 +697,7 @@ public class ExportRequestsController : ControllerBase
         {
             return result.ErrorCode switch
             {
+                "FORBIDDEN" => StatusCode(StatusCodes.Status403Forbidden, new { message = result.Message }),
                 "INVALID_USER" => Unauthorized(new { message = result.Message }),
                 "INVALID_REQUEST" => BadRequest(new { message = result.Message }),
                 "REQUEST_NOT_FOUND" => NotFound(new { message = result.Message }),

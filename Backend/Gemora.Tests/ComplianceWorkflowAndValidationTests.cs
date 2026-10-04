@@ -104,9 +104,9 @@ public class ComplianceWorkflowAndValidationTests
         var requester = new User
         {
             Id = Guid.NewGuid(),
-            Email = "buyer@gemora.com",
-            FullName = "Test Buyer",
-            Role = UserRoles.Buyer
+            Email = "seller@gemora.com",
+            FullName = "Test Seller",
+            Role = UserRoles.Seller
         };
 
         var officer = new User
@@ -866,5 +866,357 @@ public class ComplianceWorkflowAndValidationTests
         Assert.Equal(
             "This document uses an older unsupported document type. Add a new document using one of the supported compliance categories.",
             reason);
+    }
+
+    // ==========================================
+    // ROLE & AUTHORIZATION SECURITY TESTS
+    // ==========================================
+
+    [Fact]
+    public async Task RoleTest1_SellerCanCreateExportRequest()
+    {
+        using var context = CreateDbContext();
+        var (seller, _) = SeedUsers(context);
+        var service = new ExportComplianceService(context, new FakeFileStorageService());
+
+        var dto = new CreateExportRequestDto
+        {
+            OriginCountry = "Sri Lanka",
+            DestinationCountry = "United States",
+            DeclaredValue = 1000,
+            Currency = "USD"
+        };
+
+        var result = await service.CreateExportRequestAsync(seller.Id, dto);
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.Request);
+    }
+
+    [Fact]
+    public async Task RoleTest2_BuyerCannotCreateExportRequest()
+    {
+        using var context = CreateDbContext();
+        var buyer = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "buyer@gemora.com",
+            FullName = "Test Buyer",
+            Role = UserRoles.Buyer
+        };
+        context.Users.Add(buyer);
+        await context.SaveChangesAsync();
+
+        var service = new ExportComplianceService(context, new FakeFileStorageService());
+
+        var dto = new CreateExportRequestDto
+        {
+            OriginCountry = "Sri Lanka",
+            DestinationCountry = "United States",
+            DeclaredValue = 1000,
+            Currency = "USD"
+        };
+
+        var result = await service.CreateExportRequestAsync(buyer.Id, dto);
+
+        Assert.False(result.Success);
+        Assert.Equal("FORBIDDEN", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task RoleTest3_SellerACannotModifySellerBExportRequest()
+    {
+        using var context = CreateDbContext();
+        var (sellerA, _) = SeedUsers(context);
+        var sellerB = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "sellerB@gemora.com",
+            FullName = "Seller B",
+            Role = UserRoles.Seller
+        };
+        context.Users.Add(sellerB);
+        await context.SaveChangesAsync();
+
+        var requestA = SeedExportRequest(context, sellerA, ExportRequestStatus.Draft);
+        var service = new ExportComplianceService(context, new FakeFileStorageService());
+
+        var updateDto = new UpdateExportRequestDto
+        {
+            OriginCountry = "Sri Lanka",
+            DestinationCountry = "Japan",
+            DeclaredValue = 2000,
+            Currency = "USD"
+        };
+
+        var result = await service.UpdateExportRequestAsync(sellerB.Id, requestA.Id, updateDto);
+
+        Assert.False(result.Success);
+        Assert.Equal("REQUEST_NOT_FOUND", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task RoleTest4_BuyerCannotEditExportRequest()
+    {
+        using var context = CreateDbContext();
+        var (seller, _) = SeedUsers(context);
+        var buyer = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "buyer@gemora.com",
+            FullName = "Test Buyer",
+            Role = UserRoles.Buyer
+        };
+        context.Users.Add(buyer);
+        await context.SaveChangesAsync();
+
+        var request = SeedExportRequest(context, seller, ExportRequestStatus.Draft);
+        var service = new ExportComplianceService(context, new FakeFileStorageService());
+
+        var updateDto = new UpdateExportRequestDto
+        {
+            OriginCountry = "Sri Lanka",
+            DestinationCountry = "Japan",
+            DeclaredValue = 2000,
+            Currency = "USD"
+        };
+
+        var result = await service.UpdateExportRequestAsync(buyer.Id, request.Id, updateDto);
+
+        Assert.False(result.Success);
+        Assert.Equal("FORBIDDEN", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task RoleTest5_BuyerCannotUploadComplianceDocuments()
+    {
+        using var context = CreateDbContext();
+        var (seller, _) = SeedUsers(context);
+        var buyer = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "buyer@gemora.com",
+            FullName = "Test Buyer",
+            Role = UserRoles.Buyer
+        };
+        context.Users.Add(buyer);
+        await context.SaveChangesAsync();
+
+        var request = SeedExportRequest(context, seller, ExportRequestStatus.Draft);
+        var service = new ExportComplianceService(context, new FakeFileStorageService());
+
+        var docDto = new CreateComplianceDocumentDto
+        {
+            DocumentType = "GemologyCertificate",
+            DocumentNumber = "GEM-999",
+            Issuer = "NGJA"
+        };
+
+        var result = await service.AddComplianceDocumentAsync(buyer.Id, request.Id, docDto);
+
+        Assert.False(result.Success);
+        Assert.Equal("FORBIDDEN", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task RoleTest6_BuyerCannotSubmitExportRequest()
+    {
+        using var context = CreateDbContext();
+        var (seller, _) = SeedUsers(context);
+        var buyer = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "buyer@gemora.com",
+            FullName = "Test Buyer",
+            Role = UserRoles.Buyer
+        };
+        context.Users.Add(buyer);
+        await context.SaveChangesAsync();
+
+        var request = SeedExportRequest(context, seller, ExportRequestStatus.Draft);
+        var service = new ExportComplianceService(context, new FakeFileStorageService());
+
+        var result = await service.SubmitExportRequestAsync(buyer.Id, request.Id);
+
+        Assert.False(result.Success);
+        Assert.Equal("FORBIDDEN", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task RoleTest7_BuyerCannotRunAiComplianceAnalysis()
+    {
+        using var context = CreateDbContext();
+        var (seller, _) = SeedUsers(context);
+        var buyer = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "buyer@gemora.com",
+            FullName = "Test Buyer",
+            Role = UserRoles.Buyer
+        };
+        context.Users.Add(buyer);
+        await context.SaveChangesAsync();
+
+        var request = SeedExportRequest(context, seller, ExportRequestStatus.Submitted);
+        var rulesService = new ComplianceRulesService(context);
+        var toolService = new ComplianceAgentToolService(context, rulesService);
+        var aiClient = new FakeComplianceAiClient();
+        var workflowService = new ComplianceWorkflowService(context, toolService, aiClient);
+
+        var result = await workflowService.StartContextCollectionAsync(buyer.Id, request.Id);
+
+        Assert.False(result.Success);
+        Assert.Equal("FORBIDDEN", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task RoleTest8_BuyerCannotRetryAiWorkflow()
+    {
+        using var context = CreateDbContext();
+        var (seller, _) = SeedUsers(context);
+        var buyer = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "buyer@gemora.com",
+            FullName = "Test Buyer",
+            Role = UserRoles.Buyer
+        };
+        context.Users.Add(buyer);
+        await context.SaveChangesAsync();
+
+        var request = SeedExportRequest(context, seller, ExportRequestStatus.UnderComplianceReview);
+        var rulesService = new ComplianceRulesService(context);
+        var toolService = new ComplianceAgentToolService(context, rulesService);
+        var aiClient = new FakeComplianceAiClient();
+        var workflowService = new ComplianceWorkflowService(context, toolService, aiClient);
+
+        var result = await workflowService.RetryComplianceAnalysisAsync(buyer.Id, request.Id);
+
+        Assert.False(result.Success);
+        Assert.Equal("FORBIDDEN", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task RoleTest9_ExportOfficerStillHasReviewPermissions()
+    {
+        using var context = CreateDbContext();
+        var (seller, officer) = SeedUsers(context);
+        var request = SeedExportRequest(context, seller, ExportRequestStatus.UnderOfficerReview);
+
+        var rulesService = new ComplianceRulesService(context);
+        var officerService = new ExportOfficerService(context, new FakeFileStorageService(), rulesService);
+        var queueResult = await officerService.GetReviewQueueAsync(officer.Id);
+
+        Assert.True(queueResult.Success);
+        Assert.Contains(queueResult.Requests!, r => r.Id == request.Id);
+    }
+
+    [Fact]
+    public async Task RoleTest10_SellerCannotPerformOfficerFinalDecision()
+    {
+        using var context = CreateDbContext();
+        var (seller, _) = SeedUsers(context);
+        var request = SeedExportRequest(context, seller, ExportRequestStatus.UnderOfficerReview);
+
+        var rulesService = new ComplianceRulesService(context);
+        var officerService = new ExportOfficerService(context, new FakeFileStorageService(), rulesService);
+        var decisionDto = new ExportDecisionDto
+        {
+            Decision = "Approved",
+            ReviewNotes = "Looks good"
+        };
+
+        var result = await officerService.MakeDecisionAsync(seller.Id, request.Id, decisionDto);
+
+        Assert.False(result.Success);
+        Assert.Equal("FORBIDDEN", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task RoleTest11_BuyerCannotAccessArbitraryExportRequestByGuessingId()
+    {
+        using var context = CreateDbContext();
+        var (seller, _) = SeedUsers(context);
+        var buyer = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "buyer@gemora.com",
+            FullName = "Test Buyer",
+            Role = UserRoles.Buyer
+        };
+        context.Users.Add(buyer);
+        await context.SaveChangesAsync();
+
+        var request = SeedExportRequest(context, seller, ExportRequestStatus.Submitted);
+        var service = new ExportComplianceService(context, new FakeFileStorageService());
+
+        var result = await service.GetExportRequestByIdAsync(buyer.Id, request.Id);
+
+        Assert.False(result.Success);
+        Assert.Equal("FORBIDDEN", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task RoleTest12_BuyerCannotReadUnlinkedArbitraryExportRequest()
+    {
+        using var context = CreateDbContext();
+        var (seller, _) = SeedUsers(context);
+        var buyer = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "buyer@gemora.com",
+            FullName = "Test Buyer",
+            Role = UserRoles.Buyer
+        };
+        context.Users.Add(buyer);
+        await context.SaveChangesAsync();
+
+        var request = SeedExportRequest(context, seller, ExportRequestStatus.Submitted);
+        var service = new ExportComplianceService(context, new FakeFileStorageService());
+
+        var result = await service.GetMyExportRequestsAsync(buyer.Id);
+
+        Assert.False(result.Success);
+        Assert.Equal("FORBIDDEN", result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task RoleTest13_BuyerCannotAccessPrivateComplianceDocuments()
+    {
+        using var context = CreateDbContext();
+        var (seller, _) = SeedUsers(context);
+        var buyer = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "buyer@gemora.com",
+            FullName = "Test Buyer",
+            Role = UserRoles.Buyer
+        };
+        context.Users.Add(buyer);
+        await context.SaveChangesAsync();
+
+        var request = SeedExportRequest(context, seller, ExportRequestStatus.Submitted);
+        var doc = new ComplianceDocument
+        {
+            Id = Guid.NewGuid(),
+            ExportRequestId = request.Id,
+            UploadedByUserId = seller.Id,
+            DocumentType = "GemologyCertificate",
+            DocumentNumber = "GEM-100",
+            Issuer = "NGJA",
+            FileUrl = "private_storage_key.pdf"
+        };
+        context.ComplianceDocuments.Add(doc);
+        await context.SaveChangesAsync();
+
+        var service = new ExportComplianceService(context, new FakeFileStorageService());
+
+        var getDocsResult = await service.GetComplianceDocumentsAsync(buyer.Id, request.Id);
+        Assert.False(getDocsResult.Success);
+        Assert.Equal("FORBIDDEN", getDocsResult.ErrorCode);
+
+        var getFileResult = await service.GetDocumentFileAsync(buyer.Id, request.Id, doc.Id);
+        Assert.False(getFileResult.Success);
+        Assert.Equal("FORBIDDEN", getFileResult.ErrorCode);
     }
 }

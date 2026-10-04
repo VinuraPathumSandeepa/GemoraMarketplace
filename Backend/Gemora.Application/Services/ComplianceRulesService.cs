@@ -42,6 +42,30 @@ public class ComplianceRulesService : IComplianceRulesService
             };
         }
 
+        var user = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null)
+        {
+            return new ComplianceEvaluationResult
+            {
+                Success = false,
+                Message = "Authenticated user was not found.",
+                ErrorCode = "USER_NOT_FOUND"
+            };
+        }
+
+        if (!string.Equals(user.Role, UserRoles.Seller, StringComparison.OrdinalIgnoreCase))
+        {
+            return new ComplianceEvaluationResult
+            {
+                Success = false,
+                Message = "Only sellers can evaluate compliance.",
+                ErrorCode = "FORBIDDEN"
+            };
+        }
+
         // 3. Retrieve owned export request
         var exportRequest = await _context.ExportRequests
             .AsNoTracking()

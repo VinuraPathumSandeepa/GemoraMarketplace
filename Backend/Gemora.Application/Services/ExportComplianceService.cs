@@ -30,25 +30,10 @@ public class ExportComplianceService : IExportComplianceService
         Guid userId,
         CreateExportRequestDto dto)
     {
-        if (userId == Guid.Empty)
+        var userVal = await ValidateSellerUserAsync(userId);
+        if (userVal != null)
         {
-            return new ExportRequestOperationResult
-            {
-                Success = false,
-                Message = "Authenticated user is invalid.",
-                ErrorCode = "INVALID_USER"
-            };
-        }
-
-        var userExists = await _context.Users.AnyAsync(u => u.Id == userId);
-        if (!userExists)
-        {
-            return new ExportRequestOperationResult
-            {
-                Success = false,
-                Message = "Authenticated user was not found.",
-                ErrorCode = "USER_NOT_FOUND"
-            };
+            return userVal;
         }
 
         if (string.IsNullOrWhiteSpace(dto.OriginCountry) ||
@@ -125,14 +110,10 @@ public class ExportComplianceService : IExportComplianceService
     public async Task<ExportRequestOperationResult> GetMyExportRequestsAsync(
         Guid userId)
     {
-        if (userId == Guid.Empty)
+        var userVal = await ValidateSellerUserAsync(userId);
+        if (userVal != null)
         {
-            return new ExportRequestOperationResult
-            {
-                Success = false,
-                Message = "Authenticated user is invalid.",
-                ErrorCode = "INVALID_USER"
-            };
+            return userVal;
         }
 
         var requests = await _context.ExportRequests
@@ -158,14 +139,10 @@ public class ExportComplianceService : IExportComplianceService
         Guid userId,
         Guid exportRequestId)
     {
-        if (userId == Guid.Empty)
+        var userVal = await ValidateSellerUserAsync(userId);
+        if (userVal != null)
         {
-            return new ExportRequestOperationResult
-            {
-                Success = false,
-                Message = "Authenticated user is invalid.",
-                ErrorCode = "INVALID_USER"
-            };
+            return userVal;
         }
 
         if (exportRequestId == Guid.Empty)
@@ -208,14 +185,10 @@ public class ExportComplianceService : IExportComplianceService
         Guid exportRequestId,
         UpdateExportRequestDto dto)
     {
-        if (userId == Guid.Empty)
+        var userVal = await ValidateSellerUserAsync(userId);
+        if (userVal != null)
         {
-            return new ExportRequestOperationResult
-            {
-                Success = false,
-                Message = "Authenticated user is invalid.",
-                ErrorCode = "INVALID_USER"
-            };
+            return userVal;
         }
 
         if (exportRequestId == Guid.Empty)
@@ -318,14 +291,10 @@ public class ExportComplianceService : IExportComplianceService
         Guid userId,
         Guid exportRequestId)
     {
-        if (userId == Guid.Empty)
+        var userVal = await ValidateSellerUserAsync(userId);
+        if (userVal != null)
         {
-            return new ExportRequestOperationResult
-            {
-                Success = false,
-                Message = "Authenticated user is invalid.",
-                ErrorCode = "INVALID_USER"
-            };
+            return userVal;
         }
 
         if (exportRequestId == Guid.Empty)
@@ -425,14 +394,10 @@ public class ExportComplianceService : IExportComplianceService
         Guid exportRequestId,
         CreateComplianceDocumentDto dto)
     {
-        if (userId == Guid.Empty)
+        var userVal = await ValidateSellerUserForDocumentAsync(userId);
+        if (userVal != null)
         {
-            return new ComplianceDocumentOperationResult
-            {
-                Success = false,
-                Message = "Authenticated user is invalid.",
-                ErrorCode = "INVALID_USER"
-            };
+            return userVal;
         }
 
         if (exportRequestId == Guid.Empty)
@@ -539,14 +504,10 @@ public class ExportComplianceService : IExportComplianceService
         Guid userId,
         Guid exportRequestId)
     {
-        if (userId == Guid.Empty)
+        var userVal = await ValidateSellerUserForDocumentAsync(userId);
+        if (userVal != null)
         {
-            return new ComplianceDocumentOperationResult
-            {
-                Success = false,
-                Message = "Authenticated user is invalid.",
-                ErrorCode = "INVALID_USER"
-            };
+            return userVal;
         }
 
         if (exportRequestId == Guid.Empty)
@@ -602,14 +563,10 @@ public class ExportComplianceService : IExportComplianceService
         long fileSize,
         CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        var userVal = await ValidateSellerUserForDocumentAsync(userId);
+        if (userVal != null)
         {
-            return new ComplianceDocumentOperationResult
-            {
-                Success = false,
-                ErrorCode = "INVALID_USER",
-                Message = "Authenticated user is invalid."
-            };
+            return userVal;
         }
 
         if (exportRequestId == Guid.Empty)
@@ -908,14 +865,10 @@ public class ExportComplianceService : IExportComplianceService
         Guid documentId,
         CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        var userVal = await ValidateSellerUserForFileAsync(userId);
+        if (userVal != null)
         {
-            return new ComplianceDocumentFileResult
-            {
-                Success = false,
-                ErrorCode = "INVALID_USER",
-                Message = "Authenticated user is invalid."
-            };
+            return userVal;
         }
 
         if (exportRequestId == Guid.Empty)
@@ -1082,5 +1035,113 @@ public class ExportComplianceService : IExportComplianceService
             EffectiveStatusReason = effectiveReason,
             UploadedAt = entity.UploadedAt
         };
+    }
+
+    private async Task<ExportRequestOperationResult?> ValidateSellerUserAsync(Guid userId)
+    {
+        if (userId == Guid.Empty)
+        {
+            return new ExportRequestOperationResult
+            {
+                Success = false,
+                Message = "Authenticated user is invalid.",
+                ErrorCode = "INVALID_USER"
+            };
+        }
+
+        var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null)
+        {
+            return new ExportRequestOperationResult
+            {
+                Success = false,
+                Message = "Authenticated user was not found.",
+                ErrorCode = "USER_NOT_FOUND"
+            };
+        }
+
+        if (!string.Equals(user.Role, UserRoles.Seller, StringComparison.OrdinalIgnoreCase))
+        {
+            return new ExportRequestOperationResult
+            {
+                Success = false,
+                Message = "Only sellers can perform export request management.",
+                ErrorCode = "FORBIDDEN"
+            };
+        }
+
+        return null;
+    }
+
+    private async Task<ComplianceDocumentOperationResult?> ValidateSellerUserForDocumentAsync(Guid userId)
+    {
+        if (userId == Guid.Empty)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                Message = "Authenticated user is invalid.",
+                ErrorCode = "INVALID_USER"
+            };
+        }
+
+        var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null)
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                Message = "Authenticated user was not found.",
+                ErrorCode = "USER_NOT_FOUND"
+            };
+        }
+
+        if (!string.Equals(user.Role, UserRoles.Seller, StringComparison.OrdinalIgnoreCase))
+        {
+            return new ComplianceDocumentOperationResult
+            {
+                Success = false,
+                Message = "Only sellers can manage compliance documents.",
+                ErrorCode = "FORBIDDEN"
+            };
+        }
+
+        return null;
+    }
+
+    private async Task<ComplianceDocumentFileResult?> ValidateSellerUserForFileAsync(Guid userId)
+    {
+        if (userId == Guid.Empty)
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                Message = "Authenticated user is invalid.",
+                ErrorCode = "INVALID_USER"
+            };
+        }
+
+        var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null)
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                Message = "Authenticated user was not found.",
+                ErrorCode = "USER_NOT_FOUND"
+            };
+        }
+
+        if (!string.Equals(user.Role, UserRoles.Seller, StringComparison.OrdinalIgnoreCase))
+        {
+            return new ComplianceDocumentFileResult
+            {
+                Success = false,
+                Message = "Only sellers can access compliance files.",
+                ErrorCode = "FORBIDDEN"
+            };
+        }
+
+        return null;
     }
 }

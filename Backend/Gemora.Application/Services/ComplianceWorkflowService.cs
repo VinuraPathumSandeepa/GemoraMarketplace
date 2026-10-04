@@ -3,6 +3,7 @@ using System.Text.Json;
 using Gemora.Application.AgentTools;
 using Gemora.Application.DTOs.ExportCompliance;
 using Gemora.Application.Interfaces;
+using Gemora.Domain.Constants;
 using Gemora.Domain.Entities;
 using Gemora.Domain.Enums;
 using Gemora.Infrastructure.Data;
@@ -53,17 +54,27 @@ public class ComplianceWorkflowService : IComplianceWorkflowService
         }
 
         // 2. User & Request Existence Checks
-        var userExists = await _context.Users
+        var user = await _context.Users
             .AsNoTracking()
-            .AnyAsync(u => u.Id == triggeredByUserId, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Id == triggeredByUserId, cancellationToken);
 
-        if (!userExists)
+        if (user == null)
         {
             return new ComplianceWorkflowExecutionResult
             {
                 Success = false,
                 ErrorCode = "USER_NOT_FOUND",
                 Message = "Triggered user was not found."
+            };
+        }
+
+        if (!string.Equals(user.Role, UserRoles.Seller, StringComparison.OrdinalIgnoreCase))
+        {
+            return new ComplianceWorkflowExecutionResult
+            {
+                Success = false,
+                ErrorCode = "FORBIDDEN",
+                Message = "Only sellers can run compliance analysis."
             };
         }
 
@@ -842,6 +853,30 @@ public class ComplianceWorkflowService : IComplianceWorkflowService
                 Success = false,
                 ErrorCode = "INVALID_REQUEST",
                 Message = "Export request ID is invalid."
+            };
+        }
+
+        var user = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == triggeredByUserId, cancellationToken);
+
+        if (user == null)
+        {
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = "USER_NOT_FOUND",
+                Message = "Triggered user was not found."
+            };
+        }
+
+        if (!string.Equals(user.Role, UserRoles.Seller, StringComparison.OrdinalIgnoreCase))
+        {
+            return new ComplianceWorkflowAnalysisResultDto
+            {
+                Success = false,
+                ErrorCode = "FORBIDDEN",
+                Message = "Only sellers can retry compliance analysis."
             };
         }
 
