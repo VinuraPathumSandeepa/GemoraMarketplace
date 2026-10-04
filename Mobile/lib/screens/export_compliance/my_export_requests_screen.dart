@@ -17,12 +17,20 @@ class MyExportRequestsScreen extends StatefulWidget {
 class _MyExportRequestsScreenState extends State<MyExportRequestsScreen> {
   final _exportService = ExportComplianceService();
 
-  late Future<List<ExportRequestModel>> _requestsFuture;
+  Future<List<ExportRequestModel>>? _requestsFuture;
+  String? _loadedUserId;
 
   @override
-  void initState() {
-    super.initState();
-    _loadRequests();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final user = Provider.of<AuthProvider>(context).user;
+    if (user != null) {
+      final isBuyer = user.role.trim().toLowerCase() == 'buyer';
+      if (!isBuyer && (_requestsFuture == null || _loadedUserId != user.id)) {
+        _loadedUserId = user.id;
+        _loadRequests();
+      }
+    }
   }
 
   void _loadRequests() {
@@ -102,7 +110,7 @@ class _MyExportRequestsScreenState extends State<MyExportRequestsScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Export compliance tracking is automatically enabled when eligible gemstone purchases require international export clearance.',
+                  'Buyer export tracking will be available once the shared Order/Purchase workflow is linked to export requests.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
@@ -120,7 +128,19 @@ class _MyExportRequestsScreenState extends State<MyExportRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    final isBuyer = user?.role.trim().toLowerCase() == 'buyer';
+
+    if (user == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Export Compliance'),
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    final isBuyer = user.role.trim().toLowerCase() == 'buyer';
 
     if (isBuyer) {
       return Scaffold(
@@ -147,8 +167,10 @@ class _MyExportRequestsScreenState extends State<MyExportRequestsScreen> {
         icon: const Icon(Icons.add),
         label: const Text('Create Request'),
       ),
-      body: FutureBuilder<List<ExportRequestModel>>(
-        future: _requestsFuture,
+      body: _requestsFuture == null
+          ? const Center(child: CircularProgressIndicator())
+          : FutureBuilder<List<ExportRequestModel>>(
+              future: _requestsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

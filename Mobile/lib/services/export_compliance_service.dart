@@ -69,6 +69,9 @@ class ExportComplianceService {
     );
 
     if (response.statusCode != 200) {
+      if (response.statusCode == 403) {
+        throw Exception("You don't have permission to view these export requests.");
+      }
       throw Exception(
         _parseErrorResponse(
           response,
