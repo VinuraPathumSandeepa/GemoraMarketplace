@@ -77,6 +77,14 @@ builder.Services.AddScoped<
 
 builder.Services.AddScoped<TokenService>();
 
+// Secure shipping and insurance
+builder.Services.AddScoped<
+    Gemora.Application.Services.IShipmentService,
+    ShipmentService>();
+builder.Services.AddScoped<
+    Gemora.Application.Services.IShippingAgentService,
+    ShippingAgentService>();
+
 
 // ------------------------------------------------------------
 // Gem listing management
@@ -295,7 +303,6 @@ builder.Services.AddCors(
 // ============================================================
 // JWT AUTHENTICATION
 // ============================================================
->>>>>>> Stashed changes
 
 var jwtKey =
     builder.Configuration["Jwt:Key"];
@@ -313,14 +320,6 @@ if (string.IsNullOrWhiteSpace(jwtKey))
         "JWT Key is not configured."
     );
 }
-
-var jwtIssuer =
-    builder.Configuration[
-        "Jwt:Issuer"];
-
-var jwtAudience =
-    builder.Configuration[
-        "Jwt:Audience"];
 
 
 // ======================================================
@@ -539,15 +538,187 @@ using (var scope = app.Services.CreateScope())
         scope.ServiceProvider
             .GetRequiredService<ApplicationDbContext>();
 
+    // ======================================================
+    // MANUALLY ADD MISSING COLUMNS TO ORDERS TABLE
+    // ======================================================
+    
+    try
+    {
+        Console.WriteLine("Ensuring Orders table exists...");
+        
+        // Recreate with correct Component 3 schema
+        await dbContext.Database.ExecuteSqlRawAsync(
+            @"CREATE TABLE IF NOT EXISTS ""Orders"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""BuyerId"" uuid NOT NULL,
+                ""SellerId"" uuid NOT NULL,
+                ""GemListingId"" integer NULL,
+                ""TotalAmount"" numeric(18,2) NOT NULL,
+                ""Currency"" character varying(20) NOT NULL DEFAULT 'USD',
+                ""Status"" character varying(50) NOT NULL DEFAULT 'Pending',
+                ""ShippingAddress"" character varying(500) NOT NULL,
+                ""ShippingRegion"" character varying(100) NOT NULL,
+                ""ShippingCountryCode"" character varying(2) NOT NULL,
+                ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT NOW(),
+                ""UpdatedAt"" timestamp with time zone NULL,
+                ""PaidAt"" timestamp with time zone NULL,
+                CONSTRAINT ""FK_Orders_GemListings_GemListingId"" FOREIGN KEY (""GemListingId"") REFERENCES ""GemListings""(""Id""),
+                CONSTRAINT ""FK_Orders_Users_BuyerId"" FOREIGN KEY (""BuyerId"") REFERENCES ""Users""(""Id""),
+                CONSTRAINT ""FK_Orders_Users_SellerId"" FOREIGN KEY (""SellerId"") REFERENCES ""Users""(""Id"")
+            );"
+        );
+        Console.WriteLine("Orders table ready.");
+        
+        // Create indexes for performance
+        await dbContext.Database.ExecuteSqlRawAsync(
+            @"CREATE INDEX IF NOT EXISTS ""IX_Orders_BuyerId"" ON ""Orders""(""BuyerId"");
+              CREATE INDEX IF NOT EXISTS ""IX_Orders_SellerId"" ON ""Orders""(""SellerId"");
+              CREATE INDEX IF NOT EXISTS ""IX_Orders_GemListingId"" ON ""Orders""(""GemListingId"");
+              CREATE INDEX IF NOT EXISTS ""IX_Orders_Status"" ON ""Orders""(""Status"");
+              CREATE INDEX IF NOT EXISTS ""IX_Orders_CreatedAt"" ON ""Orders""(""CreatedAt"");"
+        );
+        Console.WriteLine("Created indexes for Orders table.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error recreating Orders table: {ex.Message}");
+        throw;
+    }
+
+    // ======================================================
+    // ENSURE COMPONENT 3 TABLES EXIST
+    // ======================================================
+    
+    try
+    {
+        Console.WriteLine("Ensuring Component 3 tables exist...");
+        
+        // Create Shipments table
+        await dbContext.Database.ExecuteSqlRawAsync(
+            @"CREATE TABLE IF NOT EXISTS ""Shipments"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""OrderId"" uuid NOT NULL,
+                ""SellerId"" uuid NOT NULL,
+                ""BuyerId"" uuid NOT NULL,
+                ""OriginAddress"" character varying(500) NOT NULL,
+                ""OriginRegion"" character varying(100) NOT NULL,
+                ""OriginCountryCode"" character varying(2) NOT NULL,
+                ""DestinationAddress"" character varying(500) NOT NULL,
+                ""DestinationRegion"" character varying(100) NOT NULL,
+                ""DestinationCountryCode"" character varying(2) NOT NULL,
+                ""DeclaredValue"" numeric(18,2) NOT NULL,
+                ""Currency"" character varying(20) NOT NULL DEFAULT 'USD',
+                ""PackageDescription"" character varying(1000) NOT NULL,
+                ""PackageWeight"" numeric(10,2) NULL,
+                ""PackageDimensions"" character varying(200) NULL,
+                ""SpecialHandlingNotes"" character varying(2000) NOT NULL DEFAULT '',
+                ""PreferredService"" character varying(200) NOT NULL,
+                ""ExportRequired"" boolean NOT NULL DEFAULT false,
+                ""Status"" character varying(50) NOT NULL DEFAULT 'Pending',
+                ""RiskLevel"" character varying(20) NULL,
+                ""TrackingNumber"" character varying(100) NULL,
+                ""CourierName"" character varying(200) NULL,
+                ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT NOW(),
+                ""UpdatedAt"" timestamp with time zone NULL,
+                ""ShippedAt"" timestamp with time zone NULL,
+                ""DeliveredAt"" timestamp with time zone NULL,
+                CONSTRAINT ""FK_Shipments_Orders_OrderId"" FOREIGN KEY (""OrderId"") REFERENCES ""Orders""(""Id""),
+                CONSTRAINT ""FK_Shipments_Users_SellerId"" FOREIGN KEY (""SellerId"") REFERENCES ""Users""(""Id""),
+                CONSTRAINT ""FK_Shipments_Users_BuyerId"" FOREIGN KEY (""BuyerId"") REFERENCES ""Users""(""Id"")
+            );"
+        );
+        
+        // Create ShippingPlans table
+        await dbContext.Database.ExecuteSqlRawAsync(
+            @"CREATE TABLE IF NOT EXISTS ""ShippingPlans"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""ShipmentId"" uuid NOT NULL,
+                ""RiskLevel"" character varying(20) NOT NULL DEFAULT 'Medium',
+                ""RiskReasons"" text NULL,
+                ""RecommendedServiceType"" character varying(200) NOT NULL,
+                ""InsuranceRecommended"" boolean NOT NULL DEFAULT false,
+                ""RecommendedCoverageAmount"" numeric(18,2) NULL,
+                ""HandlingRequirements"" text NULL,
+                ""RequiredDocuments"" text NULL,
+                ""Warnings"" text NULL,
+                ""IsApproved"" boolean NOT NULL DEFAULT false,
+                ""ApprovedBy"" uuid NULL,
+                ""ApprovedAt"" timestamp with time zone NULL,
+                ""AdminNotes"" text NULL,
+                ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT NOW(),
+                ""UpdatedAt"" timestamp with time zone NULL,
+                CONSTRAINT ""FK_ShippingPlans_Shipments_ShipmentId"" FOREIGN KEY (""ShipmentId"") REFERENCES ""Shipments""(""Id""),
+                CONSTRAINT ""FK_ShippingPlans_Users_ApprovedBy"" FOREIGN KEY (""ApprovedBy"") REFERENCES ""Users""(""Id"")
+            );"
+        );
+        
+        // Create InsuranceRecords table
+        await dbContext.Database.ExecuteSqlRawAsync(
+            @"CREATE TABLE IF NOT EXISTS ""InsuranceRecords"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""ShipmentId"" uuid NOT NULL,
+                ""CoverageAmount"" numeric(18,2) NOT NULL,
+                ""Currency"" character varying(20) NOT NULL DEFAULT 'USD',
+                ""CoverageType"" character varying(50) NOT NULL DEFAULT 'Standard',
+                ""PolicyNumber"" character varying(100) NULL,
+                ""ProviderName"" character varying(200) NULL,
+                ""PolicyStartDate"" timestamp with time zone NULL,
+                ""PolicyEndDate"" timestamp with time zone NULL,
+                ""Status"" character varying(50) NOT NULL DEFAULT 'Pending',
+                ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT NOW(),
+                ""UpdatedAt"" timestamp with time zone NULL,
+                CONSTRAINT ""FK_InsuranceRecords_Shipments_ShipmentId"" FOREIGN KEY (""ShipmentId"") REFERENCES ""Shipments""(""Id"")
+            );"
+        );
+        
+        // Create ShipmentTrackingEvents table WITH OccurredAt and RecordedAt
+        // First drop if exists to ensure correct schema
+        await dbContext.Database.ExecuteSqlRawAsync(
+            @"DROP TABLE IF EXISTS ""ShipmentTrackingEvents"" CASCADE;"
+        );
+        await dbContext.Database.ExecuteSqlRawAsync(
+            @"CREATE TABLE ""ShipmentTrackingEvents"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""ShipmentId"" uuid NOT NULL,
+                ""EventType"" character varying(50) NOT NULL,
+                ""Location"" character varying(200) NOT NULL,
+                ""Description"" character varying(1000) NOT NULL,
+                ""OccurredAt"" timestamp with time zone NOT NULL,
+                ""RecordedAt"" timestamp with time zone NOT NULL,
+                CONSTRAINT ""FK_ShipmentTrackingEvents_Shipments_ShipmentId"" FOREIGN KEY (""ShipmentId"") REFERENCES ""Shipments""(""Id"")
+            );"
+        );
+        
+        Console.WriteLine("Component 3 tables ready.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error creating Component 3 tables: {ex.Message}");
+        throw;
+    }
+
+    // Mark AddShippingAndInsuranceEntities migration as applied if not already
+    try
+    {
+        Console.WriteLine("Checking migration history...");
+        await dbContext.Database.ExecuteSqlRawAsync(
+            @"INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"") 
+              VALUES ('20260928211333_AddShippingAndInsuranceEntities', '8.0.8')
+              ON CONFLICT DO NOTHING;"
+        );
+        Console.WriteLine("Migration history updated.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error updating migration history: {ex.Message}");
+    }
+
     await DbSeeder.SeedAsync(
         dbContext,
         builder.Configuration
     );
 }
 
-        logger.LogError(
-            ex,
-            "An error occurred while seeding the Gemora database.");
 
 // ======================================================
 // 16. MAP CONTROLLERS

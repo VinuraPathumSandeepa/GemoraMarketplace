@@ -97,13 +97,20 @@ function Register() {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
+    phoneNumber: "",
+    phoneDialCode: "+94",
+    countryCode: "LK",
+    region: "",
     password: "",
+    confirmPassword: "",
     role: "Buyer",
   });
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -305,13 +312,30 @@ function Register() {
 
     setError("");
     setSuccess("");
+
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    const payload = {
+      fullName: formData.fullName.trim(),
+      email: formData.email.trim(),
+      phoneNumber: buildPhoneNumber(),
+      countryCode: formData.countryCode,
+      region: formData.region.trim(),
+      password: formData.password,
+      role: formData.role,
+    };
+
     setSubmitting(true);
 
     try {
-      await api.post("/Auth/register", formData);
+      await api.post("/Auth/register", payload);
 
       setSuccess(
-        "Registration successful. Redirecting to login..."
+        "Registration successful. Redirecting to email verification..."
       );
 
 

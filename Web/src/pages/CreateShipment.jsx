@@ -1,11 +1,30 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { shipmentApi } from "../services/api";
+import api, { shipmentApi } from "../services/api";
+import ShipmentHeader from "../components/ShipmentHeader";
 
 function CreateShipment() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [ordersError, setOrdersError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    api.get("/Orders/my-shipment-eligible")
+      .then(({ data }) => {
+        if (active) setOrders(data);
+      })
+      .catch((err) => {
+        if (active) setOrdersError(err.response?.data?.message || "Could not load paid orders. Check your session and that the backend has been restarted with the Orders endpoint.");
+      })
+      .finally(() => {
+        if (active) setOrdersLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
 
   const [formData, setFormData] = useState({
     orderId: "",
@@ -27,6 +46,20 @@ function CreateShipment() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    if (name === "orderId") {
+      const order = orders.find((item) => item.id === value);
+      if (order) {
+        setFormData((prev) => ({
+          ...prev,
+          orderId: order.id,
+          destinationAddress: order.shippingAddress || "",
+          destinationRegion: order.shippingRegion || "",
+          destinationCountryCode: order.shippingCountryCode || "",
+          currency: order.currency,
+        }));
+        return;
+      }
+    }
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
@@ -36,6 +69,20 @@ function CreateShipment() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(formData.orderId.trim()) ||
+        formData.orderId.trim() === "00000000-0000-0000-0000-000000000000") {
+      setError("Enter the full order ID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx) for a paid order belonging to your seller account.");
+      return;
+    }
+
+    if (![formData.originCountryCode, formData.destinationCountryCode].every(
+      (code) => /^[A-Za-z]{2}$/.test(code.trim())
+    )) {
+      setError("Enter a two-letter country code for both addresses, such as LK or US.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -43,6 +90,13 @@ function CreateShipment() {
       const payload = {
         ...formData,
         orderId: formData.orderId.trim(),
+        originAddress: formData.originAddress.trim(),
+        originRegion: formData.originRegion.trim(),
+        originCountryCode: formData.originCountryCode.trim().toUpperCase(),
+        destinationAddress: formData.destinationAddress.trim(),
+        destinationRegion: formData.destinationRegion.trim(),
+        destinationCountryCode: formData.destinationCountryCode.trim().toUpperCase(),
+        packageDescription: formData.packageDescription.trim(),
         declaredValue: formData.declaredValue
           ? parseFloat(formData.declaredValue)
           : undefined,
@@ -55,9 +109,23 @@ function CreateShipment() {
       navigate(`/seller/shipments/${response.data.id}`);
     } catch (err) {
       console.error("Failed to create shipment:", err);
+      const data = err.response?.data;
+      const validationErrors = data?.errors
+        ? Object.entries(data.errors).flatMap(([field, messages]) =>
+            (Array.isArray(messages) ? messages : [messages]).map(
+              (message) => `${field}: ${message}`
+            )
+          ).join(" ")
+        : "";
+      const statusMessage = {
+        401: "Your session has expired. Sign in again to create a shipment.",
+        403: "Only the seller who owns this order can create its shipment.",
+        500: "The server could not create the shipment. Check the backend logs for the cause.",
+      }[err.response?.status];
       setError(
-        err.response?.data?.message ||
-          "Failed to create shipment. Please check your input and try again."
+        data?.message || validationErrors || statusMessage || data?.title ||
+          (!err.response ? "Cannot reach the shipment API. Check that the backend is running at http://localhost:5198." : "") ||
+          `Shipment API rejected the request (HTTP ${err.response?.status ?? "unknown"}). Check the request response in the browser Network tab.`
       );
     } finally {
       setLoading(false);
@@ -65,34 +133,49 @@ function CreateShipment() {
   };
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Create New Shipment</h1>
+    <div className="seller-shipping shipping-create">
+      <ShipmentHeader title="Create Shipment" eyebrow="NEW GEMSTONE SHIPMENT"
+        description="Prepare your gemstone for a secure journey. Add delivery details, package information, and your preferred shipping service." />
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div role="alert" className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Order ID */}
+        <section className="shipping-card shipping-order">
+          <h2>Order Information</h2>
+          <p className="shipping-section-description">Connect this shipment to a paid gemstone order.</p>
         <div className="form-group">
           <label className="block text-sm font-medium mb-2">
             Order ID *
           </label>
-          <input
-            type="text"
+          <select
             name="orderId"
             value={formData.orderId}
             onChange={handleChange}
-            placeholder="Enter the paid order ID"
             required
+            disabled={ordersLoading || orders.length === 0}
             className="w-full px-3 py-2 border rounded"
-          />
+          >
+            <option value="">{ordersLoading ? "Loading paid orders..." : "Select a paid order"}</option>
+            {orders.map((order) => (
+              <option key={order.id} value={order.id}>
+                {order.gemTitle} — {order.currency} {order.totalAmount} — {order.id}
+              </option>
+            ))}
+          </select>
+          {ordersError ? <small role="alert">{ordersError}</small> :
+            !ordersLoading && orders.length === 0 ?
+              <small className="form-helper">No paid orders are available for shipment. Orders must belong to your seller account and have no existing shipment.</small> :
+              <small className="form-helper">Selecting an order fills in its delivery address and currency.</small>}
         </div>
 
+        </section>
         {/* Origin */}
-        <div className="border-t pt-4">
+        <div className="shipping-card">
           <h2 className="text-lg font-semibold mb-4">Origin Address</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="form-group">
@@ -140,7 +223,7 @@ function CreateShipment() {
         </div>
 
         {/* Destination */}
-        <div className="border-t pt-4">
+        <div className="shipping-card">
           <h2 className="text-lg font-semibold mb-4">Destination Address</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="form-group">
@@ -188,7 +271,7 @@ function CreateShipment() {
         </div>
 
         {/* Package Details */}
-        <div className="border-t pt-4">
+        <div className="shipping-card">
           <h2 className="text-lg font-semibold mb-4">Package Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="form-group">
@@ -266,7 +349,7 @@ function CreateShipment() {
         </div>
 
         {/* Shipping Options */}
-        <div className="border-t pt-4">
+        <div className="shipping-card">
           <h2 className="text-lg font-semibold mb-4">Shipping Options</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="form-group">
@@ -313,10 +396,10 @@ function CreateShipment() {
         </div>
 
         {/* Submit Button */}
-        <div className="border-t pt-4 flex gap-4">
+        <div className="shipping-form-actions">
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || ordersLoading || orders.length === 0 || !formData.orderId}
             className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded disabled:opacity-50"
           >
             {loading ? "Creating..." : "Create Shipment"}

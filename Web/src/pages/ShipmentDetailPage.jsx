@@ -2,11 +2,14 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { shipmentApi } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import ShipmentHeader from "../components/ShipmentHeader";
 import "../styles/ShipmentDetail.css";
 
 function ShipmentDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [shipment, setShipment] = useState(null);
   const [plan, setPlan] = useState(null);
   const [tracking, setTracking] = useState([]);
@@ -39,7 +42,9 @@ function ShipmentDetailPage() {
       setShipment(shipmentRes.data);
       setPlan(planRes?.data || null);
       setTracking(trackingRes.data || []);
-      setInsurance(insuranceRes.data || []);
+      setInsurance(Array.isArray(insuranceRes.data)
+        ? insuranceRes.data
+        : insuranceRes.data ? [insuranceRes.data] : []);
     } catch (err) {
       console.error("Failed to load shipment details:", err);
       setError(err.response?.data?.error || "Failed to load shipment details");
@@ -87,10 +92,11 @@ function ShipmentDetailPage() {
 
   return (
     <DashboardLayout title={`Shipment ${shipment.shipmentNumber}`}>
-      <div className="shipment-detail">
-        <button className="btn-back" onClick={() => navigate("/admin")}>
-          ← Back to Dashboard
-        </button>
+      <div className="shipment-detail seller-shipping shipping-overview">
+        <ShipmentHeader title="Shipping Overview" eyebrow="SECURE SHIPPING & INSURANCE"
+          description="A complete view of your gemstone's shipping plan, tracking history, and insurance coverage."
+          backTo={user?.role === "Seller" ? `/seller/shipments/${id}` : "/admin"}
+          backLabel={user?.role === "Seller" ? "Shipment Details" : "Dashboard"} />
 
         {/* Shipment Information */}
         <section className="detail-section">
@@ -107,7 +113,7 @@ function ShipmentDetailPage() {
             <div className="info-item">
               <label>Status</label>
               <p>
-                <span className={`status-badge ${shipment.status.toLowerCase()}`}>
+                <span className={`status-badge ${String(shipment.status).toLowerCase()}`}>
                   {shipment.status}
                 </span>
               </p>
@@ -159,7 +165,7 @@ function ShipmentDetailPage() {
                     </span>
                   </p>
                 </div>
-                {plan.approvalStatus === "PendingAdminApproval" && (
+                {user?.role === "Admin" && plan.approvalStatus === "PendingAdminApproval" && (
                   <button
                     className="btn-approve"
                     onClick={handleApprovePlan}

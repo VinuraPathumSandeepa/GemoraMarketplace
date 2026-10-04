@@ -35,6 +35,9 @@ public class User
 
     public DateTime? EmailVerifiedAt { get; set; }
 
+    // Profile image URL (nullable - displays initials if not set)
+    public string? ProfileImageUrl { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<GemListing> GemListings { get; set; }
@@ -43,11 +46,6 @@ public class User
     public ICollection<GemVerification> GemVerifications { get; set; }
         = new List<GemVerification>();
 
-    public ICollection<GemVerification> GemVerifications { get; set; } =
-        new List<GemVerification>();
-
-    public ICollection<EmailVerificationCode> EmailVerificationCodes { get; set; } =
-        new List<EmailVerificationCode>();
     public ICollection<EmailVerificationCode> EmailVerificationCodes { get; set; }
         = new List<EmailVerificationCode>();
 

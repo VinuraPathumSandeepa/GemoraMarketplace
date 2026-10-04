@@ -25,6 +25,13 @@ public class ApplicationDbContext : DbContext
     public DbSet<EmailVerificationCode> EmailVerificationCodes
         => Set<EmailVerificationCode>();
 
+    // Component 3 - Shipping & Insurance
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<Shipment> Shipments => Set<Shipment>();
+    public DbSet<ShippingPlan> ShippingPlans => Set<ShippingPlan>();
+    public DbSet<ShipmentTrackingEvent> ShipmentTrackingEvents => Set<ShipmentTrackingEvent>();
+    public DbSet<InsuranceRecord> InsuranceRecords => Set<InsuranceRecord>();
+
 
     // ============================================================
     // MODEL CONFIGURATION
@@ -509,6 +516,174 @@ public class ApplicationDbContext : DbContext
             entity.HasOne(e => e.User)
                 .WithMany(u => u.EmailVerificationCodes)
                 .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+
+        // ============================================================
+        // ORDER (Component 3)
+        // ============================================================
+
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.ToTable("Orders");
+
+            entity.HasKey(o => o.Id);
+
+            entity.Property(o => o.BuyerId).IsRequired();
+            entity.Property(o => o.SellerId).IsRequired();
+            entity.Property(o => o.TotalAmount).HasPrecision(18, 2);
+            entity.Property(o => o.Currency).IsRequired().HasMaxLength(20);
+            entity.Property(o => o.Status).IsRequired().HasMaxLength(50);
+            entity.Property(o => o.ShippingAddress).IsRequired().HasMaxLength(500);
+            entity.Property(o => o.ShippingRegion).IsRequired().HasMaxLength(100);
+            entity.Property(o => o.ShippingCountryCode).IsRequired().HasMaxLength(2);
+
+            entity.HasIndex(o => o.BuyerId);
+            entity.HasIndex(o => o.SellerId);
+            entity.HasIndex(o => o.Status);
+            entity.HasIndex(o => o.CreatedAt);
+
+            entity.HasOne(o => o.Buyer)
+                .WithMany(u => u.PurchasedOrders)
+                .HasForeignKey(o => o.BuyerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(o => o.Seller)
+                .WithMany(u => u.SoldOrders)
+                .HasForeignKey(o => o.SellerId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+
+        // ============================================================
+        // SHIPMENT (Component 3)
+        // ============================================================
+
+        modelBuilder.Entity<Shipment>(entity =>
+        {
+            entity.ToTable("Shipments");
+
+            entity.HasKey(s => s.Id);
+
+            entity.Property(s => s.OrderId).IsRequired();
+            entity.Property(s => s.SellerId).IsRequired();
+            entity.Property(s => s.BuyerId).IsRequired();
+            entity.Property(s => s.OriginAddress).IsRequired().HasMaxLength(500);
+            entity.Property(s => s.OriginRegion).IsRequired().HasMaxLength(100);
+            entity.Property(s => s.OriginCountryCode).IsRequired().HasMaxLength(2);
+            entity.Property(s => s.DestinationAddress).IsRequired().HasMaxLength(500);
+            entity.Property(s => s.DestinationRegion).IsRequired().HasMaxLength(100);
+            entity.Property(s => s.DestinationCountryCode).IsRequired().HasMaxLength(2);
+            entity.Property(s => s.DeclaredValue).HasPrecision(18, 2);
+            entity.Property(s => s.Currency).IsRequired().HasMaxLength(20);
+            entity.Property(s => s.PackageDescription).IsRequired().HasMaxLength(2000);
+            entity.Property(s => s.PackageWeight).HasPrecision(10, 2);
+            entity.Property(s => s.PackageDimensions).HasMaxLength(200);
+            entity.Property(s => s.SpecialHandlingNotes).HasMaxLength(2000);
+            entity.Property(s => s.PreferredService).IsRequired().HasMaxLength(100);
+            entity.Property(s => s.Status).IsRequired().HasMaxLength(50);
+            entity.Property(s => s.RiskLevel).HasMaxLength(50);
+            entity.Property(s => s.TrackingNumber).HasMaxLength(200);
+            entity.Property(s => s.CourierName).HasMaxLength(200);
+
+            entity.HasIndex(s => s.OrderId);
+            entity.HasIndex(s => s.SellerId);
+            entity.HasIndex(s => s.BuyerId);
+            entity.HasIndex(s => s.Status);
+
+            entity.HasOne(s => s.Seller)
+                .WithMany(u => u.SellerShipments)
+                .HasForeignKey(s => s.SellerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(s => s.Buyer)
+                .WithMany(u => u.BuyerShipments)
+                .HasForeignKey(s => s.BuyerId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+
+        // ============================================================
+        // SHIPPING PLAN (Component 3)
+        // ============================================================
+
+        modelBuilder.Entity<ShippingPlan>(entity =>
+        {
+            entity.ToTable("ShippingPlans");
+
+            entity.HasKey(p => p.Id);
+
+            entity.Property(p => p.ShipmentId).IsRequired();
+            entity.Property(p => p.RiskLevel).IsRequired().HasMaxLength(50);
+            entity.Property(p => p.RiskReasons).HasMaxLength(4000);
+            entity.Property(p => p.RecommendedServiceType).IsRequired().HasMaxLength(100);
+            entity.Property(p => p.RecommendedCoverageAmount).HasPrecision(18, 2);
+            entity.Property(p => p.HandlingRequirements).HasMaxLength(2000);
+            entity.Property(p => p.RequiredDocuments).HasMaxLength(2000);
+            entity.Property(p => p.Warnings).HasMaxLength(2000);
+            entity.Property(p => p.AdminNotes).HasMaxLength(2000);
+
+            entity.HasIndex(p => p.ShipmentId).IsUnique();
+            entity.HasIndex(p => p.IsApproved);
+
+            entity.HasOne(p => p.Shipment)
+                .WithOne(s => s.ShippingPlan)
+                .HasForeignKey<ShippingPlan>(p => p.ShipmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+
+        // ============================================================
+        // SHIPMENT TRACKING EVENT (Component 3)
+        // ============================================================
+
+        modelBuilder.Entity<ShipmentTrackingEvent>(entity =>
+        {
+            entity.ToTable("ShipmentTrackingEvents");
+
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.ShipmentId).IsRequired();
+            entity.Property(e => e.EventType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Location).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Description).IsRequired().HasMaxLength(2000);
+
+            entity.HasIndex(e => e.ShipmentId);
+            entity.HasIndex(e => e.EventType);
+            entity.HasIndex(e => e.OccurredAt);
+
+            entity.HasOne(e => e.Shipment)
+                .WithMany(s => s.TrackingEvents)
+                .HasForeignKey(e => e.ShipmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+
+        // ============================================================
+        // INSURANCE RECORD (Component 3)
+        // ============================================================
+
+        modelBuilder.Entity<InsuranceRecord>(entity =>
+        {
+            entity.ToTable("InsuranceRecords");
+
+            entity.HasKey(i => i.Id);
+
+            entity.Property(i => i.ShipmentId).IsRequired();
+            entity.Property(i => i.CoverageAmount).HasPrecision(18, 2);
+            entity.Property(i => i.Currency).IsRequired().HasMaxLength(20);
+            entity.Property(i => i.CoverageType).IsRequired().HasMaxLength(50);
+            entity.Property(i => i.PolicyNumber).HasMaxLength(200);
+            entity.Property(i => i.ProviderName).HasMaxLength(200);
+            entity.Property(i => i.Status).IsRequired().HasMaxLength(50);
+
+            entity.HasIndex(i => i.ShipmentId).IsUnique();
+            entity.HasIndex(i => i.Status);
+
+            entity.HasOne(i => i.Shipment)
+                .WithOne(s => s.InsuranceRecord)
+                .HasForeignKey<InsuranceRecord>(i => i.ShipmentId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

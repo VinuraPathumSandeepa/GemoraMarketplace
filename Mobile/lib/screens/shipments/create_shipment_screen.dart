@@ -13,7 +13,11 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
   final _formKey = GlobalKey<FormState>();
 
   // Form fields
-  final _orderIdController = TextEditingController();
+  String? _selectedOrderId;
+  List<dynamic> _eligibleOrders = [];
+  bool _loadingOrders = true;
+  String? _ordersError;
+  
   final _originController = TextEditingController(text: 'Colombo, Sri Lanka');
   final _destinationController = TextEditingController();
   final _packageDescriptionController = TextEditingController();
@@ -24,8 +28,44 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    _loadEligibleOrders();
+  }
+
+  Future<void> _loadEligibleOrders() async {
+    setState(() {
+      _loadingOrders = true;
+      _ordersError = null;
+    });
+
+    try {
+      final orders = await _shipmentService.getShipmentEligibleOrders();
+      
+      if (!mounted) return;
+      
+      setState(() {
+        _eligibleOrders = orders;
+        _loadingOrders = false;
+        
+        // Auto-select first order if available
+        if (orders.isNotEmpty) {
+          _selectedOrderId = orders[0]['id'].toString();
+          // Auto-populate destination from first order
+          _destinationController.text = '${orders[0]['shippingAddress']}, ${orders[0]['shippingRegion']}';
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _ordersError = e.toString().replaceFirst('Exception: ', '');
+        _loadingOrders = false;
+      });
+    }
+  }
+
+  @override
   void dispose() {
-    _orderIdController.dispose();
     _originController.dispose();
     _destinationController.dispose();
     _packageDescriptionController.dispose();
@@ -34,8 +74,48 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
     super.dispose();
   }
 
+  String _formatOrder(dynamic order) {
+    final id = order['id'].toString();
+    final shortId = id.length > 8 ? '${id.substring(0, 8)}...' : id;
+    final amount = order['totalAmount'];
+    final currency = order['currency'];
+    final region = order['shippingRegion'] ?? 'Unknown';
+    
+    return '$shortId - $currency$amount ($region)';
+  }
+
+  Future<void> _onOrderSelected(String? orderId) async {
+    if (orderId == null) return;
+    
+    setState(() {
+      _selectedOrderId = orderId;
+    });
+    
+    // Find selected order and auto-populate fields
+    final order = _eligibleOrders.firstWhere(
+      (o) => o['id'].toString() == orderId,
+      orElse: () => null,
+    );
+    
+    if (order != null && mounted) {
+      setState(() {
+        _destinationController.text = '${order['shippingAddress']}, ${order['shippingRegion']}';
+      });
+    }
+  }
+
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    if (_selectedOrderId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select an order'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _submitting = true;
@@ -44,7 +124,7 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
 
     try {
       await _shipmentService.createShipment(
-        orderId: _orderIdController.text.trim(),
+        orderId: _selectedOrderId!,
         origin: _originController.text.trim(),
         destination: _destinationController.text.trim(),
         packageDescription: _packageDescriptionController.text.trim(),
@@ -76,8 +156,17 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
       appBar: AppBar(
         title: const Text('Create Shipment'),
       ),
-      body: _submitting
-          ? const Center(child: CircularProgressIndicator())
+      body: _submitting || _loadingOrders
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text(_loadingOrders ? 'Loading eligible orders...' : 'Creating shipment...'),
+                ],
+              ),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Form(
@@ -108,21 +197,92 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                         ),
                       ),
 
-                    // Order ID
-                    TextFormField(
-                      controller: _orderIdController,
-                      decoration: const InputDecoration(
-                        labelText: 'Order ID',
-                        hintText: 'Enter order ID (e.g., from your orders)',
-                        prefixIcon: Icon(Icons.shopping_cart),
+                    // Orders Error (if failed to load)
+                    if (_ordersError != null && !_loadingOrders)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber, color: Colors.orange.shade700),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _ordersError!,
+                                style: TextStyle(color: Colors.orange.shade700),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.refresh),
+                              onPressed: _loadEligibleOrders,
+                              tooltip: 'Retry',
+                            ),
+                          ],
+                        ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Order ID is required';
-                        }
-                        return null;
-                      },
-                    ),
+
+                    // Order Dropdown
+                    if (!_loadingOrders && _eligibleOrders.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(Icons.info_outline, size: 48, color: Colors.grey.shade600),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No eligible paid orders are available for shipment.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            ElevatedButton.icon(
+                              onPressed: _loadEligibleOrders,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Refresh'),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (!_loadingOrders)
+                      DropdownButtonFormField<String>(
+                        value: _selectedOrderId,
+                        decoration: const InputDecoration(
+                          labelText: 'Select Order',
+                          hintText: 'Choose an order to ship',
+                          prefixIcon: Icon(Icons.shopping_cart),
+                        ),
+                        items: _eligibleOrders.map((order) {
+                          return DropdownMenuItem<String>(
+                            value: order['id'].toString(),
+                            child: Text(
+                              _formatOrder(order),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: _onOrderSelected,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please select an order';
+                          }
+                          return null;
+                        },
+                      ),
                     const SizedBox(height: 16),
 
                     // Origin
@@ -222,7 +382,7 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
 
                     // Submit Button
                     ElevatedButton.icon(
-                      onPressed: _submitForm,
+                      onPressed: _eligibleOrders.isEmpty ? null : _submitForm,
                       icon: const Icon(Icons.send),
                       label: const Text('Create Shipment'),
                       style: ElevatedButton.styleFrom(

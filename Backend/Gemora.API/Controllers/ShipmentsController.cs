@@ -51,7 +51,7 @@ public class ShipmentsController : ControllerBase
             var result = await _shipmentService.CreateShipmentAsync(userId, userRole, request);
             return CreatedAtAction(nameof(GetShipmentById), new { id = result.Id }, result);
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
             return Forbid();
         }
@@ -144,7 +144,7 @@ public class ShipmentsController : ControllerBase
             var result = await _shipmentService.UpdateShipmentStatusAsync(id, userId, userRole, request);
             return Ok(result);
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
             return Forbid();
         }
@@ -175,7 +175,7 @@ public class ShipmentsController : ControllerBase
     /// Get shipping plan
     /// </summary>
     [HttpGet("{id}/plan")]
-    public async Task<IActionResult> GetShippingPlan(Guid id)
+    public IActionResult GetShippingPlan(Guid id)
     {
         // Implementation would require adding a method to IShippingAgentService
         return StatusCode(501, new { message = "Get shipping plan endpoint not fully implemented yet." });
@@ -232,7 +232,7 @@ public class ShipmentsController : ControllerBase
             var result = await _shipmentService.AddTrackingEventAsync(id, userId, userRole, request);
             return CreatedAtAction(nameof(GetTrackingEvents), new { id }, result);
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
             return Forbid();
         }
@@ -280,7 +280,7 @@ public class ShipmentsController : ControllerBase
             var result = await _shipmentService.CreateInsuranceRecordAsync(id, userId, userRole, request);
             return CreatedAtAction(nameof(GetInsurance), new { id }, result);
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
             return Forbid();
         }

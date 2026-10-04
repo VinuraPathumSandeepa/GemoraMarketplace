@@ -123,6 +123,14 @@ function DashboardLayout({ children }) {
             >
               Create Listing
             </NavLink>
+            <NavLink
+              to="/seller/shipments"
+              className={({ isActive }) =>
+                isActive ? "gemora-nav-link active" : "gemora-nav-link"
+              }
+            >
+              My Shipments
+            </NavLink>
           </>
         );
 

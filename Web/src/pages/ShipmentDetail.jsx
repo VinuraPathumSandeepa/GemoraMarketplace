@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { shipmentApi } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import ShipmentHeader from "../components/ShipmentHeader";
 
 function ShipmentDetail() {
   const { id } = useParams();
@@ -11,11 +13,10 @@ function ShipmentDetail() {
   const [trackingEvents, setTrackingEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [userRole, setUserRole] = useState("");
+  const { user } = useAuth();
+  const userRole = user?.role;
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("gemora_user") || "{}");
-    setUserRole(user.role || "");
     loadShipmentData();
   }, [id]);
 
@@ -32,17 +33,8 @@ function ShipmentDetail() {
 
       // Try to get shipping plan and insurance (may not exist yet)
       try {
-        const planRes = await fetch(
-          `http://localhost:5198/api/Shipments/${id}/plan`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("gemora_token")}`,
-            },
-          }
-        );
-        if (planRes.ok) {
-          setShippingPlan(await planRes.json());
-        }
+        const planRes = await shipmentApi.getShippingPlan(id);
+        setShippingPlan(planRes.data);
       } catch (err) {
         console.log("No shipping plan yet");
       }
@@ -97,12 +89,12 @@ function ShipmentDetail() {
   };
 
   if (loading) {
-    return <div className="p-8 text-center">Loading shipment details...</div>;
+    return <div className="seller-shipping shipping-feedback" role="status">Loading shipment details...</div>;
   }
 
   if (!shipment) {
     return (
-      <div className="p-8 text-center">
+      <div className="seller-shipping shipping-feedback">
         <p className="text-red-500">{error || "Shipment not found"}</p>
         <button
           onClick={() => navigate("/seller/shipments")}
@@ -115,16 +107,13 @@ function ShipmentDetail() {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Shipment Details</h1>
-        <button
-          onClick={() => navigate(-1)}
-          className="text-blue-500 hover:text-blue-700"
-        >
-          ← Back
-        </button>
-      </div>
+    <div className="seller-shipping shipping-details">
+      <ShipmentHeader title="Shipment Details" eyebrow="YOUR GEMSTONE'S JOURNEY"
+        description="Review your delivery information, shipping recommendations, insurance, and tracking updates.">
+        <Link to={`/seller/shipments/${id}/overview`}>
+          Shipping Overview
+        </Link>
+      </ShipmentHeader>
 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">

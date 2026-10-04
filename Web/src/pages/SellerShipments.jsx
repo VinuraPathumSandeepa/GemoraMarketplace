@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { shipmentApi } from "../services/api";
+import ShipmentHeader from "../components/ShipmentHeader";
 
 function SellerShipments() {
   const [shipments, setShipments] = useState([]);
@@ -39,20 +40,21 @@ function SellerShipments() {
   };
 
   if (loading) {
-    return <div className="p-8 text-center">Loading shipments...</div>;
+    return <div className="seller-shipping shipping-feedback" role="status">Loading shipments...</div>;
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">My Shipments</h1>
+    <div className="seller-shipping">
+      <ShipmentHeader title="My Shipments" eyebrow="SECURE SHIPPING & INSURANCE"
+        description="Manage your gemstone deliveries, follow their journey, and keep every shipment protected."
+        backTo="/seller" backLabel="Seller Dashboard">
         <Link
           to="/seller/shipments/create"
           className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
         >
           Create New Shipment
         </Link>
-      </div>
+      </ShipmentHeader>
 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -61,15 +63,17 @@ function SellerShipments() {
       )}
 
       {shipments.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          No shipments found. Create your first shipment above.
+        <div className="shipping-card shipping-empty">
+          <span className="shipping-empty-symbol" aria-hidden="true">◇</span>
+          <h2>{error ? "Shipments unavailable" : "Your next journey starts here"}</h2>
+          <p>{error ? "Please try again in a moment." : "Create your first shipment to arrange a secure delivery for your gemstone."}</p>
         </div>
       ) : (
         <div className="grid gap-4">
           {shipments.map((shipment) => (
             <div
               key={shipment.id}
-              className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+              className="shipping-card shipping-list-card"
             >
               <div className="flex justify-between items-start">
                 <div>

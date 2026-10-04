@@ -94,6 +94,7 @@ export const shipmentApi = {
         api.put(`/Shipments/${id}/status`, statusData),
 
     // Generate shipping plan using AI
+    getShippingPlan: (id) => api.get(`/Shipments/${id}/plan`),
     generateShippingPlan: (id) => api.post(`/Shipments/${id}/plan`),
 
     // Approve shipping plan (Admin only)

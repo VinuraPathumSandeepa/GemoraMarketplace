@@ -139,4 +139,23 @@ class ShipmentService {
       throw Exception('Failed to load shipping plan: ${response.body}');
     }
   }
+
+  /// Get seller's eligible orders for shipment creation
+  Future<List<dynamic>> getShipmentEligibleOrders() async {
+    final headers = await _getHeaders();
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/orders/my-shipment-eligible'),
+      headers: headers,
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    } else if (response.statusCode == 401) {
+      throw Exception('Authentication required. Please login again.');
+    } else if (response.statusCode == 403) {
+      throw Exception('Only sellers can access eligible orders.');
+    } else {
+      throw Exception('Failed to load eligible orders: ${response.body}');
+    }
+  }
 }

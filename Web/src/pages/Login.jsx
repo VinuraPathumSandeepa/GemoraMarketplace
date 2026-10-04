@@ -12,11 +12,6 @@ function Login() {
   // STATE
   // ==========================================
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
   const { login } = useAuth();
 
   const navigate = useNavigate();

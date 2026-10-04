@@ -26,6 +26,11 @@ import Profile from "./pages/Profile";
 
 import BuyerDashboard from "./pages/BuyerDashboard";
 import SellerDashboard from "./pages/SellerDashboard";
+import SellerShipments from "./pages/SellerShipments";
+import CreateShipment from "./pages/CreateShipment";
+import ShipmentDetail from "./pages/ShipmentDetail";
+import ShipmentDetailPage from "./pages/ShipmentDetailPage";
+import DashboardLayout from "./layouts/DashboardLayout";
 import AdminDashboard from "./pages/AdminDashboard";
 import GemologistDashboard from "./pages/GemologistDashboard";
 import ExportOfficerDashboard from "./pages/ExportOfficerDashboard";
@@ -152,6 +157,27 @@ function App() {
           </RoleProtectedRoute>
         }
       />
+
+      <Route path="/seller/shipments" element={
+        <RoleProtectedRoute allowedRoles={["Seller"]}>
+          <DashboardLayout><SellerShipments /></DashboardLayout>
+        </RoleProtectedRoute>
+      } />
+      <Route path="/seller/shipments/create" element={
+        <RoleProtectedRoute allowedRoles={["Seller"]}>
+          <DashboardLayout><CreateShipment /></DashboardLayout>
+        </RoleProtectedRoute>
+      } />
+      <Route path="/seller/shipments/:id" element={
+        <RoleProtectedRoute allowedRoles={["Seller"]}>
+          <DashboardLayout><ShipmentDetail /></DashboardLayout>
+        </RoleProtectedRoute>
+      } />
+      <Route path="/seller/shipments/:id/overview" element={
+        <RoleProtectedRoute allowedRoles={["Seller"]}>
+          <ShipmentDetailPage />
+        </RoleProtectedRoute>
+      } />
 
       {/* ======================================================
           COMPONENT 1 — SELLER: MY GEM LISTINGS
