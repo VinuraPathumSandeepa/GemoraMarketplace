@@ -1,10 +1,18 @@
+
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
+
 import gemListingService from "../../services/gemVerification/gemListingService";
 
-const API_ORIGIN = "http://localhost:5198";
+import {
+  resolveApiAssetUrl,
+} from "../../services/api";
+
+// ============================================================
+// STATUS FILTERS
+// ============================================================
 
 const FILTERS = [
   { value: "All", label: "All" },
@@ -20,6 +28,10 @@ const FILTERS = [
   { value: "Approved", label: "Approved" },
   { value: "Rejected", label: "Rejected" },
 ];
+
+// ============================================================
+// FORMAT STATUS
+// ============================================================
 
 function formatStatus(status) {
   switch (status) {
@@ -41,10 +53,14 @@ function formatStatus(status) {
   }
 }
 
+// ============================================================
+// FORMAT PRICE
+// ============================================================
+
 function formatPrice(price) {
   const numericPrice = Number(price);
 
-  if (Number.isNaN(numericPrice)) {
+  if (!Number.isFinite(numericPrice)) {
     return "Price unavailable";
   }
 
@@ -55,20 +71,26 @@ function formatPrice(price) {
   }).format(numericPrice);
 }
 
+// ============================================================
+// IMAGE URL - LOCAL + RENDER
+//
+// Uses the shared API configuration instead of hardcoding
+// http://localhost:5198.
+//
+// Local:
+// http://localhost:5198/uploads/gem-images/filename.png
+//
+// Production:
+// https://gemora-api.onrender.com/uploads/gem-images/filename.png
+// ============================================================
+
 function getImageUrl(imageUrl) {
-  if (!imageUrl) {
-    return null;
-  }
-
-  if (
-    imageUrl.startsWith("http://") ||
-    imageUrl.startsWith("https://")
-  ) {
-    return imageUrl;
-  }
-
-  return `${API_ORIGIN}${imageUrl}`;
+  return resolveApiAssetUrl(imageUrl);
 }
+
+// ============================================================
+// GEM LISTING CARD
+// ============================================================
 
 function GemListingCard({
   listing,
@@ -76,21 +98,51 @@ function GemListingCard({
   onView,
   onEdit,
 }) {
-  const [imageFailed, setImageFailed] =
-    useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
 
-  const imageUrl =
-    getImageUrl(listing.primaryImageUrl);
+  // ----------------------------------------------------------
+  // RESOLVE IMAGE URL
+  // ----------------------------------------------------------
+
+  const imageUrl = getImageUrl(
+    listing.primaryImageUrl
+  );
+
+  // ----------------------------------------------------------
+  // RESET IMAGE ERROR WHEN IMAGE URL CHANGES
+  //
+  // Important for replacement images.
+  // ----------------------------------------------------------
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [imageUrl]);
+
+  // ----------------------------------------------------------
+  // LISTING PERMISSIONS
+  // ----------------------------------------------------------
 
   const canEdit =
     listing.status === "Draft" ||
     listing.status === "ChangesRequested";
 
-  const hasImage =
-    Boolean(listing.primaryImageUrl);
+  // These indicate stored evidence references.
+  // imageFailed separately tracks actual browser image errors.
 
-  const hasCertificate =
-    Boolean(listing.certificateUrl);
+  const hasImage = Boolean(
+    listing.primaryImageUrl
+  );
+
+  const hasCertificate = Boolean(
+    listing.certificateUrl
+  );
+
+  const displayImage =
+    Boolean(imageUrl) && !imageFailed;
+
+  // ==========================================================
+  // CARD UI
+  // ==========================================================
 
   return (
     <article
@@ -102,11 +154,15 @@ function GemListingCard({
         )}ms`,
       }}
     >
-      {/* IMAGE */}
+      {/* ======================================================
+          GEMSTONE IMAGE
+          ====================================================== */}
 
       <div className="seller-listing-image-area">
 
-        {imageUrl && !imageFailed ? (
+        {/* IMAGE WITH ERROR FALLBACK */}
+
+        {displayImage ? (
           <img
             src={imageUrl}
             alt={
@@ -114,26 +170,32 @@ function GemListingCard({
               "Gemstone listing"
             }
             className="seller-listing-image"
-            onError={() =>
-              setImageFailed(true)
-            }
+            loading="lazy"
+            onError={() => {
+              setImageFailed(true);
+            }}
           />
         ) : (
           <div className="seller-listing-image-placeholder">
+
             <div className="seller-listing-placeholder-gem">
               G
             </div>
 
             <span>
-              {hasImage
+              {imageFailed
+                ? "Photograph unavailable"
+                : hasImage
                 ? "Image unavailable"
                 : "No gemstone image"}
             </span>
+
           </div>
         )}
 
-
-        {/* STATUS OVER IMAGE */}
+        {/* ====================================================
+            STATUS BADGE
+            ==================================================== */}
 
         <span
           className={`seller-listing-status status-${listing.status}`}
@@ -143,8 +205,9 @@ function GemListingCard({
           {formatStatus(listing.status)}
         </span>
 
-
-        {/* CARAT BADGE */}
+        {/* ====================================================
+            CARAT WEIGHT BADGE
+            ==================================================== */}
 
         {listing.caratWeight && (
           <span className="seller-listing-carat">
@@ -154,22 +217,25 @@ function GemListingCard({
 
       </div>
 
-
-      {/* CONTENT */}
+      {/* ======================================================
+          LISTING CONTENT
+          ====================================================== */}
 
       <div className="seller-listing-card-content">
+
+        {/* ====================================================
+            HEADING
+            ==================================================== */}
 
         <div className="seller-listing-card-heading">
 
           <div>
             <span className="seller-listing-type">
-              {listing.gemType ||
-                "Gemstone"}
+              {listing.gemType || "Gemstone"}
             </span>
 
             <h2>
-              {listing.title ||
-                "Untitled Gemstone"}
+              {listing.title || "Untitled Gemstone"}
             </h2>
           </div>
 
@@ -179,8 +245,9 @@ function GemListingCard({
 
         </div>
 
-
-        {/* GEM CHARACTERISTICS */}
+        {/* ====================================================
+            GEM CHARACTERISTICS
+            ==================================================== */}
 
         <div className="seller-listing-characteristics">
 
@@ -210,8 +277,9 @@ function GemListingCard({
 
         </div>
 
-
-        {/* PRICE */}
+        {/* ====================================================
+            LISTING PRICE
+            ==================================================== */}
 
         <div className="seller-listing-price-row">
 
@@ -225,8 +293,9 @@ function GemListingCard({
 
         </div>
 
-
-        {/* EVIDENCE */}
+        {/* ====================================================
+            VERIFICATION EVIDENCE
+            ==================================================== */}
 
         <div className="seller-listing-evidence">
 
@@ -235,6 +304,8 @@ function GemListingCard({
           </span>
 
           <div className="seller-evidence-items">
+
+            {/* GEM IMAGE */}
 
             <span
               className={
@@ -250,6 +321,7 @@ function GemListingCard({
               Gem image
             </span>
 
+            {/* CERTIFICATE */}
 
             <span
               className={
@@ -269,31 +341,31 @@ function GemListingCard({
 
         </div>
 
-
-        {/* ACTIONS */}
+        {/* ====================================================
+            LISTING ACTIONS
+            ==================================================== */}
 
         <div className="seller-listing-actions">
+
+          {/* VIEW DETAILS */}
 
           <button
             type="button"
             className="seller-listing-view-button"
-            onClick={() =>
-              onView(listing.id)
-            }
+            onClick={() => onView(listing.id)}
           >
             View Details
 
             <span>→</span>
           </button>
 
+          {/* EDIT */}
 
           {canEdit && (
             <button
               type="button"
               className="seller-listing-edit-button"
-              onClick={() =>
-                onEdit(listing.id)
-              }
+              onClick={() => onEdit(listing.id)}
             >
               Edit
             </button>
@@ -302,35 +374,45 @@ function GemListingCard({
         </div>
 
       </div>
-
     </article>
   );
 }
 
+// ============================================================
+// MY GEM LISTINGS PAGE
+// ============================================================
 
 function MyGemListings() {
   const navigate = useNavigate();
 
-  const [listings, setListings] =
-    useState([]);
+  // ==========================================================
+  // PAGE STATES
+  // ==========================================================
 
-  const [loading, setLoading] =
-    useState(true);
+  const [listings, setListings] = useState([]);
 
-  const [error, setError] =
-    useState("");
+  const [loading, setLoading] = useState(true);
 
-  const [searchTerm, setSearchTerm] =
-    useState("");
+  const [error, setError] = useState("");
+
+  // ==========================================================
+  // FILTER STATES
+  // ==========================================================
+
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [statusFilter, setStatusFilter] =
     useState("All");
 
-  const [sortBy, setSortBy] =
-    useState("newest");
+  const [sortBy, setSortBy] = useState("newest");
 
+  // ==========================================================
+  // LOAD SELLER LISTINGS
+  // ==========================================================
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadListings = async () => {
       try {
         setLoading(true);
@@ -339,12 +421,18 @@ function MyGemListings() {
         const data =
           await gemListingService.getMyListings();
 
+        if (cancelled) {
+          return;
+        }
+
         setListings(
-          Array.isArray(data)
-            ? data
-            : []
+          Array.isArray(data) ? data : []
         );
       } catch (err) {
+        if (cancelled) {
+          return;
+        }
+
         console.error(
           "Failed to load gem listings:",
           err
@@ -354,17 +442,22 @@ function MyGemListings() {
           "We couldn't load your gemstone listings. Please try again."
         );
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     loadListings();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-
-  /* ========================================================
-     COUNTS
-     ======================================================== */
+  // ==========================================================
+  // STATUS COUNTS
+  // ==========================================================
 
   const counts = useMemo(() => {
     return {
@@ -375,19 +468,15 @@ function MyGemListings() {
           listing.status === "Draft"
       ).length,
 
-      PendingVerification:
-        listings.filter(
-          (listing) =>
-            listing.status ===
-            "PendingVerification"
-        ).length,
+      PendingVerification: listings.filter(
+        (listing) =>
+          listing.status === "PendingVerification"
+      ).length,
 
-      ChangesRequested:
-        listings.filter(
-          (listing) =>
-            listing.status ===
-            "ChangesRequested"
-        ).length,
+      ChangesRequested: listings.filter(
+        (listing) =>
+          listing.status === "ChangesRequested"
+      ).length,
 
       Approved: listings.filter(
         (listing) =>
@@ -401,80 +490,76 @@ function MyGemListings() {
     };
   }, [listings]);
 
-
-  /* ========================================================
-     SEARCH + FILTER + SORT
-     ======================================================== */
+  // ==========================================================
+  // SEARCH + FILTER + SORT
+  // ==========================================================
 
   const visibleListings = useMemo(() => {
-    const normalizedSearch =
-      searchTerm
-        .trim()
+    const normalizedSearch = searchTerm
+      .trim()
+      .toLowerCase();
+
+    // --------------------------------------------------------
+    // FILTER LISTINGS
+    // --------------------------------------------------------
+
+    const filtered = listings.filter((listing) => {
+      const matchesStatus =
+        statusFilter === "All" ||
+        listing.status === statusFilter;
+
+      const searchableText = [
+        listing.title,
+        listing.gemType,
+        listing.color,
+        listing.clarity,
+        listing.cut,
+        listing.certificateNumber,
+        listing.certificateAuthority,
+      ]
+        .filter(Boolean)
+        .join(" ")
         .toLowerCase();
 
-    const result = listings.filter(
-      (listing) => {
-        const matchesStatus =
-          statusFilter === "All" ||
-          listing.status ===
-            statusFilter;
+      const matchesSearch =
+        normalizedSearch === "" ||
+        searchableText.includes(normalizedSearch);
 
-        const searchableText = [
-          listing.title,
-          listing.gemType,
-          listing.color,
-          listing.clarity,
-          listing.cut,
-          listing.certificateNumber,
-          listing.certificateAuthority,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
+      return matchesStatus && matchesSearch;
+    });
 
-        const matchesSearch =
-          normalizedSearch === "" ||
-          searchableText.includes(
-            normalizedSearch
+    // --------------------------------------------------------
+    // SORT LISTINGS
+    // --------------------------------------------------------
+
+    return [...filtered].sort((first, second) => {
+      switch (sortBy) {
+        case "oldest":
+          return (
+            Number(first.id) -
+            Number(second.id)
           );
 
-        return (
-          matchesStatus &&
-          matchesSearch
-        );
+        case "price-high":
+          return (
+            Number(second.price || 0) -
+            Number(first.price || 0)
+          );
+
+        case "price-low":
+          return (
+            Number(first.price || 0) -
+            Number(second.price || 0)
+          );
+
+        case "newest":
+        default:
+          return (
+            Number(second.id) -
+            Number(first.id)
+          );
       }
-    );
-
-    return [...result].sort(
-      (first, second) => {
-        switch (sortBy) {
-          case "oldest":
-            return (
-              Number(first.id) -
-              Number(second.id)
-            );
-
-          case "price-high":
-            return (
-              Number(second.price || 0) -
-              Number(first.price || 0)
-            );
-
-          case "price-low":
-            return (
-              Number(first.price || 0) -
-              Number(second.price || 0)
-            );
-
-          case "newest":
-          default:
-            return (
-              Number(second.id) -
-              Number(first.id)
-            );
-        }
-      }
-    );
+    });
   }, [
     listings,
     searchTerm,
@@ -482,6 +567,9 @@ function MyGemListings() {
     sortBy,
   ]);
 
+  // ==========================================================
+  // RESET FILTERS
+  // ==========================================================
 
   const clearFilters = () => {
     setSearchTerm("");
@@ -489,15 +577,18 @@ function MyGemListings() {
     setSortBy("newest");
   };
 
+  // ==========================================================
+  // PAGE UI
+  // ==========================================================
 
   return (
     <DashboardLayout>
 
       <div className="seller-listings-page">
 
-        {/* ==================================================
+        {/* ====================================================
             PAGE HEADER
-            ================================================== */}
+            ==================================================== */}
 
         <section className="seller-listings-header">
 
@@ -509,20 +600,16 @@ function MyGemListings() {
             <h1>My Gem Listings</h1>
 
             <p>
-              Manage gemstone evidence,
-              verification progress, and
-              marketplace listing information.
+              Manage gemstone evidence, verification
+              progress, and marketplace listing information.
             </p>
           </div>
-
 
           <button
             type="button"
             className="seller-listings-create-button"
             onClick={() =>
-              navigate(
-                "/seller/listings/create"
-              )
+              navigate("/seller/listings/create")
             }
           >
             <span>+</span>
@@ -532,10 +619,9 @@ function MyGemListings() {
 
         </section>
 
-
-        {/* ==================================================
+        {/* ====================================================
             SUMMARY STRIP
-            ================================================== */}
+            ==================================================== */}
 
         <section className="seller-listings-summary">
 
@@ -543,9 +629,7 @@ function MyGemListings() {
             <span>Total</span>
 
             <strong>
-              {loading
-                ? "—"
-                : counts.All}
+              {loading ? "—" : counts.All}
             </strong>
           </div>
 
@@ -553,9 +637,7 @@ function MyGemListings() {
             <span>Draft</span>
 
             <strong>
-              {loading
-                ? "—"
-                : counts.Draft}
+              {loading ? "—" : counts.Draft}
             </strong>
           </div>
 
@@ -573,9 +655,7 @@ function MyGemListings() {
             <span>Approved</span>
 
             <strong>
-              {loading
-                ? "—"
-                : counts.Approved}
+              {loading ? "—" : counts.Approved}
             </strong>
           </div>
 
@@ -591,12 +671,13 @@ function MyGemListings() {
 
         </section>
 
-
-        {/* ==================================================
-            SEARCH + FILTERS
-            ================================================== */}
+        {/* ====================================================
+            SEARCH + SORT TOOLBAR
+            ==================================================== */}
 
         <section className="seller-listings-toolbar">
+
+          {/* SEARCH */}
 
           <div className="seller-listings-search">
 
@@ -608,9 +689,7 @@ function MyGemListings() {
               type="search"
               value={searchTerm}
               onChange={(event) =>
-                setSearchTerm(
-                  event.target.value
-                )
+                setSearchTerm(event.target.value)
               }
               placeholder="Search by title, gem type, color, certificate..."
               aria-label="Search gemstone listings"
@@ -620,9 +699,7 @@ function MyGemListings() {
               <button
                 type="button"
                 className="seller-search-clear"
-                onClick={() =>
-                  setSearchTerm("")
-                }
+                onClick={() => setSearchTerm("")}
                 aria-label="Clear search"
               >
                 ×
@@ -631,6 +708,7 @@ function MyGemListings() {
 
           </div>
 
+          {/* SORT */}
 
           <div className="seller-listings-sort">
 
@@ -642,9 +720,7 @@ function MyGemListings() {
               id="listing-sort"
               value={sortBy}
               onChange={(event) =>
-                setSortBy(
-                  event.target.value
-                )
+                setSortBy(event.target.value)
               }
             >
               <option value="newest">
@@ -668,10 +744,9 @@ function MyGemListings() {
 
         </section>
 
-
-        {/* ==================================================
-            STATUS FILTERS
-            ================================================== */}
+        {/* ====================================================
+            STATUS FILTER BUTTONS
+            ==================================================== */}
 
         <div className="seller-listing-filter-row">
 
@@ -680,15 +755,12 @@ function MyGemListings() {
               key={filter.value}
               type="button"
               className={
-                statusFilter ===
-                filter.value
+                statusFilter === filter.value
                   ? "seller-filter-button active"
                   : "seller-filter-button"
               }
               onClick={() =>
-                setStatusFilter(
-                  filter.value
-                )
+                setStatusFilter(filter.value)
               }
             >
               {filter.label}
@@ -701,10 +773,9 @@ function MyGemListings() {
 
         </div>
 
-
-        {/* ==================================================
+        {/* ====================================================
             RESULT INFORMATION
-            ================================================== */}
+            ==================================================== */}
 
         {!loading && !error && (
           <div className="seller-listings-result-info">
@@ -735,10 +806,9 @@ function MyGemListings() {
           </div>
         )}
 
-
-        {/* ==================================================
-            LOADING
-            ================================================== */}
+        {/* ====================================================
+            LOADING STATE
+            ==================================================== */}
 
         {loading && (
           <div className="seller-listings-loading">
@@ -750,17 +820,16 @@ function MyGemListings() {
             </h3>
 
             <p>
-              Retrieving listing and
-              verification information.
+              Retrieving listing and verification
+              information.
             </p>
 
           </div>
         )}
 
-
-        {/* ==================================================
-            ERROR
-            ================================================== */}
+        {/* ====================================================
+            ERROR STATE
+            ==================================================== */}
 
         {!loading && error && (
           <div className="seller-listings-error">
@@ -785,10 +854,9 @@ function MyGemListings() {
           </div>
         )}
 
-
-        {/* ==================================================
-            EMPTY ACCOUNT
-            ================================================== */}
+        {/* ====================================================
+            EMPTY ACCOUNT STATE
+            ==================================================== */}
 
         {!loading &&
           !error &&
@@ -804,23 +872,19 @@ function MyGemListings() {
               </span>
 
               <h2>
-                Create your first gemstone
-                listing
+                Create your first gemstone listing
               </h2>
 
               <p>
-                Add gemstone characteristics,
-                evidence and certificate
-                information to begin the
-                verification workflow.
+                Add gemstone characteristics, evidence
+                and certificate information to begin
+                the verification workflow.
               </p>
 
               <button
                 type="button"
                 onClick={() =>
-                  navigate(
-                    "/seller/listings/create"
-                  )
+                  navigate("/seller/listings/create")
                 }
               >
                 + Create Gem Listing
@@ -829,10 +893,9 @@ function MyGemListings() {
             </div>
           )}
 
-
-        {/* ==================================================
+        {/* ====================================================
             NO FILTER RESULTS
-            ================================================== */}
+            ==================================================== */}
 
         {!loading &&
           !error &&
@@ -847,9 +910,8 @@ function MyGemListings() {
               </h3>
 
               <p>
-                Try another search term or
-                choose a different verification
-                status.
+                Try another search term or choose a
+                different verification status.
               </p>
 
               <button
@@ -862,35 +924,32 @@ function MyGemListings() {
             </div>
           )}
 
-
-        {/* ==================================================
+        {/* ====================================================
             LISTING GRID
-            ================================================== */}
+            ==================================================== */}
 
         {!loading &&
           !error &&
           visibleListings.length > 0 && (
             <section className="seller-listing-grid">
 
-              {visibleListings.map(
-                (listing, index) => (
-                  <GemListingCard
-                    key={listing.id}
-                    listing={listing}
-                    index={index}
-                    onView={(id) =>
-                      navigate(
-                        `/seller/listings/${id}`
-                      )
-                    }
-                    onEdit={(id) =>
-                      navigate(
-                        `/seller/listings/${id}/edit`
-                      )
-                    }
-                  />
-                )
-              )}
+              {visibleListings.map((listing, index) => (
+                <GemListingCard
+                  key={listing.id}
+                  listing={listing}
+                  index={index}
+                  onView={(listingId) =>
+                    navigate(
+                      `/seller/listings/${listingId}`
+                    )
+                  }
+                  onEdit={(listingId) =>
+                    navigate(
+                      `/seller/listings/${listingId}/edit`
+                    )
+                  }
+                />
+              ))}
 
             </section>
           )}

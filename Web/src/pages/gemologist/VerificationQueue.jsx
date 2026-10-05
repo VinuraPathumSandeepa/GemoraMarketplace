@@ -1,332 +1,242 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
 
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
-import api from "../../services/api";
 
-
-// ============================================================
-// API / MEDIA HELPERS
-// ============================================================
-
-const apiUrl =
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:5198/api";
-
-const apiOrigin =
-  apiUrl.replace(/\/api\/?$/, "");
-
-
-function resolveMediaUrl(url) {
-  if (!url) {
-    return null;
-  }
-
-  if (
-    url.startsWith("http://") ||
-    url.startsWith("https://")
-  ) {
-    return url;
-  }
-
-  return `${apiOrigin}${
-    url.startsWith("/")
-      ? ""
-      : "/"
-  }${url}`;
-}
-
+import api, {
+  resolveApiAssetUrl,
+} from "../../services/api";
 
 // ============================================================
 // FORMAT HELPERS
 // ============================================================
 
-function formatMoney(
-  amount,
-  currency
-) {
-  const numericAmount =
-    Number(amount || 0);
+function formatMoney(amount, currency) {
+  const numericAmount = Number(amount || 0);
 
   try {
-    return new Intl.NumberFormat(
-      "en-US",
-      {
-        style: "currency",
-        currency:
-          currency || "LKR",
-        maximumFractionDigits: 2,
-      }
-    ).format(numericAmount);
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency || "LKR",
+      maximumFractionDigits: 2,
+    }).format(numericAmount);
   } catch {
-    return `${
-      currency || "LKR"
-    } ${numericAmount.toLocaleString()}`;
+    return `${currency || "LKR"} ${numericAmount.toLocaleString()}`;
   }
 }
 
-
 function formatDate(value) {
-  if (!value) {
-    return "Not available";
-  }
+  if (!value) return "Not available";
 
-  const date =
-    new Date(value);
+  const date = new Date(value);
 
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
+  if (Number.isNaN(date.getTime())) {
     return value;
   }
 
-  return date.toLocaleString(
-    undefined,
-    {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    }
-  );
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-
 function getAiLabel(aiStatus) {
-  if (!aiStatus) {
-    return "Not Started";
-  }
+  if (!aiStatus) return "Not Started";
 
   return aiStatus
     .replace(/([A-Z])/g, " $1")
     .trim();
 }
 
+// ============================================================
+// RESPONSIVE GEMSTONE IMAGE WITH ERROR FALLBACK
+// ============================================================
+
+function VerificationQueueImage({ url, alt }) {
+  const imageUrl = resolveApiAssetUrl(url);
+
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [imageUrl]);
+
+  if (!imageUrl || imageFailed) {
+    return (
+      <div className="verification-no-image">
+        <span>◆</span>
+
+        <small>
+          {imageFailed
+            ? "Image unavailable"
+            : "No gemstone image"}
+        </small>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={imageUrl}
+      alt={alt || "Gemstone evidence"}
+      loading="lazy"
+      onError={() => setImageFailed(true)}
+    />
+  );
+}
 
 // ============================================================
 // VERIFICATION QUEUE
 // ============================================================
 
 function VerificationQueue() {
-  // ==========================================================
-  // STATE
-  // ==========================================================
+  const [verifications, setVerifications] = useState([]);
 
-  const [
-    verifications,
-    setVerifications,
-  ] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const [
-    refreshing,
-    setRefreshing,
-  ] = useState(false);
+  const [error, setError] = useState("");
 
-  const [
-    error,
-    setError,
-  ] = useState("");
+  const [search, setSearch] = useState("");
 
-  const [
-    search,
-    setSearch,
-  ] = useState("");
-
-  const [
-    sort,
-    setSort,
-  ] = useState("newest");
-
+  const [sort, setSort] = useState("newest");
 
   // ==========================================================
   // LOAD PENDING VERIFICATIONS
   // ==========================================================
 
-  const loadPendingVerifications =
-    async ({
-      showRefresh = false,
-    } = {}) => {
-      if (showRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+  const loadPendingVerifications = async ({
+    showRefresh = false,
+  } = {}) => {
+    if (showRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
 
-      setError("");
+    setError("");
 
-      try {
-        const response =
-          await api.get(
-            "/GemVerifications/pending"
-          );
+    try {
+      const response = await api.get(
+        "/GemVerifications/pending"
+      );
 
-        const items =
-          Array.isArray(response.data)
-            ? response.data
-            : [];
+      const items = Array.isArray(response.data)
+        ? response.data
+        : [];
 
-        setVerifications(items);
+      setVerifications(items);
+    } catch (err) {
+      console.error(
+        "Failed to load pending verifications:",
+        err
+      );
 
-      } catch (error) {
-        console.error(
-          "Failed to load pending verifications:",
-          error
-        );
-
-        setError(
-          error.response?.data?.message ||
-            "Unable to load the verification queue. Please try again."
-        );
-
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    };
-
+      setError(
+        err.response?.data?.message ||
+          "Unable to load the verification queue. Please try again."
+      );
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     loadPendingVerifications();
   }, []);
 
-
   // ==========================================================
-  // FILTER / SORT
+  // FILTER AND SORT
   // ==========================================================
 
-  const filteredVerifications =
-    useMemo(() => {
-      const query =
-        search
-          .trim()
+  const filteredVerifications = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    let result = [...verifications];
+
+    if (query) {
+      result = result.filter((item) => {
+        const searchable = [
+          item.title,
+          item.gemType,
+          item.sellerName,
+          item.color,
+          item.clarity,
+          item.cut,
+          item.certificateNumber,
+          item.certificateAuthority,
+          item.listingStatus,
+          item.aiStatus,
+        ]
+          .filter(Boolean)
+          .join(" ")
           .toLowerCase();
 
-      let result =
-        [...verifications];
+        return searchable.includes(query);
+      });
+    }
 
-
-      if (query) {
-        result =
-          result.filter(
-            (item) => {
-              const searchable =
-                [
-                  item.title,
-                  item.gemType,
-                  item.sellerName,
-                  item.color,
-                  item.clarity,
-                  item.cut,
-                  item.certificateNumber,
-                  item.certificateAuthority,
-                  item.listingStatus,
-                  item.aiStatus,
-                ]
-                  .filter(Boolean)
-                  .join(" ")
-                  .toLowerCase();
-
-              return searchable.includes(
-                query
-              );
-            }
-          );
-      }
-
-
-      result.sort(
-        (a, b) => {
-          if (sort === "oldest") {
-            return (
-              new Date(a.createdAt) -
-              new Date(b.createdAt)
-            );
-          }
-
-          if (sort === "title") {
-            return (
-              a.title || ""
-            ).localeCompare(
-              b.title || ""
-            );
-          }
-
-          if (sort === "carat") {
-            return (
-              Number(b.caratWeight || 0) -
-              Number(a.caratWeight || 0)
-            );
-          }
-
-          return (
-            new Date(b.createdAt) -
-            new Date(a.createdAt)
-          );
-        }
-      );
-
-
-      return result;
-    }, [
-      verifications,
-      search,
-      sort,
-    ]);
-
-
-  // ==========================================================
-  // SUMMARY STATS
-  // ==========================================================
-
-  const totalPending =
-    verifications.length;
-
-  const withImage =
-    verifications.filter(
-      (item) =>
-        Boolean(
-          item.primaryImageUrl
-        )
-    ).length;
-
-  const withCertificate =
-    verifications.filter(
-      (item) =>
-        Boolean(
-          item.certificateUrl ||
-            item.certificateNumber
-        )
-    ).length;
-
-  const aiNotStarted =
-    verifications.filter(
-      (item) => {
-        const status =
-          (
-            item.aiStatus || ""
-          ).toLowerCase();
-
+    result.sort((a, b) => {
+      if (sort === "oldest") {
         return (
-          !status ||
-          status ===
-            "notstarted"
+          new Date(a.createdAt) -
+          new Date(b.createdAt)
         );
       }
-    ).length;
 
+      if (sort === "title") {
+        return (a.title || "").localeCompare(
+          b.title || ""
+        );
+      }
+
+      if (sort === "carat") {
+        return (
+          Number(b.caratWeight || 0) -
+          Number(a.caratWeight || 0)
+        );
+      }
+
+      return (
+        new Date(b.createdAt) -
+        new Date(a.createdAt)
+      );
+    });
+
+    return result;
+  }, [verifications, search, sort]);
+
+  // ==========================================================
+  // SUMMARY STATISTICS
+  // ==========================================================
+
+  const totalPending = verifications.length;
+
+  const withImage = verifications.filter(
+    (item) => Boolean(item.primaryImageUrl)
+  ).length;
+
+  const withCertificate = verifications.filter(
+    (item) =>
+      Boolean(
+        item.certificateUrl ||
+        item.certificateNumber
+      )
+  ).length;
+
+  const aiNotStarted = verifications.filter((item) => {
+    const status = (item.aiStatus || "")
+      .replace(/\s/g, "")
+      .toLowerCase();
+
+    return !status || status === "notstarted";
+  }).length;
 
   // ==========================================================
   // PAGE
@@ -334,36 +244,26 @@ function VerificationQueue() {
 
   return (
     <DashboardLayout title="Verification Queue">
-
       <div className="verification-queue-page">
 
-        {/* ====================================================
-            PAGE HEADER
-            ==================================================== */}
+        {/* PAGE HEADER */}
 
         <section className="verification-queue-header">
-
           <div>
-
             <span className="verification-eyebrow">
               COMPONENT 1 · GEMOLOGIST WORKSPACE
             </span>
 
             <h1>
-              Pending Gemstone
-              Verifications
+              Pending Gemstone Verifications
             </h1>
 
             <p>
-              Review seller evidence,
-              inspect gemstone details,
-              run AI-assisted analysis
-              and make the final human
-              verification decision.
+              Review seller evidence, inspect gemstone
+              details, run AI-assisted analysis and make
+              the final human verification decision.
             </p>
-
           </div>
-
 
           <button
             type="button"
@@ -379,135 +279,74 @@ function VerificationQueue() {
               ? "Refreshing..."
               : "↻ Refresh Queue"}
           </button>
-
         </section>
 
-
-        {/* ====================================================
-            HUMAN DECISION NOTICE
-            ==================================================== */}
+        {/* HUMAN DECISION NOTICE */}
 
         <section className="verification-human-notice">
-
           <div className="verification-human-icon">
             AI
           </div>
 
           <div>
             <strong>
-              AI assists the review.
-              The Gemologist makes the
-              final decision.
+              AI assists the review. The Gemologist makes
+              the final decision.
             </strong>
 
             <p>
-              AI findings are advisory
-              evidence only. Approval,
-              rejection or requested
-              changes remain under human
-              gemologist control.
+              AI findings are advisory evidence only.
+              Approval, rejection or requested changes
+              remain under human gemologist control.
             </p>
           </div>
-
         </section>
 
-
-        {/* ====================================================
-            SUMMARY
-            ==================================================== */}
+        {/* SUMMARY */}
 
         <section className="verification-stat-grid">
-
           <article>
-            <span>
-              Pending Reviews
-            </span>
-
-            <strong>
-              {totalPending}
-            </strong>
-
-            <small>
-              Awaiting gemologist action
-            </small>
+            <span>Pending Reviews</span>
+            <strong>{totalPending}</strong>
+            <small>Awaiting gemologist action</small>
           </article>
 
-
           <article>
-            <span>
-              Images Available
-            </span>
-
-            <strong>
-              {withImage}
-            </strong>
-
-            <small>
-              Listings with visual evidence
-            </small>
+            <span>Images Available</span>
+            <strong>{withImage}</strong>
+            <small>Listings with visual evidence</small>
           </article>
 
-
           <article>
-            <span>
-              Certificates
-            </span>
-
-            <strong>
-              {withCertificate}
-            </strong>
-
-            <small>
-              Certificate evidence supplied
-            </small>
+            <span>Certificates</span>
+            <strong>{withCertificate}</strong>
+            <small>Certificate evidence supplied</small>
           </article>
 
-
           <article>
-            <span>
-              AI Not Started
-            </span>
-
-            <strong>
-              {aiNotStarted}
-            </strong>
-
-            <small>
-              Ready for assisted analysis
-            </small>
+            <span>AI Not Started</span>
+            <strong>{aiNotStarted}</strong>
+            <small>Ready for assisted analysis</small>
           </article>
-
         </section>
 
-
-        {/* ====================================================
-            SEARCH / SORT
-            ==================================================== */}
+        {/* SEARCH AND SORT */}
 
         <section className="verification-toolbar">
-
           <div className="verification-search">
-
-            <span>
-              ⌕
-            </span>
+            <span>⌕</span>
 
             <input
               type="search"
               value={search}
               onChange={(event) =>
-                setSearch(
-                  event.target.value
-                )
+                setSearch(event.target.value)
               }
               placeholder="Search gem, seller, certificate..."
             />
-
           </div>
 
-
           <div className="verification-sort">
-
             <label htmlFor="verification-sort">
               Sort
             </label>
@@ -516,9 +355,7 @@ function VerificationQueue() {
               id="verification-sort"
               value={sort}
               onChange={(event) =>
-                setSort(
-                  event.target.value
-                )
+                setSort(event.target.value)
               }
             >
               <option value="newest">
@@ -537,15 +374,10 @@ function VerificationQueue() {
                 Highest carat
               </option>
             </select>
-
           </div>
-
         </section>
 
-
-        {/* ====================================================
-            ERROR
-            ==================================================== */}
+        {/* ERROR STATE */}
 
         {error && (
           <div className="verification-error">
@@ -553,39 +385,26 @@ function VerificationQueue() {
           </div>
         )}
 
-
-        {/* ====================================================
-            LOADING
-            ==================================================== */}
+        {/* LOADING STATE */}
 
         {loading && (
           <div className="verification-loading">
-
             <div className="verification-loader" />
 
-            <h3>
-              Loading verification queue
-            </h3>
+            <h3>Loading verification queue</h3>
 
             <p>
-              Retrieving pending gemstone
-              submissions...
+              Retrieving pending gemstone submissions...
             </p>
-
           </div>
         )}
 
-
-        {/* ====================================================
-            EMPTY QUEUE
-            ==================================================== */}
+        {/* EMPTY STATE */}
 
         {!loading &&
           !error &&
-          filteredVerifications.length ===
-            0 && (
+          filteredVerifications.length === 0 && (
             <div className="verification-empty">
-
               <div className="verification-empty-icon">
                 ✓
               </div>
@@ -601,288 +420,203 @@ function VerificationQueue() {
                   ? "Try another gemstone, seller, or certificate search."
                   : "There are currently no pending gemstone submissions requiring review."}
               </p>
-
             </div>
           )}
 
-
-        {/* ====================================================
-            VERIFICATION CARDS
-            ==================================================== */}
+        {/* VERIFICATION CARDS */}
 
         {!loading &&
           !error &&
-          filteredVerifications.length >
-            0 && (
+          filteredVerifications.length > 0 && (
             <section className="verification-card-grid">
 
-              {filteredVerifications.map(
-                (verification) => {
-                  const imageUrl =
-                    resolveMediaUrl(
-                      verification.primaryImageUrl
-                    );
+              {filteredVerifications.map((verification) => {
+                const certificateAvailable = Boolean(
+                  verification.certificateUrl ||
+                  verification.certificateNumber
+                );
 
-                  const certificateAvailable =
-                    Boolean(
-                      verification.certificateUrl ||
-                        verification.certificateNumber
-                    );
+                const imageAvailable = Boolean(
+                  verification.primaryImageUrl
+                );
 
-                  return (
-                    <article
-                      key={
-                        verification.verificationId
-                      }
-                      className="verification-queue-card"
-                    >
+                return (
+                  <article
+                    key={verification.verificationId}
+                    className="verification-queue-card"
+                  >
+                    {/* IMAGE */}
 
-                      {/* IMAGE */}
+                    <div className="verification-card-image">
+                      <VerificationQueueImage
+                        url={verification.primaryImageUrl}
+                        alt={verification.title}
+                      />
 
-                      <div className="verification-card-image">
+                      <span className="verification-status-chip">
+                        {verification.decision || "Pending"}
+                      </span>
+                    </div>
 
-                        {imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt={
-                              verification.title ||
-                              "Gemstone evidence"
-                            }
-                          />
-                        ) : (
-                          <div className="verification-no-image">
-                            <span>
-                              ◆
-                            </span>
+                    {/* BODY */}
 
-                            <small>
-                              No gemstone image
-                            </small>
-                          </div>
-                        )}
+                    <div className="verification-card-body">
 
+                      {/* TOP LINE */}
 
-                        <span className="verification-status-chip">
-                          {verification.decision ||
-                            "Pending"}
+                      <div className="verification-card-topline">
+                        <span>
+                          Verification #
+                          {verification.verificationId}
                         </span>
 
+                        <small>
+                          {formatDate(verification.createdAt)}
+                        </small>
                       </div>
 
+                      <h2>
+                        {verification.title ||
+                          "Untitled Gemstone"}
+                      </h2>
 
-                      {/* BODY */}
+                      <p className="verification-seller">
+                        Submitted by{" "}
+                        <strong>
+                          {verification.sellerName ||
+                            "Seller"}
+                        </strong>
+                      </p>
 
-                      <div className="verification-card-body">
+                      {/* GEM FACTS */}
 
-                        <div className="verification-card-topline">
-
-                          <span>
-                            Verification #
-                            {
-                              verification.verificationId
-                            }
-                          </span>
-
-                          <small>
-                            {formatDate(
-                              verification.createdAt
-                            )}
-                          </small>
-
-                        </div>
-
-
-                        <h2>
-                          {verification.title ||
-                            "Untitled Gemstone"}
-                        </h2>
-
-
-                        <p className="verification-seller">
-                          Submitted by{" "}
-                          <strong>
-                            {verification.sellerName ||
-                              "Seller"}
-                          </strong>
-                        </p>
-
-
-                        {/* BASIC GEM DATA */}
-
-                        <div className="verification-gem-facts">
-
-                          <div>
-                            <span>
-                              Gem Type
-                            </span>
-
-                            <strong>
-                              {verification.gemType ||
-                                "—"}
-                            </strong>
-                          </div>
-
-
-                          <div>
-                            <span>
-                              Carat
-                            </span>
-
-                            <strong>
-                              {verification.caratWeight
-                                ? `${verification.caratWeight} ct`
-                                : "—"}
-                            </strong>
-                          </div>
-
-
-                          <div>
-                            <span>
-                              Color
-                            </span>
-
-                            <strong>
-                              {verification.color ||
-                                "—"}
-                            </strong>
-                          </div>
-
-
-                          <div>
-                            <span>
-                              Cut
-                            </span>
-
-                            <strong>
-                              {verification.cut ||
-                                "—"}
-                            </strong>
-                          </div>
-
-                        </div>
-
-
-                        {/* PRICE */}
-
-                        <div className="verification-price-row">
-
-                          <span>
-                            Listed Value
-                          </span>
+                      <div className="verification-gem-facts">
+                        <div>
+                          <span>Gem Type</span>
 
                           <strong>
-                            {formatMoney(
-                              verification.price,
-                              verification.currency
-                            )}
+                            {verification.gemType || "—"}
                           </strong>
-
                         </div>
 
+                        <div>
+                          <span>Carat</span>
 
-                        {/* EVIDENCE */}
-
-                        <div className="verification-evidence-row">
-
-                          <span
-                            className={
-                              imageUrl
-                                ? "evidence-ready"
-                                : "evidence-missing"
-                            }
-                          >
-                            {imageUrl
-                              ? "✓ Image"
-                              : "○ No image"}
-                          </span>
-
-
-                          <span
-                            className={
-                              certificateAvailable
-                                ? "evidence-ready"
-                                : "evidence-missing"
-                            }
-                          >
-                            {certificateAvailable
-                              ? "✓ Certificate"
-                              : "○ No certificate"}
-                          </span>
-
+                          <strong>
+                            {verification.caratWeight
+                              ? `${verification.caratWeight} ct`
+                              : "—"}
+                          </strong>
                         </div>
 
+                        <div>
+                          <span>Color</span>
 
-                        {/* AI */}
+                          <strong>
+                            {verification.color || "—"}
+                          </strong>
+                        </div>
 
-                        <div className="verification-ai-row">
+                        <div>
+                          <span>Cut</span>
 
-                          <div>
-                            <span>
-                              AI Analysis
-                            </span>
+                          <strong>
+                            {verification.cut || "—"}
+                          </strong>
+                        </div>
+                      </div>
 
-                            <strong>
-                              {getAiLabel(
-                                verification.aiStatus
-                              )}
-                            </strong>
-                          </div>
+                      {/* PRICE */}
 
+                      <div className="verification-price-row">
+                        <span>Listed Value</span>
 
-                          {verification.aiConfidenceScore !=
-                            null && (
-                            <div>
-                              <span>
-                                Confidence
-                              </span>
-
-                              <strong>
-                                {Number(
-                                  verification.aiConfidenceScore
-                                ) <= 1
-                                  ? `${(
-                                      Number(
-                                        verification.aiConfidenceScore
-                                      ) * 100
-                                    ).toFixed(
-                                      0
-                                    )}%`
-                                  : `${Number(
-                                      verification.aiConfidenceScore
-                                    ).toFixed(
-                                      0
-                                    )}%`}
-                              </strong>
-                            </div>
+                        <strong>
+                          {formatMoney(
+                            verification.price,
+                            verification.currency
                           )}
-
-                        </div>
-
-
-                        {/* ACTION */}
-
-                        <Link
-                          to={`/gemologist/verifications/${verification.verificationId}`}
-                          className="verification-open-button"
-                        >
-                          Open Verification
-                          <span>
-                            →
-                          </span>
-                        </Link>
-
+                        </strong>
                       </div>
 
-                    </article>
-                  );
-                }
-              )}
+                      {/* EVIDENCE */}
+
+                      <div className="verification-evidence-row">
+                        <span
+                          className={
+                            imageAvailable
+                              ? "evidence-ready"
+                              : "evidence-missing"
+                          }
+                        >
+                          {imageAvailable
+                            ? "✓ Image"
+                            : "○ No image"}
+                        </span>
+
+                        <span
+                          className={
+                            certificateAvailable
+                              ? "evidence-ready"
+                              : "evidence-missing"
+                          }
+                        >
+                          {certificateAvailable
+                            ? "✓ Certificate"
+                            : "○ No certificate"}
+                        </span>
+                      </div>
+
+                      {/* AI ANALYSIS */}
+
+                      <div className="verification-ai-row">
+                        <div>
+                          <span>AI Analysis</span>
+
+                          <strong>
+                            {getAiLabel(verification.aiStatus)}
+                          </strong>
+                        </div>
+
+                        {verification.aiConfidenceScore != null && (
+                          <div>
+                            <span>Confidence</span>
+
+                            <strong>
+                              {Number(
+                                verification.aiConfidenceScore
+                              ) <= 1
+                                ? `${(
+                                    Number(
+                                      verification.aiConfidenceScore
+                                    ) * 100
+                                  ).toFixed(0)}%`
+                                : `${Number(
+                                    verification.aiConfidenceScore
+                                  ).toFixed(0)}%`}
+                            </strong>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* OPEN VERIFICATION */}
+
+                      <Link
+                        to={`/gemologist/verifications/${verification.verificationId}`}
+                        className="verification-open-button"
+                      >
+                        Open Verification
+                        <span>→</span>
+                      </Link>
+
+                    </div>
+                  </article>
+                );
+              })}
 
             </section>
           )}
-
       </div>
-
     </DashboardLayout>
   );
 }
