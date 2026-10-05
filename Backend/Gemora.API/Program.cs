@@ -3,6 +3,7 @@ using System.Text;
 using Gemora.API.Middleware;
 using Gemora.API.Services;
 
+using Gemora.Application.Configuration;
 using Gemora.Application.Interfaces;
 using Gemora.Application.Services;
 
@@ -24,14 +25,11 @@ using Microsoft.OpenApi.Models;
 // BUILD APPLICATION
 // ============================================================
 
-var builder =
-    WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
 
 // ============================================================
 // SUPABASE STORAGE CONFIGURATION
-//
-// Uses the modern sb_secret_ API key.
 //
 // Local:
 // .NET User Secrets
@@ -59,13 +57,12 @@ builder.Services.AddSingleton(
 // ============================================================
 // SUPABASE STORAGE HTTP CLIENT
 //
-// Used by:
-//
-// 1. Gemstone image uploads
-// 2. Profile image uploads
-// 3. Private certificate uploads
-// 4. AI gemstone image reading
-// 5. Private certificate signed URL generation
+// Used for:
+// - gemstone images
+// - profile images
+// - private certificates
+// - AI gemstone image reading
+// - certificate signed URLs
 // ============================================================
 
 builder.Services.AddHttpClient<
@@ -76,15 +73,7 @@ builder.Services.AddHttpClient<
 // ============================================================
 // WEB ROOT CONFIGURATION
 //
-// Local wwwroot support is retained for legacy files.
-//
-// Existing database records may still contain:
-//
-// /uploads/profiles/...
-// /uploads/gem-images/...
-// /uploads/certificates/...
-//
-// New certificate uploads no longer use local storage.
+// Legacy local files remain supported during migration.
 // ============================================================
 
 var webRootPath =
@@ -173,9 +162,9 @@ builder.Services.AddScoped<
 
 
 // ============================================================
-// PROFILE IMAGE STORAGE - SUPABASE
+// PROFILE IMAGE STORAGE
 //
-// ProfileImageStorageService uses SupabaseStorageClient.
+// Profile images use Supabase Storage.
 // ============================================================
 
 builder.Services.AddScoped<
@@ -185,7 +174,7 @@ builder.Services.AddScoped<
 
 
 // ============================================================
-// EMAIL VERIFICATION / OTP SERVICE
+// EMAIL VERIFICATION / OTP
 // ============================================================
 
 builder.Services.AddScoped<
@@ -204,6 +193,73 @@ builder.Services.AddScoped<
 
 
 // ============================================================
+// COMPONENT 4 - EXPORT COMPLIANCE FILE STORAGE
+//
+// IMPORTANT:
+//
+// This IFileStorageService belongs to:
+//
+// Gemora.Application.Interfaces
+//
+// It is different from the Gem Verification storage interface
+// under Gemora.Domain.Interfaces.
+// ============================================================
+
+builder.Services.AddSingleton<
+    Gemora.Application.Interfaces.IFileStorageService,
+    Gemora.API.Services.LocalFileStorageService
+>();
+
+
+// ============================================================
+// COMPONENT 4 - EXPORT COMPLIANCE SERVICES
+// ============================================================
+
+builder.Services.AddScoped<
+    IComplianceRulesService,
+    ComplianceRulesService
+>();
+
+builder.Services.AddScoped<
+    IExportComplianceService,
+    ExportComplianceService
+>();
+
+builder.Services.AddScoped<
+    IExportOfficerService,
+    ExportOfficerService
+>();
+
+builder.Services.AddScoped<
+    IComplianceAgentToolService,
+    ComplianceAgentToolService
+>();
+
+builder.Services.AddScoped<
+    IComplianceWorkflowService,
+    ComplianceWorkflowService
+>();
+
+
+// ============================================================
+// COMPONENT 4 - GEMINI COMPLIANCE AI
+// ============================================================
+
+builder.Services.Configure<
+    GeminiComplianceOptions
+>(
+    builder.Configuration.GetSection(
+        GeminiComplianceOptions.SectionName
+    )
+);
+
+builder.Services.AddHttpClient<
+    IComplianceAiClient,
+    GeminiComplianceAiClient
+>();
+
+
+// ============================================================
 // GEM LISTING MANAGEMENT
 // ============================================================
 
@@ -214,7 +270,7 @@ builder.Services.AddScoped<
 
 
 // ============================================================
-// HUMAN GEMOLOGIST VERIFICATION SERVICE
+// HUMAN GEMOLOGIST VERIFICATION
 // ============================================================
 
 builder.Services.AddScoped<
@@ -244,7 +300,7 @@ builder.Services.AddScoped<
 
 
 // ============================================================
-// GEMINI OPTIONS
+// GEM VERIFICATION GEMINI OPTIONS
 // ============================================================
 
 builder.Services.Configure<
@@ -257,7 +313,7 @@ builder.Services.Configure<
 
 
 // ============================================================
-// GEMINI MODEL HTTP CLIENT
+// GEM VERIFICATION GEMINI HTTP CLIENT
 // ============================================================
 
 builder.Services.AddHttpClient<
@@ -278,19 +334,24 @@ builder.Services.AddHttpClient<
 
 
 // ============================================================
-// LEGACY LOCAL FILE STORAGE
+// LEGACY GEM VERIFICATION LOCAL FILE STORAGE
 //
-// Still required for:
+// IMPORTANT:
 //
-// - deleting old local gemstone images;
-// - deleting old local certificates;
-// - supporting old /uploads/... database references.
+// This is the Infrastructure LocalFileStorageService.
 //
-// New gemstone images and certificates are stored in Supabase.
+// It is different from:
+//
+// Gemora.API.Services.LocalFileStorageService
+//
+// Used for:
+// - legacy gem images
+// - legacy certificates
+// - cleanup of old /uploads/... references
 // ============================================================
 
 builder.Services.AddScoped<
-    LocalFileStorageService
+    Gemora.Infrastructure.Services.LocalFileStorageService
 >(
     serviceProvider =>
     {
@@ -326,21 +387,16 @@ builder.Services.AddScoped<
             uploadDirectory
         );
 
-        return new LocalFileStorageService(
-            uploadDirectory
-        );
+        return new
+            Gemora.Infrastructure.Services.LocalFileStorageService(
+                uploadDirectory
+            );
     }
 );
 
 
 // ============================================================
 // LEGACY LOCAL GEM IMAGE READER
-//
-// Supports old database references:
-//
-// /uploads/gem-images/filename.jpg
-//
-// Required by HybridGemImageReader.
 // ============================================================
 
 builder.Services.AddScoped<
@@ -388,37 +444,36 @@ builder.Services.AddScoped<
 
 
 // ============================================================
-// ACTIVE HYBRID FILE STORAGE
+// GEM VERIFICATION HYBRID FILE STORAGE
 //
-// Gemstone images:
+// IMPORTANT:
 //
-//     SUPABASE
-//     -> public gem-images bucket
+// This IFileStorageService belongs to:
 //
-// Certificates:
+// Gemora.Domain.Interfaces
 //
-//     SUPABASE
-//     -> private gem-certificates bucket
+// New gemstone images:
+//   Supabase public gem-images bucket
 //
-// Legacy local /uploads/... references remain supported for
-// deletion and backward compatibility.
+// New certificates:
+//   Supabase private gem-certificates bucket
+//
+// Legacy /uploads/... references remain supported.
 // ============================================================
 
 builder.Services.AddScoped<
-    IFileStorageService,
+    Gemora.Domain.Interfaces.IFileStorageService,
     HybridFileStorageService
 >();
 
 
 // ============================================================
-// ACTIVE HYBRID GEM IMAGE READER
+// HYBRID GEM IMAGE READER
 //
 // Supports:
 //
-// 1. Existing local gemstone photographs.
-// 2. New Supabase gemstone photographs.
-//
-// Used by the Gemini Verification Agent.
+// 1. Legacy local gemstone images.
+// 2. New Supabase gemstone images.
 // ============================================================
 
 builder.Services.AddScoped<
@@ -435,9 +490,7 @@ builder.Services.AddControllers();
 
 
 // ============================================================
-// CORS CONFIGURATION
-//
-// React development and deployed Render frontend.
+// CORS
 // ============================================================
 
 builder.Services.AddCors(
@@ -470,7 +523,7 @@ builder.Services.AddCors(
 
 
 // ============================================================
-// JWT AUTHENTICATION CONFIGURATION
+// JWT AUTHENTICATION
 // ============================================================
 
 var jwtKey =
@@ -558,7 +611,7 @@ builder.Services.AddAuthorization();
 
 
 // ============================================================
-// SWAGGER CONFIGURATION
+// SWAGGER
 // ============================================================
 
 builder.Services.AddEndpointsApiExplorer();
@@ -640,7 +693,7 @@ builder.Services.AddSwaggerGen(
 
 
 // ============================================================
-// BUILD THE APPLICATION
+// BUILD APPLICATION
 // ============================================================
 
 var app =
@@ -668,25 +721,15 @@ app.UseSwaggerUI();
 // ============================================================
 // BLOCK DIRECT PUBLIC ACCESS TO LEGACY CERTIFICATES
 //
-// Historical certificates may still physically exist under:
+// Legacy certificates under:
 //
-// wwwroot/uploads/certificates/...
+// /uploads/certificates/...
 //
-// They must NOT be downloaded directly through StaticFiles.
-//
-// Authorized users must instead use:
+// must only be accessed through:
 //
 // /api/GemCertificates/listings/{id}/access
 //
-// The GemCertificatesController performs authorization and:
-//
-// - serves legacy local certificates securely;
-// - generates temporary signed URLs for private Supabase
-//   certificates.
-//
-// IMPORTANT:
-//
-// This middleware must remain BEFORE app.UseStaticFiles().
+// This middleware MUST remain before UseStaticFiles().
 // ============================================================
 
 app.Use(
@@ -725,12 +768,9 @@ app.Use(
 // ============================================================
 // STATIC FILES
 //
-// Retained only for public legacy assets such as:
+// Public legacy assets remain accessible.
 //
-// /uploads/profiles/...
-// /uploads/gem-images/...
-//
-// /uploads/certificates/... is blocked by the middleware above.
+// Direct legacy certificate access is blocked above.
 // ============================================================
 
 app.UseStaticFiles(
@@ -767,7 +807,7 @@ app.UseAuthorization();
 
 
 // ============================================================
-// MAP API CONTROLLERS
+// CONTROLLERS
 // ============================================================
 
 app.MapControllers();
@@ -775,14 +815,6 @@ app.MapControllers();
 
 // ============================================================
 // DATABASE SEEDING
-//
-// Preserves existing staff accounts:
-//
-// - Admin
-// - Gemologist
-// - Export Officer
-//
-// Passwords come from secure configuration.
 // ============================================================
 
 using (
