@@ -27,6 +27,25 @@ public class ApplicationDbContext : DbContext
 
 
     // ============================================================
+    // COMPONENT 2
+    // ============================================================
+
+    public DbSet<Order> Orders => Set<Order>();
+
+    public DbSet<OrderStatusHistory> OrderStatusHistories
+        => Set<OrderStatusHistory>();
+
+
+    public DbSet<PaymentTransaction> PaymentTransactions =>
+        Set<PaymentTransaction>();
+
+
+
+
+
+
+
+    // ============================================================
     // MODEL CONFIGURATION
     // ============================================================
 
@@ -145,6 +164,52 @@ public class ApplicationDbContext : DbContext
 
             entity.HasIndex(u => u.PhoneNumber);
         });
+
+
+
+
+
+        modelBuilder.Entity<PaymentTransaction>(entity =>
+{
+    entity.ToTable("PaymentTransactions");
+
+    entity.HasKey(p => p.Id);
+
+    entity.Property(p => p.Provider)
+        .HasMaxLength(50)
+        .IsRequired();
+
+    entity.Property(p => p.ExternalReference)
+        .HasMaxLength(100)
+        .IsRequired();
+
+    entity.Property(p => p.Amount)
+        .HasPrecision(18, 2)
+        .IsRequired();
+
+    entity.Property(p => p.Currency)
+        .HasMaxLength(10)
+        .IsRequired();
+
+    entity.Property(p => p.Status)
+        .HasMaxLength(50)
+        .IsRequired();
+
+    entity.HasIndex(p => p.ExternalReference)
+        .IsUnique();
+
+    entity.HasIndex(p => p.OrderId);
+
+    entity.HasOne(p => p.Order)
+        .WithMany()
+        .HasForeignKey(p => p.OrderId)
+        .OnDelete(DeleteBehavior.Restrict);
+});
+
+
+
+
+
 
 
         // ============================================================
@@ -266,6 +331,7 @@ public class ApplicationDbContext : DbContext
                 .HasMaxLength(50);
 
 
+
             // --------------------------------------------------------
             // AUDIT
             // --------------------------------------------------------
@@ -309,6 +375,9 @@ public class ApplicationDbContext : DbContext
                 .HasForeignKey(g => g.SellerId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
+
+
+
 
 
         // ============================================================
@@ -427,6 +496,181 @@ public class ApplicationDbContext : DbContext
             entity.HasOne(v => v.Gemologist)
                 .WithMany(u => u.GemVerifications)
                 .HasForeignKey(v => v.GemologistId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ============================================================
+        // COMPONENT 2 - ORDER STATUS HISTORY
+        // ============================================================
+
+        modelBuilder.Entity<OrderStatusHistory>(entity =>
+{
+    entity.ToTable("OrderStatusHistories");
+
+    entity.HasKey(h => h.Id);
+
+    entity.Property(h => h.OrderId)
+        .IsRequired();
+
+    entity.Property(h => h.ChangedByUserId);
+
+    entity.Property(h => h.PreviousStatus)
+        .HasMaxLength(50);
+
+    entity.Property(h => h.NewStatus)
+        .IsRequired()
+        .HasMaxLength(50);
+
+    entity.Property(h => h.Reason)
+        .HasMaxLength(500);
+
+    entity.Property(h => h.CreatedAt)
+        .IsRequired();
+
+    entity.HasIndex(h => h.OrderId);
+    entity.HasIndex(h => h.ChangedByUserId);
+    entity.HasIndex(h => h.CreatedAt);
+
+    entity.HasOne(h => h.Order)
+        .WithMany(o => o.StatusHistory)
+        .HasForeignKey(h => h.OrderId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+    entity.HasOne(h => h.ChangedByUser)
+        .WithMany(u => u.OrderStatusChanges)
+        .HasForeignKey(h => h.ChangedByUserId)
+        .OnDelete(DeleteBehavior.SetNull);
+});
+
+        // ============================================================
+        // COMPONENT 2 - ORDERS / TRANSACTIONS
+        // ============================================================
+
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.ToTable("Orders");
+
+            entity.HasKey(o => o.Id);
+
+
+            // --------------------------------------------------------
+            // ID
+            // PostgreSQL type = uuid
+            // --------------------------------------------------------
+
+            entity.Property(o => o.Id)
+                .IsRequired();
+
+
+            // --------------------------------------------------------
+            // RELATIONSHIP IDS
+            // --------------------------------------------------------
+
+            entity.Property(o => o.BuyerId)
+                .IsRequired();
+
+            entity.Property(o => o.SellerId)
+                .IsRequired();
+
+
+            // GemListingId is nullable in the existing database.
+            entity.Property(o => o.GemListingId);
+
+
+            // --------------------------------------------------------
+            // AMOUNT
+            // --------------------------------------------------------
+
+            entity.Property(o => o.TotalAmount)
+                .IsRequired()
+                .HasPrecision(18, 2);
+
+
+            entity.Property(o => o.Currency)
+                .IsRequired()
+                .HasMaxLength(20);
+
+
+            // --------------------------------------------------------
+            // STATUS
+            // --------------------------------------------------------
+
+            entity.Property(o => o.Status)
+                .IsRequired()
+                .HasMaxLength(50);
+
+
+            // --------------------------------------------------------
+            // SHIPPING
+            // --------------------------------------------------------
+
+            entity.Property(o => o.ShippingAddress)
+                .IsRequired()
+                .HasMaxLength(500);
+
+
+            entity.Property(o => o.ShippingRegion)
+                .IsRequired()
+                .HasMaxLength(100);
+
+
+            entity.Property(o => o.ShippingCountryCode)
+                .IsRequired()
+                .HasMaxLength(2);
+
+
+            // --------------------------------------------------------
+            // AUDIT
+            // --------------------------------------------------------
+
+            entity.Property(o => o.CreatedAt)
+                .IsRequired();
+
+            entity.Property(o => o.UpdatedAt);
+
+            entity.Property(o => o.PaidAt);
+
+
+            // --------------------------------------------------------
+            // INDEXES
+            // --------------------------------------------------------
+
+            entity.HasIndex(o => o.BuyerId);
+
+            entity.HasIndex(o => o.SellerId);
+
+            entity.HasIndex(o => o.GemListingId);
+
+            entity.HasIndex(o => o.Status);
+
+
+            // --------------------------------------------------------
+            // BUYER
+            // --------------------------------------------------------
+
+            entity.HasOne(o => o.Buyer)
+                .WithMany(u => u.BuyerOrders)
+                .HasForeignKey(o => o.BuyerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // --------------------------------------------------------
+            // SELLER
+            // --------------------------------------------------------
+
+            entity.HasOne(o => o.Seller)
+                .WithMany(u => u.SellerOrders)
+                .HasForeignKey(o => o.SellerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // --------------------------------------------------------
+            // GEM LISTING
+            // --------------------------------------------------------
+
+            entity.HasOne(o => o.GemListing)
+                .WithMany(g => g.Orders)
+                .HasForeignKey(o => o.GemListingId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 

@@ -1,8 +1,17 @@
 import {
-  Navigate,
-  Route,
   Routes,
+  Route,
+  Navigate,
 } from "react-router-dom";
+
+import BuyerDashboard from "./pages/buyer/BuyerDashboard";
+import BuyerLayout from "./layouts/BuyerLayout";
+import MarketplacePage from "./pages/buyer/MarketplacePage";
+import MyOrdersPage from "./pages/buyer/MyOrdersPage";
+import BuyerProfilePage from "./pages/buyer/BuyerProfilePage";
+import GemDetailsPage from "./pages/buyer/GemDetailsPage";
+import CheckoutPage from "./pages/buyer/CheckoutPage";
+import PaymentPage from "./pages/buyer/PaymentPage";
 
 // ============================================================
 // PUBLIC PAGES
@@ -20,11 +29,12 @@ import VerifyEmail from "./pages/VerifyEmail";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 
+
+
 // ============================================================
 // ROLE DASHBOARDS
 // ============================================================
 
-import BuyerDashboard from "./pages/BuyerDashboard";
 import SellerDashboard from "./pages/SellerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import GemologistDashboard from "./pages/GemologistDashboard";
@@ -45,6 +55,7 @@ import EditGemListing from "./pages/seller/EditGemListing";
 
 import VerificationQueue from "./pages/gemologist/VerificationQueue";
 import VerificationDetails from "./pages/gemologist/VerificationDetails";
+import TransactionDashboard from "./pages/admin/TransactionDashboard";
 
 // ============================================================
 // ROUTE PROTECTION
@@ -52,6 +63,8 @@ import VerificationDetails from "./pages/gemologist/VerificationDetails";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleProtectedRoute from "./routes/RoleProtectedRoute";
+
+
 
 function App() {
   return (
@@ -65,6 +78,74 @@ function App() {
         path="/"
         element={<Home />}
       />
+
+
+
+      {/* ======================================================
+    BUYER AREA
+    ====================================================== */}
+
+      <Route
+        path="/buyer"
+        element={
+          <RoleProtectedRoute allowedRoles={["Buyer"]}>
+            <BuyerLayout />
+          </RoleProtectedRoute>
+        }
+      >
+        <Route
+          index
+          element={
+            <Navigate
+              to="dashboard"
+              replace
+            />
+          }
+        />
+
+        <Route
+          path="dashboard"
+          element={<BuyerDashboard />}
+        />
+
+        <Route
+          path="marketplace"
+          element={<MarketplacePage />}
+        />
+
+        <Route
+          path="marketplace/:id"
+          element={<GemDetailsPage />}
+        />
+
+        <Route
+          path="checkout/:gemId"
+          element={<CheckoutPage />}
+        />
+
+        <Route
+          path="orders"
+          element={<MyOrdersPage />}
+        />
+
+        <Route
+          path="orders/:orderId/payment"
+          element={<PaymentPage />}
+        />
+
+        <Route
+          path="profile"
+          element={<BuyerProfilePage />}
+        />
+      </Route>
+
+
+
+
+
+
+
+
 
       {/* ======================================================
           PUBLIC AUTH ROUTES
@@ -129,13 +210,46 @@ function App() {
       <Route
         path="/buyer"
         element={
-          <RoleProtectedRoute
-            allowedRoles={["Buyer"]}
-          >
-            <BuyerDashboard />
+          <RoleProtectedRoute roles={["Buyer"]}>
+            <BuyerLayout />
           </RoleProtectedRoute>
         }
-      />
+      >
+        <Route
+          index
+          element={
+            <Navigate
+              to="dashboard"
+              replace
+            />
+          }
+        />
+
+        <Route
+          path="dashboard"
+          element={<BuyerDashboard />}
+        />
+
+        <Route
+          path="marketplace"
+          element={<MarketplacePage />}
+        />
+
+        <Route
+          path="marketplace/:id"
+          element={<GemDetailsPage />}
+        />
+
+        <Route
+          path="orders"
+          element={<MyOrdersPage />}
+        />
+
+        <Route
+          path="profile"
+          element={<BuyerProfilePage />}
+        />
+      </Route>
 
       {/* ======================================================
           SELLER DASHBOARD
@@ -332,6 +446,15 @@ function App() {
             allowedRoles={["Admin"]}
           >
             <AdminDashboard />
+          </RoleProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/transactions"
+        element={
+          <RoleProtectedRoute allowedRoles={["Admin"]}>
+            <TransactionDashboard />
           </RoleProtectedRoute>
         }
       />

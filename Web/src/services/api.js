@@ -1,7 +1,8 @@
 import axios from "axios";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
+  // "https://gemora-api.onrender.com/api";
+  // import.meta.env.VITE_API_URL ||
   "http://localhost:5198/api";
 
 export const API_ORIGIN =
@@ -24,11 +25,10 @@ export function resolveApiAssetUrl(
     return value;
   }
 
-  return `${API_ORIGIN}${
-    value.startsWith("/")
+  return `${API_ORIGIN}${value.startsWith("/")
       ? value
       : `/${value}`
-  }`;
+    }`;
 }
 
 const api = axios.create({

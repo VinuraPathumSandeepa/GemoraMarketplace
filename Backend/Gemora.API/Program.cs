@@ -62,6 +62,10 @@ builder.Services.AddScoped<
     ProfileImageStorageService>();
 
 
+
+
+
+
 // ------------------------------------------------------------
 // Email verification / OTP
 // ------------------------------------------------------------
@@ -85,6 +89,14 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<
     IGemListingService,
     GemListingService>();
+
+
+// ------------------------------------------------------------
+// Component 2 - Marketplace & Transactions
+// ------------------------------------------------------------
+builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IMarketplaceAgentService, MarketplaceAgentService>();
 
 
 // ------------------------------------------------------------
@@ -281,7 +293,11 @@ builder.Services.AddCors(
                 policy
                     .WithOrigins(
                         "http://localhost:5173",
-                        "https://localhost:5173")
+                        "https://localhost:5173",
+                        "https://localhost:5174",
+                        "http://localhost:5174",
+                        "http://localhost:5175",
+                        "https://localhost:5175")
                     .AllowAnyHeader()
                     .AllowAnyMethod();
             });
@@ -444,6 +460,7 @@ var app =
     builder.Build();
 
 
+
 // ============================================================
 // GLOBAL EXCEPTION HANDLER
 //
@@ -516,6 +533,12 @@ app.UseAuthorization();
 // ============================================================
 
 app.MapControllers();
+
+app.UseHttpsRedirection();
+ 
+ 
+app.UseStaticFiles();
+ 
 
 
 // ============================================================
