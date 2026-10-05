@@ -6709,3 +6709,11 @@ body {
 
 
 
+
+/* My Orders async action safety */
+.premium-pay-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  transform: none;
+  box-shadow: none;
+}

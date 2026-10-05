@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import {
+  completeOrder,
   getMyOrders,
   resolveMediaUrl,
 } from "../../services/buyerApi";
@@ -32,6 +33,8 @@ export default function MyOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [updatingOrderId, setUpdatingOrderId] = useState(null);
 
   const [search, setSearch] = useState("");
   const [activeStatus, setActiveStatus] = useState("All");
@@ -64,6 +67,32 @@ export default function MyOrdersPage() {
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+
+  async function handleCompleteOrder(order) {
+    if (!order?.id) return;
+
+    try {
+      setActionError("");
+      setUpdatingOrderId(order.id);
+
+      await completeOrder(
+        order.id,
+        "Buyer confirmed successful delivery."
+      );
+
+      await loadOrders();
+    } catch (err) {
+      console.error("Failed to complete order:", err);
+
+      setActionError(
+        err.message ||
+          "Unable to confirm delivery for this order."
+      );
+    } finally {
+      setUpdatingOrderId(null);
     }
   }
 
@@ -252,6 +281,15 @@ export default function MyOrdersPage() {
 
       </section>
 
+      {actionError && (
+        <section className="buyer-orders-error">
+          <div>
+            <strong>Unable to update order</strong>
+            <p>{actionError}</p>
+          </div>
+        </section>
+      )}
+
 
       {/* ================= ERROR ================= */}
 
@@ -330,6 +368,14 @@ export default function MyOrdersPage() {
                     )
                   }
 
+                  onComplete={() =>
+                    handleCompleteOrder(order)
+                  }
+
+                  completing={
+                    updatingOrderId === order.id
+                  }
+
                   formatPrice={
                     formatPrice
                   }
@@ -393,6 +439,8 @@ function PremiumOrderCard({
   expanded,
   toggleExpanded,
   onPay,
+  onComplete,
+  completing,
   formatPrice,
   formatDate,
 }) {
@@ -407,6 +455,9 @@ function PremiumOrderCard({
 
   const status =
     order.status || "Pending";
+
+  const fulfillmentStatus =
+    order.fulfillmentStatus || "Pending";
 
 
   return (
@@ -548,6 +599,7 @@ function PremiumOrderCard({
 
         <OrderProgress
           status={status}
+          fulfillmentStatus={fulfillmentStatus}
         />
 
 
@@ -555,6 +607,7 @@ function PremiumOrderCard({
 
         <CurrentOrderMessage
           status={status}
+          fulfillmentStatus={fulfillmentStatus}
         />
 
 
@@ -592,7 +645,7 @@ function PremiumOrderCard({
 
             {/* PAYMENT BUTTON ONLY WHEN CONFIRMED */}
 
-            {status === "Confirmed" && (
+            {["Confirmed", "AwaitingPayment"].includes(status) && (
               <button
                 type="button"
                 className="premium-pay-btn"
@@ -603,6 +656,21 @@ function PremiumOrderCard({
                 Pay Now
               </button>
             )}
+
+            {status === "Paid" &&
+              fulfillmentStatus === "Delivered" && (
+                <button
+                  type="button"
+                  className="premium-pay-btn"
+                  onClick={onComplete}
+                  disabled={completing}
+                >
+                  <PackageCheck size={18} />
+                  {completing
+                    ? "Confirming..."
+                    : "Confirm Delivery"}
+                </button>
+              )}
 
 
             <button
@@ -693,6 +761,36 @@ function PremiumOrderCard({
                 />
 
                 <ExpandedInfo
+                  label="Fulfillment"
+                  value={humanizeStatus(fulfillmentStatus)}
+                />
+
+                <ExpandedInfo
+                  label="Courier"
+                  value={
+                    order.shipment?.courierName ||
+                    "Not assigned"
+                  }
+                />
+
+                <ExpandedInfo
+                  label="Tracking Number"
+                  value={
+                    order.shipment?.trackingNumber ||
+                    "Not available"
+                  }
+                />
+
+                <ExpandedInfo
+                  label="Expected Delivery"
+                  value={
+                    order.shipment?.expectedDeliveryDate
+                      ? formatDate(order.shipment.expectedDeliveryDate)
+                      : "Not available"
+                  }
+                />
+
+                <ExpandedInfo
                   label="Last Updated"
                   value={formatDate(
                     order.updatedAt
@@ -702,7 +800,61 @@ function PremiumOrderCard({
               </div>
 
 
-              {/* REAL DATABASE HISTORY */}
+              {order.shipment?.trackingUrl && (
+                <div className="premium-history">
+                  <h4>Shipment Tracking</h4>
+                  <a
+                    href={order.shipment.trackingUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="secondary-order-action"
+                  >
+                    <Truck size={16} />
+                    Open courier tracking
+                    <ArrowRight size={16} />
+                  </a>
+                </div>
+              )}
+
+              {Array.isArray(order.fulfillmentHistory) &&
+                order.fulfillmentHistory.length > 0 && (
+                  <div className="premium-history">
+                    <h4>Delivery History</h4>
+
+                    {order.fulfillmentHistory.map(
+                      (history, historyIndex) => (
+                        <div
+                          className="premium-history-row"
+                          key={`${order.id}-fulfillment-${historyIndex}`}
+                        >
+                          <span className="premium-history-dot" />
+
+                          <div>
+                            <strong>
+                              {humanizeStatus(
+                                history.newStatus || "Updated"
+                              )}
+                            </strong>
+
+                            {history.note && (
+                              <p>{history.note}</p>
+                            )}
+
+                            <small>
+                              {formatDate(history.createdAt)}
+                              {history.changedByName
+                                ? ` · ${history.changedByName}`
+                                : ""}
+                            </small>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+
+
+              {/* REAL DATABASE ORDER STATUS HISTORY */}
 
               {Array.isArray(
                 order.statusHistory
@@ -828,7 +980,65 @@ function OrderStatus({
 
 function CurrentOrderMessage({
   status,
+  fulfillmentStatus,
 }) {
+
+  if (status === "Paid") {
+    const fulfillmentConfig = {
+      Pending: {
+        icon: <Clock3 size={18} />,
+        title: "Payment successful",
+        text: "Your payment is secure. The seller will prepare the gemstone next.",
+      },
+      Preparing: {
+        icon: <Gem size={18} />,
+        title: "Gemstone is being prepared",
+        text: "The seller is securely preparing your gemstone for dispatch.",
+      },
+      ReadyForDispatch: {
+        icon: <PackageCheck size={18} />,
+        title: "Ready for dispatch",
+        text: "Your gemstone package is ready for courier handover.",
+      },
+      HandedOverToCourier: {
+        icon: <Truck size={18} />,
+        title: "Handed over to courier",
+        text: "The delivery address is now locked and the courier has your package.",
+      },
+      InTransit: {
+        icon: <Truck size={18} />,
+        title: "Shipment in transit",
+        text: "Your gemstone is moving through the courier network.",
+      },
+      OutForDelivery: {
+        icon: <Truck size={18} />,
+        title: "Out for delivery",
+        text: "Your gemstone is on its final delivery route.",
+      },
+      Delivered: {
+        icon: <PackageCheck size={18} />,
+        title: "Delivered — confirmation required",
+        text: "Confirm delivery after you have safely received and checked the package.",
+      },
+    };
+
+    const fulfillmentItem =
+      fulfillmentConfig[fulfillmentStatus || "Pending"];
+
+    if (fulfillmentItem) {
+      return (
+        <div className="order-current-message paid">
+          <div className="order-current-icon">
+            {fulfillmentItem.icon}
+          </div>
+          <div>
+            <strong>{fulfillmentItem.title}</strong>
+            <p>{fulfillmentItem.text}</p>
+          </div>
+        </div>
+      );
+    }
+  }
 
   const config = {
 
@@ -852,6 +1062,17 @@ function CurrentOrderMessage({
 
       text:
         "The seller confirmed your gemstone. Complete payment to continue.",
+    },
+
+    AwaitingPayment: {
+      icon:
+        <CreditCard size={18} />,
+
+      title:
+        "Payment required",
+
+      text:
+        "Complete payment to continue with secure gemstone delivery.",
     },
 
     Paid: {
@@ -944,8 +1165,20 @@ function CurrentOrderMessage({
 
 
 
+
+function humanizeStatus(value) {
+  if (!value) return "Not available";
+
+  return value
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/_/g, " ")
+    .trim();
+}
+
+
 function OrderProgress({
   status,
+  fulfillmentStatus,
 }) {
 
   const failureStatuses = [
@@ -991,7 +1224,8 @@ function OrderProgress({
   const stageMap = {
     Pending: 1,
     Confirmed: 2,
-    Paid: 3,
+    AwaitingPayment: 2,
+    Paid: 4,
     Completed: 5,
   };
 
@@ -1077,8 +1311,8 @@ function OrderProgress({
           if (
             stage.label ===
               "Payment" &&
-            status ===
-              "Confirmed"
+            ["Confirmed", "AwaitingPayment"]
+              .includes(status)
           ) {
             subLabel =
               "Pending";
@@ -1095,13 +1329,13 @@ function OrderProgress({
           }
 
           if (
-            stage.label ===
-              "Delivery" &&
-            status ===
-              "Paid"
+            stage.label === "Delivery" &&
+            status === "Paid"
           ) {
             subLabel =
-              "Pending";
+              humanizeStatus(
+                fulfillmentStatus || "Pending"
+              );
           }
 
 

@@ -7,11 +7,18 @@ import {
   ArrowLeft,
   CheckCircle2,
   CreditCard,
+  FileText,
   Gem,
+  Landmark,
   LockKeyhole,
+  MapPin,
+  Pencil,
+  Phone,
   ReceiptText,
   ShieldCheck,
   Store,
+  UserRound,
+  X,
 } from "lucide-react";
 
 import {
@@ -23,7 +30,28 @@ import {
   getOrderById,
   payOrder,
   resolveMediaUrl,
+  updateOrderDeliveryDetails,
 } from "../../services/buyerApi";
+
+
+const EMPTY_DELIVERY = {
+  recipientName: "",
+  recipientPhone: "",
+  alternatePhone: "",
+
+  addressLine1: "",
+  addressLine2: "",
+
+  city: "",
+  district: "",
+  region: "",
+
+  postalCode: "",
+  countryCode: "LK",
+
+  nearestLandmark: "",
+  deliveryInstructions: "",
+};
 
 
 export default function PaymentPage() {
@@ -35,7 +63,7 @@ export default function PaymentPage() {
 
 
   // =========================================================
-  // STATE
+  // ORDER / PAYMENT STATE
   // =========================================================
 
   const [order, setOrder] =
@@ -69,7 +97,34 @@ export default function PaymentPage() {
 
 
   // =========================================================
-  // LOAD ACTUAL ORDER FROM BACKEND
+  // DELIVERY STATE
+  // =========================================================
+
+  const [
+    editingDelivery,
+    setEditingDelivery,
+  ] = useState(false);
+
+  const [
+    savingDelivery,
+    setSavingDelivery,
+  ] = useState(false);
+
+  const [
+    deliveryError,
+    setDeliveryError,
+  ] = useState("");
+
+  const [
+    deliveryForm,
+    setDeliveryForm,
+  ] = useState(
+    EMPTY_DELIVERY
+  );
+
+
+  // =========================================================
+  // LOAD ORDER
   // =========================================================
 
   useEffect(() => {
@@ -85,9 +140,17 @@ export default function PaymentPage() {
             orderId
           );
 
-        if (mounted) {
-          setOrder(data);
+        if (!mounted) {
+          return;
         }
+
+        setOrder(data);
+
+        setDeliveryForm(
+          buildDeliveryForm(
+            data
+          )
+        );
       } catch (err) {
         console.error(
           "Failed to load payment order:",
@@ -97,7 +160,7 @@ export default function PaymentPage() {
         if (mounted) {
           setError(
             err.message ||
-              "Unable to load payment details."
+            "Unable to load payment details."
           );
         }
       } finally {
@@ -118,11 +181,187 @@ export default function PaymentPage() {
 
 
   // =========================================================
+  // DELIVERY HANDLERS
+  // =========================================================
+
+  function updateDeliveryField(
+    event
+  ) {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setDeliveryForm(
+      (current) => ({
+        ...current,
+
+        [name]:
+          value,
+      })
+    );
+  }
+
+
+  function beginDeliveryEdit() {
+    setDeliveryError("");
+
+    setDeliveryForm(
+      buildDeliveryForm(
+        order
+      )
+    );
+
+    setEditingDelivery(true);
+  }
+
+
+  function cancelDeliveryEdit() {
+    setDeliveryError("");
+
+    setDeliveryForm(
+      buildDeliveryForm(
+        order
+      )
+    );
+
+    setEditingDelivery(false);
+  }
+
+
+  async function
+    handleSaveDelivery() {
+    const validationMessage =
+      validateDeliveryForm(
+        deliveryForm
+      );
+
+    if (validationMessage) {
+      setDeliveryError(
+        validationMessage
+      );
+
+      return;
+    }
+
+    try {
+      setSavingDelivery(true);
+      setDeliveryError("");
+
+      const updatedOrder =
+        await updateOrderDeliveryDetails(
+          order.id,
+          {
+            recipientName:
+              deliveryForm
+                .recipientName
+                .trim(),
+
+            recipientPhone:
+              deliveryForm
+                .recipientPhone
+                .trim(),
+
+            alternatePhone:
+              deliveryForm
+                .alternatePhone
+                .trim(),
+
+            addressLine1:
+              deliveryForm
+                .addressLine1
+                .trim(),
+
+            addressLine2:
+              deliveryForm
+                .addressLine2
+                .trim(),
+
+            city:
+              deliveryForm
+                .city
+                .trim(),
+
+            district:
+              deliveryForm
+                .district
+                .trim(),
+
+            region:
+              deliveryForm
+                .region
+                .trim(),
+
+            postalCode:
+              deliveryForm
+                .postalCode
+                .trim(),
+
+            countryCode:
+              deliveryForm
+                .countryCode
+                .trim()
+                .toUpperCase(),
+
+            nearestLandmark:
+              deliveryForm
+                .nearestLandmark
+                .trim(),
+
+            deliveryInstructions:
+              deliveryForm
+                .deliveryInstructions
+                .trim(),
+          }
+        );
+
+      setOrder(
+        updatedOrder
+      );
+
+      setDeliveryForm(
+        buildDeliveryForm(
+          updatedOrder
+        )
+      );
+
+      setEditingDelivery(false);
+    } catch (err) {
+      console.error(
+        "Unable to update delivery details:",
+        err
+      );
+
+      setDeliveryError(
+        err.message ||
+        "Unable to update delivery details."
+      );
+    } finally {
+      setSavingDelivery(false);
+    }
+  }
+
+
+  // =========================================================
   // PAYMENT
   // =========================================================
 
   async function handlePayment() {
     if (!order) {
+      return;
+    }
+
+    if (
+      !hasCompleteDeliveryDetails(
+        order.deliveryDetails
+      )
+    ) {
+      setPaymentError(
+        "Complete your delivery details before making payment."
+      );
+
+      setEditingDelivery(true);
+
       return;
     }
 
@@ -136,23 +375,6 @@ export default function PaymentPage() {
           "Card"
         );
 
-      /*
-       * Backend response:
-       *
-       * PaymentResponseDto
-       * {
-       *   id,
-       *   orderId,
-       *   provider,
-       *   externalReference,
-       *   amount,
-       *   currency,
-       *   status,
-       *   createdAt,
-       *   order
-       * }
-       */
-
       setPaymentSuccess(
         result
       );
@@ -160,6 +382,12 @@ export default function PaymentPage() {
       if (result?.order) {
         setOrder(
           result.order
+        );
+
+        setDeliveryForm(
+          buildDeliveryForm(
+            result.order
+          )
         );
       }
     } catch (err) {
@@ -170,7 +398,7 @@ export default function PaymentPage() {
 
       setPaymentError(
         err.message ||
-          "Payment could not be completed."
+        "Payment could not be completed."
       );
     } finally {
       setProcessing(false);
@@ -230,11 +458,9 @@ export default function PaymentPage() {
 
           <div className="payment-loading-content">
 
-            <div className="payment-loading-icon">
-              <CreditCard
-                size={28}
-              />
-            </div>
+            <CreditCard
+              size={28}
+            />
 
             <div>
               <h3>
@@ -242,7 +468,7 @@ export default function PaymentPage() {
               </h3>
 
               <p>
-                Loading your order details...
+                Loading order and delivery information...
               </p>
             </div>
 
@@ -256,7 +482,7 @@ export default function PaymentPage() {
 
 
   // =========================================================
-  // ERROR / ORDER NOT FOUND
+  // ERROR
   // =========================================================
 
   if (
@@ -297,32 +523,64 @@ export default function PaymentPage() {
 
 
   // =========================================================
-  // PAYMENT RULES
+  // DERIVED STATE
   // =========================================================
 
-  /*
-   * Buyer may pay only when:
-   *
-   * Confirmed
-   * OR
-   * AwaitingPayment
-   *
-   * Paid / Completed orders cannot
-   * be paid again.
-   */
+  const delivery =
+    order.deliveryDetails;
+
+  const deliveryLocked =
+    Boolean(
+      delivery?.isLocked
+    ) ||
+    [
+      "HandedOverToCourier",
+      "InTransit",
+      "OutForDelivery",
+      "Delivered",
+      "DeliveryFailed",
+      "Returned",
+    ].includes(
+      order.fulfillmentStatus
+    );
+
+
+  const canEditDelivery =
+    !deliveryLocked &&
+    ![
+      "Cancelled",
+      "Refunded",
+      "Failed",
+      "Completed",
+    ].includes(
+      order.status
+    );
+
+
+  const deliveryComplete =
+    hasCompleteDeliveryDetails(
+      delivery
+    );
+
 
   const canPay =
-    order.status ===
+    (
+      order.status ===
       "Confirmed" ||
-    order.status ===
-      "AwaitingPayment";
+
+      order.status ===
+      "AwaitingPayment"
+    ) &&
+    deliveryComplete;
 
 
   const alreadyPaid =
     order.status ===
-      "Paid" ||
+    "Paid" ||
+
     order.status ===
-      "Completed" ||
+    "Completed" ||
+
     Boolean(
       order.paidAt
     );
@@ -341,10 +599,6 @@ export default function PaymentPage() {
   return (
     <div className="buyer-payment-page">
 
-      {/* =====================================
-          BACK
-      ====================================== */}
-
       <button
         type="button"
         className="back-inline-btn"
@@ -362,9 +616,9 @@ export default function PaymentPage() {
       </button>
 
 
-      {/* =====================================
+      {/* =====================================================
           PAYMENT SUCCESS
-      ====================================== */}
+      ====================================================== */}
 
       {paymentSuccess && (
         <section className="glass-card payment-success-card">
@@ -384,9 +638,10 @@ export default function PaymentPage() {
           </h1>
 
           <p>
-            Your gemstone payment
-            has been successfully
-            recorded by Gemora.
+            Your payment was successfully
+            recorded. Your gemstone will
+            now move into fulfilment and
+            delivery preparation.
           </p>
 
           <div className="payment-success-details">
@@ -413,6 +668,7 @@ export default function PaymentPage() {
                 {formatPrice(
                   paymentSuccess
                     .amount,
+
                   paymentSuccess
                     .currency
                 )}
@@ -466,30 +722,40 @@ export default function PaymentPage() {
               type="button"
               className="hero-btn secondary"
               onClick={() =>
-                navigate(
-                  "/buyer/marketplace"
+                setPaymentSuccess(
+                  null
                 )
               }
             >
-              Continue Shopping
+              Review Delivery Details
             </button>
 
           </div>
+
+
+          <p className="payment-page-description">
+            You can still change the
+            delivery information until
+            the gemstone is handed over
+            to the courier.
+          </p>
 
         </section>
       )}
 
 
-      {/* =====================================
-          MAIN PAYMENT AREA
-      ====================================== */}
+      {/* =====================================================
+          MAIN PAGE
+      ====================================================== */}
 
       {!paymentSuccess && (
+
         <div className="payment-page-grid">
 
-          {/* =================================
-              LEFT SIDE
-          ================================== */}
+
+          {/* =================================================
+              LEFT
+          ================================================== */}
 
           <section className="glass-card payment-main-card">
 
@@ -502,9 +768,9 @@ export default function PaymentPage() {
             </h1>
 
             <p className="payment-page-description">
-              Review your verified gemstone
-              order before completing your
-              payment.
+              Review your verified gemstone,
+              delivery recipient and delivery
+              address before proceeding.
             </p>
 
 
@@ -523,10 +789,9 @@ export default function PaymentPage() {
 
                 <p>
                   Payment is available only
-                  after seller confirmation.
-                  Your order information and
-                  transaction history are
-                  securely recorded.
+                  after seller confirmation
+                  and completion of required
+                  delivery information.
                 </p>
               </div>
 
@@ -539,7 +804,7 @@ export default function PaymentPage() {
 
               <div>
                 <span>
-                  Current Order Status
+                  Order Status
                 </span>
 
                 <strong>
@@ -547,32 +812,549 @@ export default function PaymentPage() {
                 </strong>
               </div>
 
-              {canPay && (
-                <span className="payment-ready-chip">
-                  Ready for Payment
+              <div>
+                <span>
+                  Fulfilment
                 </span>
-              )}
 
-              {alreadyPaid && (
-                <span className="payment-paid-chip">
-                  Payment Completed
-                </span>
+                <strong>
+                  {order.fulfillmentStatus ||
+                    "Pending"}
+                </strong>
+              </div>
+
+            </div>
+
+
+            {/* =================================================
+                DELIVERY INFORMATION
+            ================================================== */}
+
+            <div className="payment-delivery-card">
+
+              <div className="payment-delivery-header">
+
+                <div>
+                  <span className="section-mini-title">
+                    DELIVERY INFORMATION
+                  </span>
+
+                  <h3>
+                    <MapPin size={19} />
+                    Recipient & Delivery Address
+                  </h3>
+                </div>
+
+
+                {canEditDelivery &&
+                  !editingDelivery && (
+
+                    <button
+                      type="button"
+                      className="delivery-edit-btn"
+                      onClick={
+                        beginDeliveryEdit
+                      }
+                    >
+                      <Pencil
+                        size={15}
+                      />
+
+                      {delivery
+                        ? "Edit Delivery Details"
+                        : "Add Delivery Details"}
+                    </button>
+                  )}
+
+              </div>
+
+
+              {/* ===============================================
+                  DELIVERY DISPLAY
+              ================================================ */}
+
+              {!editingDelivery &&
+                delivery && (
+
+                  <div className="delivery-address-display">
+
+                    <div className="delivery-detail-row">
+                      <UserRound
+                        size={17}
+                      />
+
+                      <div>
+                        <span>
+                          Recipient
+                        </span>
+
+                        <strong>
+                          {delivery.recipientName}
+                        </strong>
+                      </div>
+                    </div>
+
+
+                    <div className="delivery-detail-row">
+                      <Phone
+                        size={17}
+                      />
+
+                      <div>
+                        <span>
+                          Mobile
+                        </span>
+
+                        <strong>
+                          {delivery.recipientPhone}
+                        </strong>
+
+                        {delivery.alternatePhone && (
+                          <small>
+                            Alternate:{" "}
+                            {delivery.alternatePhone}
+                          </small>
+                        )}
+                      </div>
+                    </div>
+
+
+                    <div className="delivery-detail-row">
+                      <MapPin
+                        size={17}
+                      />
+
+                      <div>
+                        <span>
+                          Delivery Address
+                        </span>
+
+                        <strong>
+                          {delivery.addressLine1}
+                        </strong>
+
+                        {delivery.addressLine2 && (
+                          <p>
+                            {delivery.addressLine2}
+                          </p>
+                        )}
+
+                        <p>
+                          {delivery.city},{" "}
+                          {delivery.district}
+                        </p>
+
+                        <p>
+                          {delivery.region},{" "}
+                          {delivery.postalCode}
+                        </p>
+
+                        <p>
+                          {delivery.countryCode}
+                        </p>
+                      </div>
+                    </div>
+
+
+                    {delivery.nearestLandmark && (
+                      <div className="delivery-detail-row">
+
+                        <Landmark
+                          size={17}
+                        />
+
+                        <div>
+                          <span>
+                            Nearest Landmark
+                          </span>
+
+                          <strong>
+                            {delivery.nearestLandmark}
+                          </strong>
+                        </div>
+
+                      </div>
+                    )}
+
+
+                    {delivery.deliveryInstructions && (
+                      <div className="delivery-detail-row">
+
+                        <FileText
+                          size={17}
+                        />
+
+                        <div>
+                          <span>
+                            Delivery Instructions
+                          </span>
+
+                          <strong>
+                            {delivery.deliveryInstructions}
+                          </strong>
+                        </div>
+
+                      </div>
+                    )}
+
+
+                    <div className="delivery-signature-note">
+                      <ShieldCheck
+                        size={16}
+                      />
+
+                      Signature required
+                      when the gemstone
+                      is delivered.
+                    </div>
+
+
+                    {deliveryLocked && (
+                      <div className="delivery-lock-notice">
+
+                        <LockKeyhole
+                          size={18}
+                        />
+
+                        <div>
+                          <strong>
+                            Delivery details locked
+                          </strong>
+
+                          <p>
+                            This gemstone has
+                            already been handed
+                            over for delivery.
+                            The recipient and
+                            address can no longer
+                            be changed.
+                          </p>
+                        </div>
+
+                      </div>
+                    )}
+
+                  </div>
+                )}
+
+
+              {/* NO DELIVERY */}
+
+              {!editingDelivery &&
+                !delivery && (
+
+                  <div className="payment-warning">
+
+                    Complete the recipient
+                    and delivery information
+                    before payment.
+
+                  </div>
+                )}
+
+
+              {/* ===============================================
+                  DELIVERY EDIT FORM
+              ================================================ */}
+
+              {editingDelivery && (
+
+                <div className="delivery-address-form">
+
+                  <div className="delivery-form-section">
+
+                    <h4>
+                      Recipient Details
+                    </h4>
+
+
+                    <div className="delivery-form-row">
+
+                      <label>
+                        Recipient Full Name *
+
+                        <input
+                          name="recipientName"
+                          value={
+                            deliveryForm
+                              .recipientName
+                          }
+                          onChange={
+                            updateDeliveryField
+                          }
+                          placeholder="Full name of recipient"
+                        />
+                      </label>
+
+
+                      <label>
+                        Mobile Number *
+
+                        <input
+                          name="recipientPhone"
+                          value={
+                            deliveryForm
+                              .recipientPhone
+                          }
+                          onChange={
+                            updateDeliveryField
+                          }
+                          placeholder="+94 77 123 4567"
+                        />
+                      </label>
+
+                    </div>
+
+
+                    <label>
+                      Alternate Phone
+
+                      <input
+                        name="alternatePhone"
+                        value={
+                          deliveryForm
+                            .alternatePhone
+                        }
+                        onChange={
+                          updateDeliveryField
+                        }
+                        placeholder="Optional"
+                      />
+                    </label>
+
+                  </div>
+
+
+                  <div className="delivery-form-section">
+
+                    <h4>
+                      Delivery Address
+                    </h4>
+
+
+                    <label>
+                      Address Line 1 *
+
+                      <input
+                        name="addressLine1"
+                        value={
+                          deliveryForm
+                            .addressLine1
+                        }
+                        onChange={
+                          updateDeliveryField
+                        }
+                        placeholder="House / building number and street"
+                      />
+                    </label>
+
+
+                    <label>
+                      Address Line 2
+
+                      <input
+                        name="addressLine2"
+                        value={
+                          deliveryForm
+                            .addressLine2
+                        }
+                        onChange={
+                          updateDeliveryField
+                        }
+                        placeholder="Apartment, floor, unit, etc."
+                      />
+                    </label>
+
+
+                    <div className="delivery-form-row">
+
+                      <label>
+                        City / Town *
+
+                        <input
+                          name="city"
+                          value={
+                            deliveryForm.city
+                          }
+                          onChange={
+                            updateDeliveryField
+                          }
+                          placeholder="Colombo"
+                        />
+                      </label>
+
+
+                      <label>
+                        District *
+
+                        <input
+                          name="district"
+                          value={
+                            deliveryForm
+                              .district
+                          }
+                          onChange={
+                            updateDeliveryField
+                          }
+                          placeholder="Colombo"
+                        />
+                      </label>
+
+                    </div>
+
+
+                    <div className="delivery-form-row">
+
+                      <label>
+                        Province / Region *
+
+                        <input
+                          name="region"
+                          value={
+                            deliveryForm
+                              .region
+                          }
+                          onChange={
+                            updateDeliveryField
+                          }
+                          placeholder="Western"
+                        />
+                      </label>
+
+
+                      <label>
+                        Postal Code *
+
+                        <input
+                          name="postalCode"
+                          value={
+                            deliveryForm
+                              .postalCode
+                          }
+                          onChange={
+                            updateDeliveryField
+                          }
+                          placeholder="00300"
+                        />
+                      </label>
+
+                    </div>
+
+
+                    <label>
+                      Country Code *
+
+                      <input
+                        name="countryCode"
+                        maxLength={2}
+                        value={
+                          deliveryForm
+                            .countryCode
+                        }
+                        onChange={
+                          updateDeliveryField
+                        }
+                        placeholder="LK"
+                      />
+                    </label>
+
+
+                    <label>
+                      Nearest Landmark
+
+                      <input
+                        name="nearestLandmark"
+                        value={
+                          deliveryForm
+                            .nearestLandmark
+                        }
+                        onChange={
+                          updateDeliveryField
+                        }
+                        placeholder="Optional landmark"
+                      />
+                    </label>
+
+
+                    <label>
+                      Delivery Instructions
+
+                      <textarea
+                        name="deliveryInstructions"
+                        rows={3}
+                        value={
+                          deliveryForm
+                            .deliveryInstructions
+                        }
+                        onChange={
+                          updateDeliveryField
+                        }
+                        placeholder="Gate access, call before arrival, etc."
+                      />
+                    </label>
+
+                  </div>
+
+
+                  {deliveryError && (
+                    <div className="payment-warning">
+                      {deliveryError}
+                    </div>
+                  )}
+
+
+                  <div className="delivery-form-actions">
+
+                    <button
+                      type="button"
+                      className="hero-btn secondary"
+                      onClick={
+                        cancelDeliveryEdit
+                      }
+                    >
+                      <X size={16} />
+                      Cancel
+                    </button>
+
+
+                    <button
+                      type="button"
+                      className="premium-pay-btn"
+                      disabled={
+                        savingDelivery
+                      }
+                      onClick={
+                        handleSaveDelivery
+                      }
+                    >
+                      <CheckCircle2
+                        size={17}
+                      />
+
+                      {savingDelivery
+                        ? "Saving..."
+                        : "Save Delivery Details"}
+                    </button>
+
+                  </div>
+
+                </div>
               )}
 
             </div>
 
 
-            {/* PAYMENT METHOD */}
+            {/* =================================================
+                PAYMENT
+            ================================================== */}
 
             <div className="payment-method-panel">
 
               <div className="payment-method-heading">
 
-                <div className="payment-method-icon">
-                  <CreditCard
-                    size={23}
-                  />
-                </div>
+                <CreditCard
+                  size={23}
+                />
 
                 <div>
                   <h3>
@@ -588,32 +1370,6 @@ export default function PaymentPage() {
               </div>
 
 
-              {/* DEMO PAYMENT NOTICE */}
-
-              <div className="payment-demo-note">
-
-                <LockKeyhole
-                  size={18}
-                />
-
-                <div>
-                  <strong>
-                    Secure Payment
-                  </strong>
-
-                  <p>
-                    This payment creates
-                    a transaction record
-                    and updates your
-                    order to Paid.
-                  </p>
-                </div>
-
-              </div>
-
-
-              {/* PAYMENT ERROR */}
-
               {paymentError && (
                 <div className="payment-warning">
                   {paymentError}
@@ -621,22 +1377,30 @@ export default function PaymentPage() {
               )}
 
 
-              {/* NOT READY */}
-
-              {!canPay &&
+              {!deliveryComplete &&
                 !alreadyPaid && (
+
                   <div className="payment-warning">
-
-                    This order must be
-                    confirmed by the
-                    seller before payment
-                    can be made.
-
+                    Complete all required
+                    delivery information
+                    before making payment.
                   </div>
                 )}
 
 
-              {/* ALREADY PAID */}
+              {!canPay &&
+                !alreadyPaid &&
+                deliveryComplete && (
+
+                  <div className="payment-warning">
+
+                    This order must be
+                    confirmed by the seller
+                    before payment can be made.
+
+                  </div>
+                )}
+
 
               {alreadyPaid && (
                 <div className="payment-already-completed">
@@ -647,21 +1411,21 @@ export default function PaymentPage() {
 
                   <div>
                     <strong>
-                      Payment already completed
+                      Payment completed
                     </strong>
 
                     <p>
                       This order has already
-                      been paid and cannot
-                      be charged again.
+                      been paid. Delivery
+                      details can still be
+                      changed until courier
+                      handover.
                     </p>
                   </div>
 
                 </div>
               )}
 
-
-              {/* PAYMENT BUTTON */}
 
               {!alreadyPaid && (
                 <button
@@ -670,7 +1434,9 @@ export default function PaymentPage() {
 
                   disabled={
                     !canPay ||
-                    processing
+                    processing ||
+                    editingDelivery ||
+                    savingDelivery
                   }
 
                   onClick={
@@ -683,11 +1449,13 @@ export default function PaymentPage() {
 
                   {processing
                     ? "Processing Payment..."
+
                     : canPay
                       ? `Pay ${formatPrice(
                           order.agreedPrice,
                           order.currency
                         )}`
+
                       : `Order ${order.status}`}
                 </button>
               )}
@@ -716,9 +1484,9 @@ export default function PaymentPage() {
           </section>
 
 
-          {/* =================================
-              RIGHT ORDER SUMMARY
-          ================================== */}
+          {/* =================================================
+              ORDER SUMMARY
+          ================================================== */}
 
           <aside className="glass-card payment-order-summary">
 
@@ -727,15 +1495,15 @@ export default function PaymentPage() {
             </span>
 
 
-            {/* REAL DATABASE GEM IMAGE */}
-
             <div className="payment-gem-preview">
 
               {imageUrl &&
-              !imageFailed ? (
+                !imageFailed ? (
 
                 <img
-                  src={imageUrl}
+                  src={
+                    imageUrl
+                  }
                   alt={
                     order.gemTitle ||
                     "Gemstone"
@@ -770,13 +1538,12 @@ export default function PaymentPage() {
               VERIFIED GEMSTONE
             </span>
 
+
             <h2>
               {order.gemTitle ||
                 "Gemstone Purchase"}
             </h2>
 
-
-            {/* ORDER */}
 
             <div className="payment-summary-row">
 
@@ -792,8 +1559,6 @@ export default function PaymentPage() {
             </div>
 
 
-            {/* SELLER */}
-
             <div className="payment-summary-row">
 
               <span>
@@ -801,18 +1566,18 @@ export default function PaymentPage() {
               </span>
 
               <strong className="payment-seller-value">
+
                 <Store
                   size={15}
                 />
 
                 {order.sellerName ||
                   "Verified Seller"}
+
               </strong>
 
             </div>
 
-
-            {/* STATUS */}
 
             <div className="payment-summary-row">
 
@@ -827,24 +1592,35 @@ export default function PaymentPage() {
             </div>
 
 
-            {/* SHIPPING */}
-
             <div className="payment-summary-row">
 
               <span>
-                Delivery Region
+                Fulfilment
               </span>
 
               <strong>
-                {order.shippingRegion ||
-                  order.shippingCountryCode ||
-                  "Not provided"}
+                {order.fulfillmentStatus ||
+                  "Pending"}
               </strong>
 
             </div>
 
 
-            {/* ORDERED DATE */}
+            {delivery && (
+              <div className="payment-summary-row">
+
+                <span>
+                  Deliver To
+                </span>
+
+                <strong>
+                  {delivery.city},{" "}
+                  {delivery.region}
+                </strong>
+
+              </div>
+            )}
+
 
             <div className="payment-summary-row">
 
@@ -861,8 +1637,6 @@ export default function PaymentPage() {
             </div>
 
 
-            {/* TOTAL */}
-
             <div className="payment-total-row">
 
               <span>
@@ -878,8 +1652,6 @@ export default function PaymentPage() {
 
             </div>
 
-
-            {/* TRUST */}
 
             <div className="payment-summary-trust">
 
@@ -900,5 +1672,174 @@ export default function PaymentPage() {
       )}
 
     </div>
+  );
+}
+
+
+// =========================================================
+// DELIVERY FORM HELPERS
+// =========================================================
+
+function buildDeliveryForm(
+  order
+) {
+  const delivery =
+    order?.deliveryDetails;
+
+  if (delivery) {
+    return {
+      recipientName:
+        delivery.recipientName ||
+        "",
+
+      recipientPhone:
+        delivery.recipientPhone ||
+        "",
+
+      alternatePhone:
+        delivery.alternatePhone ||
+        "",
+
+      addressLine1:
+        delivery.addressLine1 ||
+        "",
+
+      addressLine2:
+        delivery.addressLine2 ||
+        "",
+
+      city:
+        delivery.city ||
+        "",
+
+      district:
+        delivery.district ||
+        "",
+
+      region:
+        delivery.region ||
+        "",
+
+      postalCode:
+        delivery.postalCode ||
+        "",
+
+      countryCode:
+        delivery.countryCode ||
+        "LK",
+
+      nearestLandmark:
+        delivery.nearestLandmark ||
+        "",
+
+      deliveryInstructions:
+        delivery.deliveryInstructions ||
+        "",
+    };
+  }
+
+
+  // ===========================================
+  // LEGACY ORDER FALLBACK
+  //
+  // Useful for orders created before
+  // structured delivery was introduced.
+  // ===========================================
+
+  return {
+    ...EMPTY_DELIVERY,
+
+    recipientName:
+      order?.buyerName ||
+      "",
+
+    addressLine1:
+      order?.shippingAddress ||
+      "",
+
+    region:
+      order?.shippingRegion ||
+      "",
+
+    countryCode:
+      order?.shippingCountryCode ||
+      "LK",
+  };
+}
+
+
+function validateDeliveryForm(
+  form
+) {
+  if (
+    !form.recipientName.trim()
+  ) {
+    return "Recipient full name is required.";
+  }
+
+  if (
+    !form.recipientPhone.trim()
+  ) {
+    return "Recipient mobile number is required.";
+  }
+
+  if (
+    !form.addressLine1.trim()
+  ) {
+    return "Address line 1 is required.";
+  }
+
+  if (
+    !form.city.trim()
+  ) {
+    return "City or town is required.";
+  }
+
+  if (
+    !form.district.trim()
+  ) {
+    return "District is required.";
+  }
+
+  if (
+    !form.region.trim()
+  ) {
+    return "Province or region is required.";
+  }
+
+  if (
+    !form.postalCode.trim()
+  ) {
+    return "Postal code is required.";
+  }
+
+  if (
+    form.countryCode
+      .trim()
+      .length !== 2
+  ) {
+    return "Enter a valid two-letter country code.";
+  }
+
+  return "";
+}
+
+
+function hasCompleteDeliveryDetails(
+  delivery
+) {
+  if (!delivery) {
+    return false;
+  }
+
+  return Boolean(
+    delivery.recipientName?.trim() &&
+    delivery.recipientPhone?.trim() &&
+    delivery.addressLine1?.trim() &&
+    delivery.city?.trim() &&
+    delivery.district?.trim() &&
+    delivery.region?.trim() &&
+    delivery.postalCode?.trim() &&
+    delivery.countryCode?.trim()
   );
 }

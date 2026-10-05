@@ -52,5 +52,27 @@ public class OrderResponseDto
     public DateTime? PaidAt { get; set; }
 
     public List<OrderStatusHistoryDto> StatusHistory
-        { get; set; } = [];
+    { get; set; } = [];
+
+
+    public string FulfillmentStatus { get; set; }
+        = string.Empty;
+
+    public DateTime? HandedOverAt { get; set; }
+
+    public DateTime? DeliveredAt { get; set; }
+
+    public OrderDeliveryDetailsDto? DeliveryDetails
+    { get; set; }
+
+
+    public ShipmentResponseDto? Shipment { get; set; }
+
+    public List<FulfillmentStatusHistoryDto>
+        FulfillmentHistory
+    { get; set; }
+            = new();
+
+
+
 }

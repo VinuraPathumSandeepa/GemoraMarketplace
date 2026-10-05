@@ -1,6 +1,7 @@
 using Gemora.Application.DTOs.Marketplace;
 using Gemora.Application.Interfaces;
 using Gemora.Domain.Constants;
+using Gemora.Domain.Entities;
 using Gemora.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,188 +17,254 @@ public class MarketplaceService : IMarketplaceService
         _context = context;
     }
 
+
     // =========================================================
     // MARKETPLACE SEARCH
     //
-    // IMPORTANT:
-    // Only Approved + currently available gemstones
-    // are shown in the public/buyer marketplace.
+    // ONLY:
+    // Approved + currently purchasable gemstones.
     //
-    // This allows buyers to:
-    // - discover new gemstones
-    // - search/filter listings
-    // - open gem details
-    // - place new orders
-    //
-    // Gems that already have an active order are not shown
-    // as available for another purchase.
+    // Any live order reserves the unique gemstone.
     // =========================================================
 
     public async Task<PagedMarketplaceResponseDto>
-        SearchAsync(MarketplaceSearchQueryDto query)
+        SearchAsync(
+            MarketplaceSearchQueryDto query)
     {
         var gems =
             AvailableListings();
 
-        // -----------------------------------------------------
-        // SEARCH
-        // -----------------------------------------------------
 
-        if (!string.IsNullOrWhiteSpace(
+        // =====================================================
+        // SEARCH
+        // =====================================================
+
+        if (
+            !string.IsNullOrWhiteSpace(
                 query.Search))
         {
             var search =
-                query.Search
-                    .Trim()
-                    .ToLower();
+                query.Search.Trim();
 
-            gems = gems.Where(g =>
-                g.Title
-                    .ToLower()
-                    .Contains(search) ||
+            var pattern =
+                $"%{search}%";
 
-                g.GemType
-                    .ToLower()
-                    .Contains(search) ||
+            gems =
+                gems.Where(g =>
+                    EF.Functions.ILike(
+                        g.Title,
+                        pattern) ||
 
-                g.Description
-                    .ToLower()
-                    .Contains(search));
+                    EF.Functions.ILike(
+                        g.GemType,
+                        pattern) ||
+
+                    EF.Functions.ILike(
+                        g.Description,
+                        pattern));
         }
 
-        // -----------------------------------------------------
-        // GEM TYPE
-        // -----------------------------------------------------
 
-        if (!string.IsNullOrWhiteSpace(
+        // =====================================================
+        // GEM TYPE
+        // =====================================================
+
+        if (
+            !string.IsNullOrWhiteSpace(
                 query.GemType))
         {
-            gems = gems.Where(g =>
-                g.GemType ==
-                query.GemType.Trim());
+            var gemType =
+                query.GemType.Trim();
+
+            gems =
+                gems.Where(g =>
+                    EF.Functions.ILike(
+                        g.GemType,
+                        gemType));
         }
 
-        // -----------------------------------------------------
-        // COLOR
-        // -----------------------------------------------------
 
-        if (!string.IsNullOrWhiteSpace(
+        // =====================================================
+        // COLOR
+        // =====================================================
+
+        if (
+            !string.IsNullOrWhiteSpace(
                 query.Color))
         {
-            gems = gems.Where(g =>
-                g.Color ==
-                query.Color.Trim());
+            var color =
+                query.Color.Trim();
+
+            gems =
+                gems.Where(g =>
+                    EF.Functions.ILike(
+                        g.Color,
+                        color));
         }
 
-        // -----------------------------------------------------
-        // CUT
-        // -----------------------------------------------------
 
-        if (!string.IsNullOrWhiteSpace(
+        // =====================================================
+        // CUT
+        // =====================================================
+
+        if (
+            !string.IsNullOrWhiteSpace(
                 query.Cut))
         {
-            gems = gems.Where(g =>
-                g.Cut ==
-                query.Cut.Trim());
+            var cut =
+                query.Cut.Trim();
+
+            gems =
+                gems.Where(g =>
+                    EF.Functions.ILike(
+                        g.Cut,
+                        cut));
         }
 
-        // -----------------------------------------------------
-        // COUNTRY
-        // -----------------------------------------------------
 
-        if (!string.IsNullOrWhiteSpace(
+        // =====================================================
+        // COUNTRY
+        // =====================================================
+
+        if (
+            !string.IsNullOrWhiteSpace(
                 query.CountryCode))
         {
-            gems = gems.Where(g =>
-                g.CountryCode ==
+            var country =
                 query.CountryCode
                     .Trim()
-                    .ToUpper());
+                    .ToUpperInvariant();
+
+            gems =
+                gems.Where(g =>
+                    g.CountryCode ==
+                    country);
         }
 
-        // -----------------------------------------------------
+
+        // =====================================================
         // PRICE RANGE
-        // -----------------------------------------------------
+        // =====================================================
 
-        if (query.MinPrice.HasValue)
+        if (
+            query.MinPrice.HasValue)
         {
-            gems = gems.Where(g =>
-                g.Price >=
-                query.MinPrice.Value);
+            gems =
+                gems.Where(g =>
+                    g.Price >=
+                    query.MinPrice.Value);
         }
 
-        if (query.MaxPrice.HasValue)
+        if (
+            query.MaxPrice.HasValue)
         {
-            gems = gems.Where(g =>
-                g.Price <=
-                query.MaxPrice.Value);
+            gems =
+                gems.Where(g =>
+                    g.Price <=
+                    query.MaxPrice.Value);
         }
 
-        // -----------------------------------------------------
+
+        // =====================================================
         // CARAT RANGE
-        // -----------------------------------------------------
+        // =====================================================
 
-        if (query.MinCarat.HasValue)
+        if (
+            query.MinCarat.HasValue)
         {
-            gems = gems.Where(g =>
-                g.CaratWeight >=
-                query.MinCarat.Value);
+            gems =
+                gems.Where(g =>
+                    g.CaratWeight >=
+                    query.MinCarat.Value);
         }
 
-        if (query.MaxCarat.HasValue)
+        if (
+            query.MaxCarat.HasValue)
         {
-            gems = gems.Where(g =>
-                g.CaratWeight <=
-                query.MaxCarat.Value);
+            gems =
+                gems.Where(g =>
+                    g.CaratWeight <=
+                    query.MaxCarat.Value);
         }
 
-        // -----------------------------------------------------
+
+        // =====================================================
         // SORTING
-        // -----------------------------------------------------
+        // =====================================================
 
         var sort =
             query.Sort?
                 .Trim()
                 .ToLowerInvariant()
-            ?? "";
+            ?? string.Empty;
 
-        gems = sort switch
-        {
-            "price_asc" =>
-                gems.OrderBy(
-                    g => g.Price),
+        gems =
+            sort switch
+            {
+                "price_asc" =>
+                    gems.OrderBy(g =>
+                        g.Price),
 
-            "price_desc" =>
-                gems.OrderByDescending(
-                    g => g.Price),
+                "price_desc" =>
+                    gems.OrderByDescending(g =>
+                        g.Price),
 
-            "carat_desc" =>
-                gems.OrderByDescending(
-                    g => g.CaratWeight),
+                "carat_asc" =>
+                    gems.OrderBy(g =>
+                        g.CaratWeight),
 
-            _ =>
-                gems.OrderByDescending(
-                    g => g.CreatedAt)
-        };
+                "carat_desc" =>
+                    gems.OrderByDescending(g =>
+                        g.CaratWeight),
 
-        // -----------------------------------------------------
-        // TOTAL COUNT
-        // -----------------------------------------------------
+                "oldest" =>
+                    gems.OrderBy(g =>
+                        g.CreatedAt),
+
+                _ =>
+                    gems.OrderByDescending(g =>
+                        g.CreatedAt)
+            };
+
+
+        // =====================================================
+        // SAFE PAGINATION
+        // =====================================================
+
+        var page =
+            query.Page < 1
+                ? 1
+                : query.Page;
+
+        var pageSize =
+            query.PageSize < 1
+                ? 12
+                : Math.Min(
+                    query.PageSize,
+                    50);
+
+
+        // =====================================================
+        // COUNT
+        // =====================================================
 
         var totalItems =
             await gems.CountAsync();
 
-        // -----------------------------------------------------
-        // PAGINATION + DTO
-        // -----------------------------------------------------
+
+        // =====================================================
+        // RESULTS
+        // =====================================================
 
         var items =
             await gems
                 .Skip(
-                    (query.Page - 1) *
-                    query.PageSize)
+                    (page - 1) *
+                    pageSize)
+
                 .Take(
-                    query.PageSize)
+                    pageSize)
+
                 .Select(g =>
                     new MarketplaceGemResponseDto
                     {
@@ -249,13 +316,13 @@ public class MarketplaceService : IMarketplaceService
                         SellerName =
                             g.Seller.FullName,
 
-                        // Search uses AvailableListings(),
-                        // therefore every returned listing
-                        // is currently purchasable.
+                        // AvailableListings()
+                        // guarantees this.
                         IsAvailable =
                             true
                     })
                 .ToListAsync();
+
 
         return new PagedMarketplaceResponseDto
         {
@@ -263,49 +330,45 @@ public class MarketplaceService : IMarketplaceService
                 items,
 
             Page =
-                query.Page,
+                page,
 
             PageSize =
-                query.PageSize,
+                pageSize,
 
             TotalItems =
                 totalItems,
 
             TotalPages =
-                (int)Math.Ceiling(
-                    totalItems /
-                    (double)query.PageSize)
+                totalItems == 0
+                    ? 0
+                    : (int)Math.Ceiling(
+                        totalItems /
+                        (double)pageSize)
         };
     }
 
 
     // =========================================================
-    // SINGLE GEM DETAILS
+    // SINGLE GEM
     //
-    // IMPORTANT DIFFERENCE FROM SearchAsync:
+    // IMPORTANT:
     //
-    // SearchAsync:
-    //   Approved + Available only
+    // Sold/reserved gems remain viewable via:
     //
-    // GetByIdAsync:
-    //   Any Approved gemstone can be viewed.
+    // My Orders → View Gem
     //
-    // This is necessary because:
-    //
-    // Buyer orders Gem #2
-    // -> Gem #2 becomes unavailable
-    // -> it disappears from marketplace browsing
-    // -> BUT buyer must still be able to open:
-    //    My Orders -> View Gem
-    //
+    // therefore GetById uses ApprovedListings(),
+    // not AvailableListings().
     // =========================================================
 
     public async Task<MarketplaceGemResponseDto?>
         GetByIdAsync(int id)
     {
         return await ApprovedListings()
+
             .Where(g =>
                 g.Id == id)
+
             .Select(g =>
                 new MarketplaceGemResponseDto
                 {
@@ -357,36 +420,35 @@ public class MarketplaceService : IMarketplaceService
                     SellerName =
                         g.Seller.FullName,
 
-                    // Here we calculate availability.
-                    //
-                    // The gem can still be viewed even
-                    // when IsAvailable == false.
+
                     IsAvailable =
                         !g.Orders.Any(o =>
-                            o.Status !=
-                                OrderStatuses.Cancelled &&
 
                             o.Status !=
-                                OrderStatuses.Refunded &&
+                                OrderStatuses
+                                    .Cancelled &&
 
                             o.Status !=
-                                OrderStatuses.Failed)
+                                OrderStatuses
+                                    .Refunded &&
+
+                            o.Status !=
+                                OrderStatuses
+                                    .Failed)
                 })
+
             .FirstOrDefaultAsync();
     }
 
 
     // =========================================================
-    // ALL APPROVED GEM LISTINGS
+    // APPROVED LISTINGS
     //
     // Used for:
-    // - single gem detail lookup
-    //
-    // Does NOT remove already ordered gems.
+    // - historical / order gem details
     // =========================================================
 
-    private IQueryable<
-        Gemora.Domain.Entities.GemListing>
+    private IQueryable<GemListing>
         ApprovedListings()
     {
         return _context
@@ -394,37 +456,43 @@ public class MarketplaceService : IMarketplaceService
             .AsNoTracking()
             .Where(g =>
                 g.Status ==
-                GemListingStatuses.Approved);
+                    GemListingStatuses
+                        .Approved);
     }
 
 
     // =========================================================
-    // APPROVED + CURRENTLY AVAILABLE LISTINGS
+    // AVAILABLE MARKETPLACE LISTINGS
     //
-    // Used for:
-    // - buyer marketplace
-    // - marketplace stats
+    // Unique gemstone rule:
     //
-    // An active order reserves/removes the gemstone
-    // from new purchase availability.
+    // Cancelled  → available again
+    // Refunded   → available again
+    // Failed     → available again
+    //
+    // Pending / Confirmed / Paid /
+    // Completed etc. → reserved/sold.
     // =========================================================
 
-    private IQueryable<
-        Gemora.Domain.Entities.GemListing>
+    private IQueryable<GemListing>
         AvailableListings()
     {
         return ApprovedListings()
+
             .Where(g =>
                 !g.Orders.Any(o =>
 
                     o.Status !=
-                        OrderStatuses.Cancelled &&
+                        OrderStatuses
+                            .Cancelled &&
 
                     o.Status !=
-                        OrderStatuses.Refunded &&
+                        OrderStatuses
+                            .Refunded &&
 
                     o.Status !=
-                        OrderStatuses.Failed
+                        OrderStatuses
+                            .Failed
                 ));
     }
 
@@ -436,10 +504,6 @@ public class MarketplaceService : IMarketplaceService
     public async Task<MarketplaceStatsDto>
         GetStatsAsync()
     {
-        // -----------------------------------------------------
-        // AUTHORIZED / VERIFIED SELLERS
-        // -----------------------------------------------------
-
         var authorizedSellers =
             await _context.Users
                 .AsNoTracking()
@@ -449,9 +513,6 @@ public class MarketplaceService : IMarketplaceService
 
                     u.IsEmailVerified);
 
-        // -----------------------------------------------------
-        // REGISTERED BUYERS
-        // -----------------------------------------------------
 
         var registeredBuyers =
             await _context.Users
@@ -460,24 +521,23 @@ public class MarketplaceService : IMarketplaceService
                     u.Role ==
                     UserRoles.Buyer);
 
-        // -----------------------------------------------------
-        // ACTIVE / AVAILABLE MARKETPLACE LISTINGS
-        // -----------------------------------------------------
 
         var activeGemListings =
             await AvailableListings()
                 .CountAsync();
 
-        // -----------------------------------------------------
-        // SUCCESSFUL TRANSACTIONS
-        // -----------------------------------------------------
 
         var successfulTransactions =
             await _context.Orders
                 .AsNoTracking()
                 .CountAsync(o =>
+
                     o.Status ==
-                    "Paid");
+                        OrderStatuses.Paid ||
+
+                    o.Status ==
+                        OrderStatuses.Completed);
+
 
         return new MarketplaceStatsDto
         {

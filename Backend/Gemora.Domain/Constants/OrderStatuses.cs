@@ -3,6 +3,8 @@ namespace Gemora.Domain.Constants;
 public static class OrderStatuses
 {
     public const string Pending = "Pending";
+
+    public const string Completed = "Completed";
     public const string Confirmed = "Confirmed";
     public const string AwaitingPayment = "AwaitingPayment";
     public const string Paid = "Paid";

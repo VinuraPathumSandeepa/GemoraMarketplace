@@ -26,9 +26,22 @@ export default function CheckoutPage() {
   const [error, setError] = useState("");
 
   const [form, setForm] = useState({
-    shippingAddress: "",
-    shippingRegion: "",
-    shippingCountryCode: "LK",
+    recipientName: "",
+    recipientPhone: "",
+    alternatePhone: "",
+
+    addressLine1: "",
+    addressLine2: "",
+
+    city: "",
+    district: "",
+    region: "",
+
+    postalCode: "",
+    countryCode: "LK",
+
+    nearestLandmark: "",
+    deliveryInstructions: "",
   });
 
   useEffect(() => {
@@ -50,7 +63,7 @@ export default function CheckoutPage() {
       } catch (err) {
         setError(
           err.message ||
-            "Unable to load gemstone."
+          "Unable to load gemstone."
         );
       } finally {
         setLoading(false);
@@ -59,6 +72,37 @@ export default function CheckoutPage() {
 
     loadGem();
   }, [gemId]);
+
+
+
+
+  const requiredFields = [
+    "recipientName",
+    "recipientPhone",
+    "addressLine1",
+    "city",
+    "district",
+    "region",
+    "postalCode",
+    "countryCode",
+  ];
+
+  const hasMissingField =
+    requiredFields.some(
+      (field) =>
+        !form[field]?.trim()
+    );
+
+  if (hasMissingField) {
+    setError(
+      "Please complete all required delivery information."
+    );
+
+    return;
+  }
+
+
+
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -87,17 +131,51 @@ export default function CheckoutPage() {
       setSubmitting(true);
       setError("");
 
-      const order = await createOrder({
-        gemListingId: Number(gemId),
-        shippingAddress:
-          form.shippingAddress.trim(),
-        shippingRegion:
-          form.shippingRegion.trim(),
-        shippingCountryCode:
-          form.shippingCountryCode
-            .trim()
-            .toUpperCase(),
-      });
+      const order =
+        await createOrder({
+          gemListingId:
+            Number(gemId),
+
+          deliveryDetails: {
+            recipientName:
+              form.recipientName.trim(),
+
+            recipientPhone:
+              form.recipientPhone.trim(),
+
+            alternatePhone:
+              form.alternatePhone.trim(),
+
+            addressLine1:
+              form.addressLine1.trim(),
+
+            addressLine2:
+              form.addressLine2.trim(),
+
+            city:
+              form.city.trim(),
+
+            district:
+              form.district.trim(),
+
+            region:
+              form.region.trim(),
+
+            postalCode:
+              form.postalCode.trim(),
+
+            countryCode:
+              form.countryCode
+                .trim()
+                .toUpperCase(),
+
+            nearestLandmark:
+              form.nearestLandmark.trim(),
+
+            deliveryInstructions:
+              form.deliveryInstructions.trim(),
+          },
+        });
 
       navigate("/buyer/orders", {
         replace: true,
@@ -109,7 +187,7 @@ export default function CheckoutPage() {
     } catch (err) {
       setError(
         err.message ||
-          "Unable to create your order."
+        "Unable to create your order."
       );
     } finally {
       setSubmitting(false);

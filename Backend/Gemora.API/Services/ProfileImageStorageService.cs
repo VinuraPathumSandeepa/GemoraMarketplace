@@ -251,6 +251,53 @@ public class ProfileImageStorageService :
 
 
     // ============================================================
+    // CHECK PROFILE IMAGE EXISTS
+    // ============================================================
+
+    public Task<bool> ExistsAsync(
+        string? profileImageUrl,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(profileImageUrl))
+        {
+            return Task.FromResult(false);
+        }
+
+        if (!profileImageUrl.StartsWith(
+                "/uploads/profiles/",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            // Remote/external URLs are not managed by local storage.
+            return Task.FromResult(true);
+        }
+
+        var fileName = Path.GetFileName(profileImageUrl);
+
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return Task.FromResult(false);
+        }
+
+        var webRoot = _environment.WebRootPath;
+
+        if (string.IsNullOrWhiteSpace(webRoot))
+        {
+            webRoot = Path.Combine(
+                _environment.ContentRootPath,
+                "wwwroot");
+        }
+
+        var physicalPath = Path.Combine(
+            webRoot,
+            "uploads",
+            "profiles",
+            fileName);
+
+        return Task.FromResult(File.Exists(physicalPath));
+    }
+
+
+    // ============================================================
     // FILE SIGNATURE VALIDATION
     // ============================================================
 

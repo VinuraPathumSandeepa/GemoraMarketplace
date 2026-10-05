@@ -24,8 +24,14 @@ public class SellerOrdersController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
-        var order = await _service.GetForSellerAsync(id, CurrentUserId());
-        return order == null ? NotFound(new { message = "Order was not found." }) : Ok(await _service.GetForSellerAsync(id, CurrentUserId()));
+        var order =
+            await _service.GetForSellerAsync(
+                id,
+                CurrentUserId());
+
+        return order == null
+            ? NotFound(new { message = "Order was not found." })
+            : Ok(order);
     }
 
     private Guid CurrentUserId()

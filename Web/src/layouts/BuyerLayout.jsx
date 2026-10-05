@@ -73,6 +73,11 @@ export default function BuyerLayout() {
             : null;
 
     useEffect(() => {
+        setProfileImageFailed(false);
+    }, [profileImage]);
+
+
+    useEffect(() => {
         function closeDropdown(event) {
             if (
                 dropdownRef.current &&

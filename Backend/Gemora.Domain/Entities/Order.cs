@@ -39,4 +39,24 @@ public class Order
 
     public ICollection<OrderStatusHistory> StatusHistory { get; set; }
         = new List<OrderStatusHistory>();
+
+
+    public string FulfillmentStatus { get; set; }
+    = FulfillmentStatuses.Pending;
+
+    public DateTime? HandedOverAt { get; set; }
+
+    public DateTime? DeliveredAt { get; set; }
+
+    public OrderDeliveryDetails? DeliveryDetails { get; set; }
+
+
+
+
+    public Shipment? Shipment { get; set; }
+
+    public ICollection<FulfillmentStatusHistory> FulfillmentStatusHistory
+    { get; set; } = new List<FulfillmentStatusHistory>();
+
+
 }

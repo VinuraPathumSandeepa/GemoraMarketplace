@@ -40,4 +40,60 @@ public interface IOrderService
 Guid orderId,
 Guid buyerId,
 CreatePaymentRequestDto dto);
+
+
+
+
+    Task<OrderResponseDto> UpdateDeliveryDetailsAsync(
+        Guid orderId,
+        Guid buyerId,
+        DeliveryDetailsRequestDto dto);
+
+    Task<OrderResponseDto> StartPreparingAsync(
+        Guid orderId,
+        Guid actorId,
+        string actorRole,
+        string? reason);
+
+    Task<OrderResponseDto> MarkReadyForDispatchAsync(
+        Guid orderId,
+        Guid actorId,
+        string actorRole,
+        string? reason);
+
+    Task<OrderResponseDto> HandOverToCourierAsync(
+    Guid orderId,
+    Guid actorId,
+    string actorRole,
+    CreateShipmentRequestDto dto);
+
+
+
+Task<OrderResponseDto> MarkInTransitAsync(
+    Guid orderId,
+    Guid actorId,
+    string actorRole,
+    string? reason);
+
+Task<OrderResponseDto> MarkOutForDeliveryAsync(
+    Guid orderId,
+    Guid actorId,
+    string actorRole,
+    string? reason);
+
+Task<OrderResponseDto> MarkDeliveredAsync(
+    Guid orderId,
+    Guid actorId,
+    string actorRole,
+    string? reason);
+
+Task<OrderResponseDto> CompleteAsync(
+    Guid orderId,
+    Guid buyerId,
+    string? reason);
+
+
+
+
+
 }
