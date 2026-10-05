@@ -98,10 +98,22 @@ export const shipmentApi = {
     generateShippingPlan: (id) => api.post(`/Shipments/${id}/plan`),
 
     // Approve shipping plan (Admin only)
-    approveShippingPlan: (id) => api.post(`/Shipments/${id}/plan/approve`),
+    approveShippingPlan: (id, notes) => 
+        api.post(`/Shipments/${id}/plan/approve`, notes ? { notes } : {}),
+
+    // Reject shipping plan (Admin only)
+    rejectShippingPlan: (id, reason) => 
+        api.post(`/Shipments/${id}/plan/reject`, reason ? { reason } : {}),
+
+    // Request revision of shipping plan (Admin only)
+    requestRevisionShippingPlan: (id, notes) => 
+        api.post(`/Shipments/${id}/plan/request-revision`, notes ? { notes } : {}),
 
     // Get tracking events
     getTrackingEvents: (id) => api.get(`/Shipments/${id}/tracking`),
+
+    // Get shipment audit history (Admin only)
+    getShipmentAuditHistory: (id) => api.get(`/Shipments/${id}/audit`),
 
     // Add tracking event (Admin only)
     addTrackingEvent: (id, eventData) =>
@@ -110,7 +122,10 @@ export const shipmentApi = {
     // Get insurance information
     getInsurance: (id) => api.get(`/Shipments/${id}/insurance`),
 
-    // Create insurance record
+    // Create insurance record (Admin only)
     createInsurance: (id, insuranceData) =>
         api.post(`/Shipments/${id}/insurance`, insuranceData),
+
+    // Book shipment with courier (Admin only)
+    bookShipment: (id) => api.post(`/Shipments/${id}/book`),
 };

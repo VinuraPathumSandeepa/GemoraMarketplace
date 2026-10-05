@@ -32,6 +32,9 @@ import ShipmentDetail from "./pages/ShipmentDetail";
 import ShipmentDetailPage from "./pages/ShipmentDetailPage";
 import DashboardLayout from "./layouts/DashboardLayout";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminShipments from "./pages/AdminShipments";
+import AdminShipmentDetail from "./pages/AdminShipmentDetail";
+import AdminAIDashboard from "./pages/AdminAIDashboard";
 import GemologistDashboard from "./pages/GemologistDashboard";
 import ExportOfficerDashboard from "./pages/ExportOfficerDashboard";
 
@@ -360,6 +363,43 @@ function App() {
             allowedRoles={["Admin"]}
           >
             <AdminDashboard />
+          </RoleProtectedRoute>
+        }
+      />
+
+      {/* ======================================================
+          ADMIN SHIPMENT MANAGEMENT
+          ====================================================== */}
+
+      <Route
+        path="/admin/shipments"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Admin"]}
+          >
+            <DashboardLayout><AdminShipments /></DashboardLayout>
+          </RoleProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/shipments/:id"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Admin"]}
+          >
+            <DashboardLayout><AdminShipmentDetail /></DashboardLayout>
+          </RoleProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/ai-dashboard"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Admin"]}
+          >
+            <AdminAIDashboard />
           </RoleProtectedRoute>
         }
       />

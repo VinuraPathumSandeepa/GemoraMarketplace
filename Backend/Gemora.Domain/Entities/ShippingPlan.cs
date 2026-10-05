@@ -14,6 +14,10 @@ public class ShippingPlan
     public string? HandlingRequirements { get; set; }
     public string? RequiredDocuments { get; set; }
     public string? Warnings { get; set; }
+    
+    // Generation Metadata (Phase 7)
+    public string GenerationSource { get; set; } = "FallbackRules"; // AI or FallbackRules
+    public string? ExecutionSummary { get; set; } // Concise audit trail without chain-of-thought
 
     // Admin Approval
     public bool IsApproved { get; set; }

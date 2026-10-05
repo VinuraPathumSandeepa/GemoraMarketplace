@@ -78,8 +78,12 @@ public class ShipmentResponseDto
     public string? RiskLevel { get; set; }
     public string? TrackingNumber { get; set; }
     public string? CourierName { get; set; }
+    public string? ExternalShipmentReference { get; set; }
+    public string? SelectedService { get; set; }
+    public string? GenerationSource { get; set; } // AI or FallbackRules
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public DateTime? BookedAt { get; set; }
     public DateTime? ShippedAt { get; set; }
     public DateTime? DeliveredAt { get; set; }
 }
@@ -87,8 +91,11 @@ public class ShipmentResponseDto
 public class UpdateShipmentStatusDto
 {
     [Required]
-    [RegularExpression(@"^(Pending|PlanGenerated|PlanApproved|InTransit|Delivered|Cancelled|Exception)$")]
+    [RegularExpression(@"^(Pending|Planning|PlanGenerated|ReadyForBooking|Booked|PickedUp|InTransit|CustomsHold|OutForDelivery|Delivered|DeliveryFailed|Cancelled|Exception)$")]
     public string Status { get; set; } = string.Empty;
+
+    [StringLength(500)]
+    public string? Location { get; set; }
 
     [StringLength(2000)]
     public string? Notes { get; set; }
@@ -100,6 +107,9 @@ public class CreateInsuranceRecordRequest
     public Guid ShipmentId { get; set; }
 
     [Required]
+    public decimal DeclaredValue { get; set; }
+
+    [Required]
     public decimal CoverageAmount { get; set; }
 
     [StringLength(20)]
@@ -107,21 +117,28 @@ public class CreateInsuranceRecordRequest
 
     [StringLength(50)]
     public string? CoverageType { get; set; }
+
+    [StringLength(200)]
+    public string? ProviderName { get; set; }
 }
 
 public class InsuranceRecordResponseDto
 {
     public Guid Id { get; set; }
     public Guid ShipmentId { get; set; }
+    public decimal DeclaredValue { get; set; }
     public decimal CoverageAmount { get; set; }
     public string Currency { get; set; } = "USD";
     public string CoverageType { get; set; } = "Standard";
     public string? PolicyNumber { get; set; }
+    public string? PolicyReference { get; set; }
     public string? ProviderName { get; set; }
+    public decimal PremiumAmount { get; set; }
     public DateTime? PolicyStartDate { get; set; }
     public DateTime? PolicyEndDate { get; set; }
     public string Status { get; set; } = "Pending";
     public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 }
 
 public class AddTrackingEventDto
@@ -137,6 +154,9 @@ public class AddTrackingEventDto
     [Required]
     [StringLength(2000)]
     public string Description { get; set; } = string.Empty;
+
+    [StringLength(100)]
+    public string? ExternalEventCode { get; set; }
 }
 
 public class TrackingEventResponseDto
@@ -146,12 +166,17 @@ public class TrackingEventResponseDto
     public string EventType { get; set; } = string.Empty;
     public string Location { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public DateTime EventTimestamp { get; set; }
-    public DateTime CreatedAt { get; set; }
+    public string? ExternalEventCode { get; set; }
+    public DateTime OccurredAt { get; set; }
+    public DateTime RecordedAt { get; set; }
 }
 
 public class ShippingPlanResponseDto
 {
+    public bool IsPreview { get; set; }
+    public string? GenerationSource { get; set; }
+    public string? ExecutionSummary { get; set; }
+    public DateTime? UpdatedAt { get; set; }
     public Guid Id { get; set; }
     public Guid ShipmentId { get; set; }
     public string RiskLevel { get; set; } = "Medium";
@@ -163,5 +188,26 @@ public class ShippingPlanResponseDto
     public string? RequiredDocuments { get; set; }
     public string? Warnings { get; set; }
     public bool IsApproved { get; set; }
+    public Guid? ApprovedBy { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+    public string? AdminNotes { get; set; }
     public DateTime CreatedAt { get; set; }
+}
+
+public class ApprovePlanRequest
+{
+    [StringLength(2000)]
+    public string? Notes { get; set; }
+}
+
+public class RejectPlanRequest
+{
+    [StringLength(2000)]
+    public string? Reason { get; set; }
+}
+
+public class RequestRevisionPlanRequest
+{
+    [StringLength(2000)]
+    public string? Notes { get; set; }
 }

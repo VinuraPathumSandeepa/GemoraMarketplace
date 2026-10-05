@@ -34,10 +34,13 @@ public class Shipment
     // Tracking
     public string? TrackingNumber { get; set; }
     public string? CourierName { get; set; }
+    public string? ExternalShipmentReference { get; set; }
+    public string? SelectedService { get; set; }
 
     // Timestamps
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+    public DateTime? BookedAt { get; set; }
     public DateTime? ShippedAt { get; set; }
     public DateTime? DeliveredAt { get; set; }
 
@@ -48,3 +51,4 @@ public class Shipment
     public InsuranceRecord? InsuranceRecord { get; set; }
     public ICollection<ShipmentTrackingEvent>? TrackingEvents { get; set; }
 }
+/*  */

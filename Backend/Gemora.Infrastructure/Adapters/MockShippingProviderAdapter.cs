@@ -221,6 +221,63 @@ public class MockShippingProviderAdapter : IShippingProviderAdapter
         }
     }
 
+    public async Task<CourierBookingResult> BookShipmentAsync(
+        CourierBookingRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "MOCK: Booking shipment {ShipmentNumber} with service {ServiceType} from {Origin} to {Destination}",
+            request.ShipmentNumber, request.ServiceType, request.Origin, request.Destination);
+
+        try
+        {
+            return await ExecuteWithRetryAndTimeout(
+                async (ct) =>
+                {
+                    // Simulate processing time
+                    await Task.Delay(TimeSpan.FromMilliseconds(800), ct);
+
+                    // Simulate occasional failures if enabled
+                    if (_simulateFailures && ShouldSimulateFailure())
+                    {
+                        throw new InvalidOperationException("Simulated courier booking failure - provider unavailable");
+                    }
+
+                    // Generate SIM-prefixed identifiers for clear demo labeling
+                    var externalRef = $"SIM-BOOK-{Guid.NewGuid():N}".Substring(0, 16).ToUpper();
+                    var trackingNumber = $"SIM-TRK-{Guid.NewGuid():N}".Substring(0, 16).ToUpper();
+
+                    _logger.LogInformation(
+                        "MOCK: Successfully booked shipment. ExternalRef={ExternalRef}, TrackingNumber={TrackingNumber}",
+                        externalRef, trackingNumber);
+
+                    return new CourierBookingResult
+                    {
+                        Success = true,
+                        CourierName = "DEMO Gemora Courier Sandbox",
+                        ExternalShipmentReference = externalRef,
+                        TrackingNumber = trackingNumber,
+                        SelectedService = request.ServiceType
+                    };
+                },
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("MOCK: Booking cancelled for shipment {ShipmentNumber}", request.ShipmentNumber);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "MOCK: Failed to book shipment {ShipmentNumber}", request.ShipmentNumber);
+            return new CourierBookingResult
+            {
+                Success = false,
+                ErrorMessage = $"Courier booking failed: {ex.Message}"
+            };
+        }
+    }
+
     /// <summary>
     /// Executes an operation with bounded retry attempts and timeout handling.
     /// Only retries transient failures.

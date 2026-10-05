@@ -1,5 +1,6 @@
 using Gemora.Application.DTOs;
 using Gemora.Domain.Entities;
+using Gemora.Domain.Interfaces;
 using Gemora.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,18 +14,21 @@ public interface IShipmentService
     Task<List<ShipmentResponseDto>> GetUserShipmentsAsync(Guid userId, string userRole);
     Task<ShipmentResponseDto> UpdateShipmentStatusAsync(Guid shipmentId, Guid userId, string userRole, UpdateShipmentStatusDto request);
     Task<InsuranceRecordResponseDto> CreateInsuranceRecordAsync(Guid shipmentId, Guid userId, string userRole, CreateInsuranceRecordRequest request);
-    Task<InsuranceRecordResponseDto?> GetInsuranceRecordAsync(Guid shipmentId);
-    Task<List<TrackingEventResponseDto>> GetTrackingEventsAsync(Guid shipmentId);
+    Task<InsuranceRecordResponseDto?> GetInsuranceRecordAsync(Guid shipmentId, Guid userId, string userRole);
+    Task<List<TrackingEventResponseDto>> GetTrackingEventsAsync(Guid shipmentId, Guid userId, string userRole);
     Task<TrackingEventResponseDto> AddTrackingEventAsync(Guid shipmentId, Guid userId, string userRole, AddTrackingEventDto request);
+    Task<CourierBookingResult> BookShipmentAsync(Guid shipmentId, Guid userId, string userRole);
 }
 
 public class ShipmentService : IShipmentService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IShippingProviderAdapter _shippingProvider;
 
-    public ShipmentService(ApplicationDbContext context)
+    public ShipmentService(ApplicationDbContext context, IShippingProviderAdapter shippingProvider)
     {
         _context = context;
+        _shippingProvider = shippingProvider;
     }
 
     public async Task<ShipmentResponseDto> CreateShipmentAsync(Guid userId, string userRole, CreateShipmentDto request)
@@ -176,6 +180,38 @@ public class ShipmentService : IShipmentService
             throw new UnauthorizedAccessException("Buyers cannot update shipment status.");
         }
 
+        // Admin-only operations: Only Admin can mark as Delivered or handle Exceptions
+        if (request.Status == "Delivered" || request.Status == "Exception" || request.Status == "DeliveryFailed" || request.Status == "CustomsHold")
+        {
+            if (userRole != "Admin")
+            {
+                throw new UnauthorizedAccessException("Only administrators can perform this operational status change.");
+            }
+        }
+
+        // Prevent booking before plan approval
+        if (request.Status == "ReadyForBooking")
+        {
+            if (userRole != "Admin")
+            {
+                throw new UnauthorizedAccessException("Only administrators can set shipment status to ReadyForBooking.");
+            }
+
+            // Verify plan is approved
+            var plan = await _context.ShippingPlans
+                .FirstOrDefaultAsync(p => p.ShipmentId == shipmentId);
+
+            if (plan == null)
+            {
+                throw new InvalidOperationException("Cannot book shipment: No shipping plan has been generated.");
+            }
+
+            if (!plan.IsApproved)
+            {
+                throw new InvalidOperationException("Cannot book shipment: Shipping plan has not been approved by Admin.");
+            }
+        }
+
         // Validate status transition
         ValidateStatusTransition(shipment.Status, request.Status);
 
@@ -184,7 +220,7 @@ public class ShipmentService : IShipmentService
         shipment.UpdatedAt = DateTime.UtcNow;
 
         // Update timestamps based on status
-        if (request.Status == "InTransit")
+        if (request.Status == "InTransit" || request.Status == "PickedUp")
         {
             shipment.ShippedAt = DateTime.UtcNow;
         }
@@ -193,21 +229,26 @@ public class ShipmentService : IShipmentService
             shipment.DeliveredAt = DateTime.UtcNow;
         }
 
-        await _context.SaveChangesAsync();
-
-        // Add tracking event for status change
+        // Create tracking event WITHIN SAME TRANSACTION
         var trackingEvent = new ShipmentTrackingEvent
         {
             Id = Guid.NewGuid(),
             ShipmentId = shipment.Id,
-            EventType = $"StatusChanged:{oldStatus}->{request.Status}",
-            Location = "System",
+            EventType = request.Status,
+            Location = request.Location ?? "System",
             Description = request.Notes ?? $"Status changed from {oldStatus} to {request.Status}",
+            PerformedByUserId = userId,
+            PerformedByRole = userRole,
+            PreviousState = oldStatus,
+            NewState = request.Status,
+            Reason = request.Notes,
             OccurredAt = DateTime.UtcNow,
             RecordedAt = DateTime.UtcNow
         };
 
         _context.ShipmentTrackingEvents.Add(trackingEvent);
+
+        // SINGLE SaveChanges ensures atomic transaction - both shipment and tracking event saved together
         await _context.SaveChangesAsync();
 
         return MapToResponseDto(shipment);
@@ -223,15 +264,10 @@ public class ShipmentService : IShipmentService
             throw new InvalidOperationException("Shipment not found.");
         }
 
-        // Only admin or seller can create insurance
-        if (userRole == "Buyer")
+        // Only Admin can create insurance records (Phase 4 requirement)
+        if (userRole != "Admin")
         {
-            throw new UnauthorizedAccessException("Buyers cannot create insurance records.");
-        }
-
-        if (userRole == "Seller" && shipment.SellerId != userId)
-        {
-            throw new UnauthorizedAccessException("You can only create insurance for your own shipments.");
+            throw new UnauthorizedAccessException("Only administrators can create insurance records.");
         }
 
         // Check if insurance already exists
@@ -243,37 +279,151 @@ public class ShipmentService : IShipmentService
             throw new InvalidOperationException("Insurance record already exists for this shipment.");
         }
 
+        // VALIDATION: CoverageAmount > 0
+        if (request.CoverageAmount <= 0)
+        {
+            throw new InvalidOperationException("Coverage amount must be greater than zero.");
+        }
+
+        // VALIDATION: DeclaredValue > 0
+        if (request.DeclaredValue <= 0)
+        {
+            throw new InvalidOperationException("Declared value must be greater than zero.");
+        }
+
+        // VALIDATION: PremiumAmount >= 0 (calculated from coverage)
+        var premiumAmount = CalculatePremium(request.CoverageAmount, request.CoverageType ?? "Standard");
+        if (premiumAmount < 0)
+        {
+            throw new InvalidOperationException("Premium calculation failed.");
+        }
+
+        // VALIDATION: Currency matches Shipment
+        var currency = request.Currency ?? shipment.Currency;
+        if (currency != shipment.Currency)
+        {
+            throw new InvalidOperationException($"Currency must match shipment currency ({shipment.Currency}).");
+        }
+
+        // Generate SIM-prefixed policy reference for clear demo labeling
+        var policyReference = $"SIM-POL-{Guid.NewGuid():N}".Substring(0, 16).ToUpper();
+        var providerName = request.ProviderName ?? "DEMO Gemora Insurance Sandbox";
+
         var insuranceRecord = new InsuranceRecord
         {
             Id = Guid.NewGuid(),
             ShipmentId = shipmentId,
+            DeclaredValue = request.DeclaredValue,
             CoverageAmount = request.CoverageAmount,
-            Currency = request.Currency ?? shipment.Currency,
+            Currency = currency,
             CoverageType = request.CoverageType ?? "Standard",
+            PolicyNumber = policyReference,
+            PolicyReference = policyReference,
+            ProviderName = providerName,
+            PremiumAmount = premiumAmount,
             Status = "Active",
             PolicyStartDate = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow
         };
 
         _context.InsuranceRecords.Add(insuranceRecord);
+        
+        // Create audit tracking event for insurance creation
+        var insuranceEvent = new ShipmentTrackingEvent
+        {
+            Id = Guid.NewGuid(),
+            ShipmentId = shipmentId,
+            EventType = "InsuranceCreated",
+            Location = "Admin Insurance Management",
+            Description = $"Insurance created: Policy {policyReference}, Coverage {currency} {request.CoverageAmount}",
+            PerformedByUserId = userId,
+            PerformedByRole = userRole,
+            PreviousState = "No Insurance",
+            NewState = "Insured",
+            Reason = $"Coverage: {currency} {request.CoverageAmount}, Type: {insuranceRecord.CoverageType}",
+            OccurredAt = DateTime.UtcNow,
+            RecordedAt = DateTime.UtcNow
+        };
+        
+        _context.ShipmentTrackingEvents.Add(insuranceEvent);
+        
         await _context.SaveChangesAsync();
 
         return MapToInsuranceResponseDto(insuranceRecord);
     }
 
-    public async Task<InsuranceRecordResponseDto?> GetInsuranceRecordAsync(Guid shipmentId)
+    private static decimal CalculatePremium(decimal coverageAmount, string coverageType)
     {
+        // Simple mock premium calculation - not real actuarial logic
+        var baseRate = coverageType switch
+        {
+            "Premium" => 0.05m,      // 5% of coverage
+            "Comprehensive" => 0.08m, // 8% of coverage
+            _ => 0.03m                // 3% for Standard
+        };
+
+        var premium = coverageAmount * baseRate;
+        return Math.Round(premium, 2);
+    }
+
+    public async Task<InsuranceRecordResponseDto?> GetInsuranceRecordAsync(Guid shipmentId, Guid userId, string userRole)
+    {
+        var shipment = await _context.Shipments
+            .FirstOrDefaultAsync(s => s.Id == shipmentId);
+
+        if (shipment == null)
+        {
+            throw new InvalidOperationException("Shipment not found.");
+        }
+
+        // Authorization check: Admin (all), Seller (own), Buyer (own purchase)
+        if (userRole != "Admin")
+        {
+            if (userRole == "Buyer" && shipment.BuyerId != userId)
+            {
+                throw new UnauthorizedAccessException("You can only view insurance for your own shipments.");
+            }
+
+            if (userRole == "Seller" && shipment.SellerId != userId)
+            {
+                throw new UnauthorizedAccessException("You can only view insurance for your own shipments.");
+            }
+        }
+
         var insurance = await _context.InsuranceRecords
             .FirstOrDefaultAsync(i => i.ShipmentId == shipmentId);
 
         return insurance != null ? MapToInsuranceResponseDto(insurance) : null;
     }
 
-    public async Task<List<TrackingEventResponseDto>> GetTrackingEventsAsync(Guid shipmentId)
+    public async Task<List<TrackingEventResponseDto>> GetTrackingEventsAsync(Guid shipmentId, Guid userId, string userRole)
     {
+        var shipment = await _context.Shipments
+            .FirstOrDefaultAsync(s => s.Id == shipmentId);
+
+        if (shipment == null)
+        {
+            throw new InvalidOperationException("Shipment not found.");
+        }
+
+        // Authorization check: Admin (all), Seller (own), Buyer (own purchase)
+        if (userRole != "Admin")
+        {
+            if (userRole == "Buyer" && shipment.BuyerId != userId)
+            {
+                throw new UnauthorizedAccessException("You can only view tracking for your own shipments.");
+            }
+
+            if (userRole == "Seller" && shipment.SellerId != userId)
+            {
+                throw new UnauthorizedAccessException("You can only view tracking for your own shipments.");
+            }
+        }
+
+        // Return timeline chronologically (oldest first)
         var events = await _context.ShipmentTrackingEvents
             .Where(e => e.ShipmentId == shipmentId)
-            .OrderByDescending(e => e.OccurredAt)
+            .OrderBy(e => e.OccurredAt)
             .ToListAsync();
 
         return events.Select(MapToTrackingResponseDto).ToList();
@@ -302,6 +452,7 @@ public class ShipmentService : IShipmentService
             EventType = request.EventType,
             Location = request.Location,
             Description = request.Description,
+            ExternalEventCode = request.ExternalEventCode,
             OccurredAt = DateTime.UtcNow,
             RecordedAt = DateTime.UtcNow
         };
@@ -312,16 +463,136 @@ public class ShipmentService : IShipmentService
         return MapToTrackingResponseDto(trackingEvent);
     }
 
+    public async Task<CourierBookingResult> BookShipmentAsync(Guid shipmentId, Guid userId, string userRole)
+    {
+        // Only Admin can execute booking
+        if (userRole != "Admin")
+        {
+            throw new UnauthorizedAccessException("Only administrators can book shipments with couriers.");
+        }
+
+        var shipment = await _context.Shipments
+            .Include(s => s.ShippingPlan)
+            .FirstOrDefaultAsync(s => s.Id == shipmentId);
+
+        if (shipment == null)
+        {
+            throw new InvalidOperationException("Shipment not found.");
+        }
+
+        // IDEMPOTENCY CHECK #1: If already has booking references, return existing result FIRST
+        // This prevents duplicate provider calls on retry/concurrent requests
+        if (!string.IsNullOrEmpty(shipment.TrackingNumber) && !string.IsNullOrEmpty(shipment.ExternalShipmentReference))
+        {
+            return new CourierBookingResult
+            {
+                Success = true,
+                CourierName = shipment.CourierName,
+                ExternalShipmentReference = shipment.ExternalShipmentReference,
+                TrackingNumber = shipment.TrackingNumber,
+                SelectedService = shipment.SelectedService
+            };
+        }
+
+        // PRECONDITION 1: Shipment must exist (already checked above)
+
+        // PRECONDITION 2: ShippingPlan must exist
+        if (shipment.ShippingPlan == null)
+        {
+            throw new InvalidOperationException("Cannot book shipment: No shipping plan has been generated.");
+        }
+
+        // PRECONDITION 3: Plan must be Admin-approved
+        if (!shipment.ShippingPlan.IsApproved)
+        {
+            throw new InvalidOperationException("Cannot book shipment: Shipping plan has not been approved by Admin.");
+        }
+
+        // PRECONDITION 4: Shipment must be ReadyForBooking OR already Booked (for idempotency)
+        // Note: Already-booked shipments are caught by IDEMPOTENCY CHECK #1 above
+        if (shipment.Status != "ReadyForBooking")
+        {
+            throw new InvalidOperationException(
+                $"Cannot book shipment: Shipment status is '{shipment.Status}', expected 'ReadyForBooking'.");
+        }
+
+        // Call courier provider adapter for simulation
+        var bookingRequest = new CourierBookingRequest
+        {
+            ShipmentNumber = shipment.Id.ToString(),
+            Origin = $"{shipment.OriginAddress}, {shipment.OriginRegion}",
+            Destination = $"{shipment.DestinationAddress}, {shipment.DestinationRegion}",
+            PackageDescription = shipment.PackageDescription,
+            DeclaredValue = shipment.DeclaredValue,
+            Currency = shipment.Currency,
+            ServiceType = shipment.ShippingPlan.RecommendedServiceType,
+            Weight = shipment.PackageWeight
+        };
+
+        var bookingResult = await _shippingProvider.BookShipmentAsync(bookingRequest);
+
+        // FAILURE HANDLING: If provider fails, do not mark as booked
+        if (!bookingResult.Success)
+        {
+            throw new InvalidOperationException($"Courier booking failed: {bookingResult.ErrorMessage}");
+        }
+
+        // SAVE RESULT: Persist booking information atomically
+        shipment.CourierName = bookingResult.CourierName;
+        shipment.ExternalShipmentReference = bookingResult.ExternalShipmentReference;
+        shipment.TrackingNumber = bookingResult.TrackingNumber;
+        shipment.SelectedService = bookingResult.SelectedService;
+        shipment.BookedAt = DateTime.UtcNow;
+        shipment.Status = "Booked";
+        shipment.UpdatedAt = DateTime.UtcNow;
+
+        // Create audit tracking event for booking (only on first successful booking)
+        var bookingEvent = new ShipmentTrackingEvent
+        {
+            Id = Guid.NewGuid(),
+            ShipmentId = shipment.Id,
+            EventType = "Booked",
+            Location = "Courier Booking",
+            Description = $"Shipment booked with {bookingResult.CourierName} - Tracking: {bookingResult.TrackingNumber}",
+            PerformedByUserId = userId,
+            PerformedByRole = userRole,
+            PreviousState = "ReadyForBooking",
+            NewState = "Booked",
+            Reason = $"Courier: {bookingResult.CourierName}, Service: {bookingResult.SelectedService}",
+            OccurredAt = DateTime.UtcNow,
+            RecordedAt = DateTime.UtcNow
+        };
+
+        _context.ShipmentTrackingEvents.Add(bookingEvent);
+
+        await _context.SaveChangesAsync();
+
+        return bookingResult;
+    }
+
     private void ValidateStatusTransition(string currentStatus, string newStatus)
     {
         var validTransitions = new Dictionary<string, List<string>>
         {
-            { "Pending", new List<string> { "PlanGenerated", "Cancelled" } },
-            { "PlanGenerated", new List<string> { "PlanApproved", "Cancelled" } },
-            { "PlanApproved", new List<string> { "InTransit", "Cancelled" } },
-            { "InTransit", new List<string> { "Delivered", "Exception" } },
-            { "Exception", new List<string> { "InTransit", "Cancelled" } },
+            // Planning phase
+            { "Pending", new List<string> { "PlanGenerated", "Cancelled", "Planning" } },
+            { "Planning", new List<string> { "PlanGenerated", "Pending", "Cancelled" } },
+            
+            // Plan review phase
+            { "PlanGenerated", new List<string> { "ReadyForBooking", "Cancelled", "Pending", "Planning" } },
+            { "ReadyForBooking", new List<string> { "Booked", "Cancelled", "Pending", "Planning" } },
+            
+            // Operational delivery phase
+            { "Booked", new List<string> { "PickedUp", "InTransit", "Cancelled" } },
+            { "PickedUp", new List<string> { "InTransit", "Exception", "Cancelled" } },
+            { "InTransit", new List<string> { "CustomsHold", "OutForDelivery", "Exception", "DeliveryFailed" } },
+            { "CustomsHold", new List<string> { "InTransit", "Exception", "Cancelled" } },
+            { "OutForDelivery", new List<string> { "Delivered", "DeliveryFailed", "Exception" } },
+            
+            // Terminal/exception states
             { "Delivered", new List<string>() }, // Terminal state
+            { "DeliveryFailed", new List<string> { "Cancelled", "Exception" } },
+            { "Exception", new List<string> { "InTransit", "Cancelled" } },
             { "Cancelled", new List<string>() }  // Terminal state
         };
 
@@ -364,8 +635,12 @@ public class ShipmentService : IShipmentService
             RiskLevel = shipment.RiskLevel,
             TrackingNumber = shipment.TrackingNumber,
             CourierName = shipment.CourierName,
+            ExternalShipmentReference = shipment.ExternalShipmentReference,
+            SelectedService = shipment.SelectedService,
+            GenerationSource = shipment.ShippingPlan?.GenerationSource,
             CreatedAt = shipment.CreatedAt,
             UpdatedAt = shipment.UpdatedAt,
+            BookedAt = shipment.BookedAt,
             ShippedAt = shipment.ShippedAt,
             DeliveredAt = shipment.DeliveredAt
         };
@@ -377,15 +652,19 @@ public class ShipmentService : IShipmentService
         {
             Id = record.Id,
             ShipmentId = record.ShipmentId,
+            DeclaredValue = record.DeclaredValue,
             CoverageAmount = record.CoverageAmount,
             Currency = record.Currency,
             CoverageType = record.CoverageType,
             PolicyNumber = record.PolicyNumber,
+            PolicyReference = record.PolicyReference,
             ProviderName = record.ProviderName,
+            PremiumAmount = record.PremiumAmount,
             PolicyStartDate = record.PolicyStartDate,
             PolicyEndDate = record.PolicyEndDate,
             Status = record.Status,
-            CreatedAt = record.CreatedAt
+            CreatedAt = record.CreatedAt,
+            UpdatedAt = record.UpdatedAt
         };
     }
 
@@ -398,8 +677,9 @@ public class ShipmentService : IShipmentService
             EventType = evt.EventType,
             Location = evt.Location,
             Description = evt.Description,
-            EventTimestamp = evt.OccurredAt,
-            CreatedAt = evt.RecordedAt
+            ExternalEventCode = evt.ExternalEventCode,
+            OccurredAt = evt.OccurredAt,
+            RecordedAt = evt.RecordedAt
         };
     }
 }

@@ -155,14 +155,14 @@ class _SellerShipmentListState extends State<SellerShipmentList> {
                                 color: _getStatusColor(status),
                               ),
                               title: Text(
-                                shipment['shipmentNumber'] ?? 'N/A',
+                                'Shipment #${(shipment['id'] ?? '').toString().substring(0, 8)}',
                                 style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const SizedBox(height: 4),
-                                  Text('${shipment['origin']} → ${shipment['destination']}'),
+                                  Text('${shipment['originAddress'] ?? ''}, ${shipment['originRegion'] ?? ''} → ${shipment['destinationAddress'] ?? ''}, ${shipment['destinationRegion'] ?? ''}'),
                                   const SizedBox(height: 4),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

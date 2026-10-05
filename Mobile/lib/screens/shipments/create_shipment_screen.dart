@@ -18,11 +18,16 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
   bool _loadingOrders = true;
   String? _ordersError;
   
-  final _originController = TextEditingController(text: 'Colombo, Sri Lanka');
-  final _destinationController = TextEditingController();
+  final _originAddressController = TextEditingController(text: 'Colombo');
+  final _originRegionController = TextEditingController(text: 'Western Province');
+  final _originCountryCodeController = TextEditingController(text: 'LK');
+  final _destinationAddressController = TextEditingController();
+  final _destinationRegionController = TextEditingController();
+  final _destinationCountryCodeController = TextEditingController();
   final _packageDescriptionController = TextEditingController();
-  final _selectedServiceController = TextEditingController(text: 'Express Courier');
-  final _courierNameController = TextEditingController(text: 'DHL Express');
+  final _preferredServiceController = TextEditingController(text: 'Standard');
+  final _specialHandlingNotesController = TextEditingController();
+  bool _exportRequired = false;
 
   bool _submitting = false;
   String? _error;
@@ -52,7 +57,9 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
         if (orders.isNotEmpty) {
           _selectedOrderId = orders[0]['id'].toString();
           // Auto-populate destination from first order
-          _destinationController.text = '${orders[0]['shippingAddress']}, ${orders[0]['shippingRegion']}';
+          _destinationAddressController.text = orders[0]['shippingAddress'] ?? '';
+          _destinationRegionController.text = orders[0]['shippingRegion'] ?? '';
+          _destinationCountryCodeController.text = orders[0]['shippingCountryCode'] ?? 'LK';
         }
       });
     } catch (e) {
@@ -66,11 +73,15 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
 
   @override
   void dispose() {
-    _originController.dispose();
-    _destinationController.dispose();
+    _originAddressController.dispose();
+    _originRegionController.dispose();
+    _originCountryCodeController.dispose();
+    _destinationAddressController.dispose();
+    _destinationRegionController.dispose();
+    _destinationCountryCodeController.dispose();
     _packageDescriptionController.dispose();
-    _selectedServiceController.dispose();
-    _courierNameController.dispose();
+    _preferredServiceController.dispose();
+    _specialHandlingNotesController.dispose();
     super.dispose();
   }
 
@@ -99,7 +110,9 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
     
     if (order != null && mounted) {
       setState(() {
-        _destinationController.text = '${order['shippingAddress']}, ${order['shippingRegion']}';
+        _destinationAddressController.text = order['shippingAddress'] ?? '';
+        _destinationRegionController.text = order['shippingRegion'] ?? '';
+        _destinationCountryCodeController.text = order['shippingCountryCode'] ?? 'LK';
       });
     }
   }
@@ -125,11 +138,18 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
     try {
       await _shipmentService.createShipment(
         orderId: _selectedOrderId!,
-        origin: _originController.text.trim(),
-        destination: _destinationController.text.trim(),
+        originAddress: _originAddressController.text.trim(),
+        originRegion: _originRegionController.text.trim(),
+        originCountryCode: _originCountryCodeController.text.trim().toUpperCase(),
+        destinationAddress: _destinationAddressController.text.trim(),
+        destinationRegion: _destinationRegionController.text.trim(),
+        destinationCountryCode: _destinationCountryCodeController.text.trim().toUpperCase(),
         packageDescription: _packageDescriptionController.text.trim(),
-        selectedService: _selectedServiceController.text.trim(),
-        courierName: _courierNameController.text.trim(),
+        preferredService: _preferredServiceController.text.trim().isEmpty 
+            ? 'Standard' 
+            : _preferredServiceController.text.trim(),
+        specialHandlingNotes: _specialHandlingNotesController.text.trim(),
+        exportRequired: _exportRequired,
       );
 
       if (!mounted) return;
@@ -285,33 +305,108 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                       ),
                     const SizedBox(height: 16),
 
-                    // Origin
+                    // Origin Address
                     TextFormField(
-                      controller: _originController,
+                      controller: _originAddressController,
                       decoration: const InputDecoration(
-                        labelText: 'Origin',
+                        labelText: 'Origin Address',
+                        hintText: 'e.g., Colombo',
                         prefixIcon: Icon(Icons.location_on),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Origin is required';
+                          return 'Origin address is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Origin Region
+                    TextFormField(
+                      controller: _originRegionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Origin Region',
+                        hintText: 'e.g., Western Province',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Origin region is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Origin Country Code
+                    TextFormField(
+                      controller: _originCountryCodeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Origin Country Code',
+                        hintText: 'e.g., LK',
+                      ),
+                      maxLength: 2,
+                      textCapitalization: TextCapitalization.characters,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Origin country code is required';
+                        }
+                        if (value.trim().length != 2) {
+                          return 'Country code must be 2 letters';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
 
-                    // Destination
+                    // Destination Address
                     TextFormField(
-                      controller: _destinationController,
+                      controller: _destinationAddressController,
                       decoration: const InputDecoration(
-                        labelText: 'Destination',
-                        hintText: 'e.g., Kandy, Sri Lanka',
+                        labelText: 'Destination Address',
+                        hintText: 'e.g., Kandy',
                         prefixIcon: Icon(Icons.flag),
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Destination is required';
+                          return 'Destination address is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Destination Region
+                    TextFormField(
+                      controller: _destinationRegionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Destination Region',
+                        hintText: 'e.g., Central Province',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Destination region is required';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Destination Country Code
+                    TextFormField(
+                      controller: _destinationCountryCodeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Destination Country Code',
+                        hintText: 'e.g., LK',
+                      ),
+                      maxLength: 2,
+                      textCapitalization: TextCapitalization.characters,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Destination country code is required';
+                        }
+                        if (value.trim().length != 2) {
+                          return 'Country code must be 2 letters';
                         }
                         return null;
                       },
@@ -336,47 +431,54 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Selected Service
+                    // Preferred Service
                     DropdownButtonFormField<String>(
-                      value: _selectedServiceController.text,
+                      value: _preferredServiceController.text.isEmpty 
+                          ? 'Standard' 
+                          : _preferredServiceController.text,
                       decoration: const InputDecoration(
                         labelText: 'Shipping Service',
                         prefixIcon: Icon(Icons.local_shipping),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'Express Courier', child: Text('Express Courier')),
-                        DropdownMenuItem(value: 'Standard Ground', child: Text('Standard Ground')),
-                        DropdownMenuItem(value: 'Premium Overnight', child: Text('Premium Overnight')),
+                        DropdownMenuItem(value: 'Standard', child: Text('Standard')),
+                        DropdownMenuItem(value: 'Express Insured', child: Text('Express Insured')),
+                        DropdownMenuItem(value: 'Priority Insured', child: Text('Priority Insured')),
+                        DropdownMenuItem(value: 'International Priority', child: Text('International Priority')),
                       ],
                       onChanged: (value) {
                         if (value != null) {
                           setState(() {
-                            _selectedServiceController.text = value;
+                            _preferredServiceController.text = value;
                           });
                         }
                       },
                     ),
                     const SizedBox(height: 16),
 
-                    // Courier Name
-                    DropdownButtonFormField<String>(
-                      value: _courierNameController.text,
+                    // Special Handling Notes
+                    TextFormField(
+                      controller: _specialHandlingNotesController,
                       decoration: const InputDecoration(
-                        labelText: 'Courier',
-                        prefixIcon: Icon(Icons.business),
+                        labelText: 'Special Handling Notes (Optional)',
+                        hintText: 'e.g., Fragile - handle with care',
+                        prefixIcon: Icon(Icons.note_add),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'DHL Express', child: Text('DHL Express')),
-                        DropdownMenuItem(value: 'FedEx', child: Text('FedEx')),
-                        DropdownMenuItem(value: 'Sri Lanka Post', child: Text('Sri Lanka Post')),
-                      ],
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Export Required Checkbox
+                    CheckboxListTile(
+                      title: const Text('Export Required'),
+                      subtitle: const Text('Check if international export documentation is needed'),
+                      value: _exportRequired,
                       onChanged: (value) {
-                        if (value != null) {
-                          setState(() {
-                            _courierNameController.text = value;
-                          });
-                        }
+                        setState(() {
+                          _exportRequired = value ?? false;
+                        });
                       },
+                      controlAffinity: ListTileControlAffinity.leading,
                     ),
                     const SizedBox(height: 24),
 

@@ -15,7 +15,7 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
 
   Map<String, dynamic>? _shipment;
   List<dynamic> _trackingEvents = [];
-  List<dynamic> _insuranceRecords = [];
+  Map<String, dynamic>? _insuranceRecord;
   Map<String, dynamic>? _shippingPlan;
 
   bool _loading = true;
@@ -34,21 +34,22 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
     });
 
     try {
-      final results = await Future.wait([
-        _shipmentService.getShipmentById(widget.shipmentId),
-        _shipmentService.getTrackingEvents(widget.shipmentId).catchError((_) => []),
-        _shipmentService.getInsuranceRecords(widget.shipmentId).catchError((_) => []),
-        _shipmentService.getShippingPlan(widget.shipmentId).catchError((_) => null),
-      ]);
+      final shipment = await _shipmentService.getShipmentById(widget.shipmentId);
+      final trackingEvents = await _shipmentService.getTrackingEvents(widget.shipmentId).catchError((_) => []);
+      final insuranceRecord = await _shipmentService.getInsuranceRecord(widget.shipmentId);
+      final shippingPlan = await _shipmentService.getShippingPlan(widget.shipmentId);
+
+      if (!mounted) return;
 
       setState(() {
-        _shipment = results[0] as Map<String, dynamic>;
-        _trackingEvents = results[1] as List<dynamic>;
-        _insuranceRecords = results[2] as List<dynamic>;
-        _shippingPlan = results[3] as Map<String, dynamic>?;
+        _shipment = shipment;
+        _trackingEvents = trackingEvents as List<dynamic>;
+        _insuranceRecord = insuranceRecord;
+        _shippingPlan = shippingPlan;
         _loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
         _loading = false;
@@ -204,13 +205,13 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
 
           // Information
           _buildInfoCard('Shipment Information', [
-            _buildInfoRow('Shipment #', _shipment!['shipmentNumber']),
+            _buildInfoRow('Shipment #', 'Shipment ${(widget.shipmentId.length > 8 ? widget.shipmentId.substring(0, 8) : widget.shipmentId)}'),
             _buildInfoRow('Order ID', '${_shipment!['orderId'].toString().substring(0, 8)}...'),
-            _buildInfoRow('Origin', _shipment!['origin']),
-            _buildInfoRow('Destination', _shipment!['destination']),
+            _buildInfoRow('Origin', '${_shipment!['originAddress'] ?? ''}, ${_shipment!['originRegion'] ?? ''}'),
+            _buildInfoRow('Destination', '${_shipment!['destinationAddress'] ?? ''}, ${_shipment!['destinationRegion'] ?? ''}'),
             _buildInfoRow('Declared Value', '${_shipment!['currency']} ${_shipment!['declaredValue']}'),
-            _buildInfoRow('Service', _shipment!['selectedService']),
-            _buildInfoRow('Courier', _shipment!['courierName']),
+            _buildInfoRow('Service', _shipment!['selectedService'] ?? 'Not selected'),
+            _buildInfoRow('Courier', _shipment!['courierName'] ?? 'Not assigned'),
             _buildInfoRow('Tracking #', _shipment!['trackingNumber'] ?? 'Not assigned'),
           ]),
 
@@ -226,9 +227,9 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
               if (_shippingPlan!['insuranceRecommended'])
                 _buildInfoRow(
                   'Coverage',
-                  '${_shipment!['currency']} ${_shippingPlan!['recommendedCoverage']}',
+                  '${_shipment!['currency']} ${_shippingPlan!['recommendedCoverageAmount'] ?? 'N/A'}',
                 ),
-              _buildInfoRow('Status', _shippingPlan!['approvalStatus']),
+              _buildInfoRow('Approved', _shippingPlan!['isApproved'] ? 'Yes' : 'No'),
             ]),
           ],
         ],
@@ -264,8 +265,20 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
               backgroundColor: Colors.blue.shade100,
               child: Icon(Icons.event, color: Colors.blue.shade700),
             ),
-            title: Text(event['status'], style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(event['eventType'] ?? 'Unknown Event', style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(event['description'] ?? ''),
+                const SizedBox(height: 4),
+                Text('Location: ${event['location'] ?? 'Unknown'}'),
+                const SizedBox(height: 4),
+                Text(
+                  'Occurred: ${occurredAt.toString()}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 4),
@@ -294,7 +307,7 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
   }
 
   Widget _buildInsuranceTab() {
-    if (_insuranceRecords.isEmpty) {
+    if (_insuranceRecord == null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -309,61 +322,56 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
       );
     }
 
-    return ListView.builder(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      itemCount: _insuranceRecords.length,
-      itemBuilder: (context, index) {
-        final record = _insuranceRecords[index];
-
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.security, color: Colors.green.shade700, size: 28),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            record['provider'],
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            'Policy: ${record['policyReference']}',
-                            style: const TextStyle(color: Colors.grey),
-                          ),
-                        ],
-                      ),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.security, color: Colors.green.shade700, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _insuranceRecord!['providerName'] ?? 'DEMO Gemora Insurance Sandbox',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'Policy: ${_insuranceRecord!['policyReference'] ?? 'N/A'}',
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.green.shade200),
-                      ),
-                      child: Text(
-                        record['status'],
-                        style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold),
-                      ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.green.shade200),
                     ),
-                  ],
-                ),
-                const Divider(height: 24),
-                _buildInfoRow('Coverage Amount', '${record['currency']} ${record['coverageAmount']}'),
-                _buildInfoRow('Coverage Type', record['coverageType']),
-                _buildInfoRow('Premium', '${record['currency']} ${record['premiumAmount']}'),
-              ],
-            ),
+                    child: Text(
+                      _insuranceRecord!['status'],
+                      style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              _buildInfoRow('Declared Value', '${_insuranceRecord!['currency']} ${_insuranceRecord!['declaredValue']}'),
+              _buildInfoRow('Coverage Amount', '${_insuranceRecord!['currency']} ${_insuranceRecord!['coverageAmount']}'),
+              _buildInfoRow('Coverage Type', _insuranceRecord!['coverageType']),
+              _buildInfoRow('Premium', '${_insuranceRecord!['currency']} ${_insuranceRecord!['premiumAmount']}'),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 

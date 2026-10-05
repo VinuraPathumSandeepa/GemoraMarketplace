@@ -102,6 +102,8 @@ function DashboardLayout({ children }) {
               Dashboard
             </NavLink>
 
+
+
             <NavLink
               to="/seller/listings"
               className={({ isActive }) =>
@@ -207,6 +209,18 @@ function DashboardLayout({ children }) {
               }
             >
               Dashboard
+            </NavLink>
+            <NavLink
+              to="/admin/shipments"
+              className={({ isActive }) => isActive ? "gemora-nav-link active" : "gemora-nav-link"}
+            >
+              Shipments
+            </NavLink>
+            <NavLink
+              to="/admin/ai-dashboard"
+              className={({ isActive }) => isActive ? "gemora-nav-link active" : "gemora-nav-link"}
+            >
+              AI Agent Dashboard
             </NavLink>
           </>
         );

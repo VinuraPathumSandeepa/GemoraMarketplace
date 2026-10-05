@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
+import '../shipments/seller_shipment_list.dart';
 
 class BuyerDashboard extends StatelessWidget {
   const BuyerDashboard({super.key});
@@ -55,6 +56,22 @@ class BuyerDashboard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SellerShipmentList(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.local_shipping),
+                label: const Text('My Shipments'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                 ),
               ),
             ],

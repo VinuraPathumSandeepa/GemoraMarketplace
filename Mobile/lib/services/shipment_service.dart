@@ -18,7 +18,7 @@ class ShipmentService {
   Future<List<dynamic>> getMyShipments() async {
     final headers = await _getHeaders();
     final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/Shipment/my'),
+      Uri.parse('${ApiConfig.baseUrl}/shipments/my'),
       headers: headers,
     );
 
@@ -33,7 +33,7 @@ class ShipmentService {
   Future<Map<String, dynamic>> getShipmentById(String id) async {
     final headers = await _getHeaders();
     final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/Shipment/$id'),
+      Uri.parse('${ApiConfig.baseUrl}/shipments/$id'),
       headers: headers,
     );
 
@@ -47,26 +47,34 @@ class ShipmentService {
   /// Create a new shipment (Seller only)
   Future<Map<String, dynamic>> createShipment({
     required String orderId,
-    required String origin,
-    required String destination,
+    required String originAddress,
+    required String originRegion,
+    required String originCountryCode,
+    required String destinationAddress,
+    required String destinationRegion,
+    required String destinationCountryCode,
     required String packageDescription,
-    required String selectedService,
-    required String courierName,
+    String? preferredService,
+    String specialHandlingNotes = '',
+    bool exportRequired = false,
   }) async {
     final headers = await _getHeaders();
     final body = jsonEncode({
       'orderId': orderId,
-      'origin': origin,
-      'destination': destination,
-      'declaredValue': 0, // Will be derived from order on backend
-      'currency': '', // Will be derived from order on backend
+      'originAddress': originAddress,
+      'originRegion': originRegion,
+      'originCountryCode': originCountryCode,
+      'destinationAddress': destinationAddress,
+      'destinationRegion': destinationRegion,
+      'destinationCountryCode': destinationCountryCode,
       'packageDescription': packageDescription,
-      'selectedService': selectedService,
-      'courierName': courierName,
+      'preferredService': preferredService ?? 'Standard',
+      'specialHandlingNotes': specialHandlingNotes,
+      'exportRequired': exportRequired,
     });
 
     final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/Shipment'),
+      Uri.parse('${ApiConfig.baseUrl}/shipments'),
       headers: headers,
       body: body,
     );
@@ -75,7 +83,7 @@ class ShipmentService {
       return jsonDecode(response.body) as Map<String, dynamic>;
     } else {
       final error = jsonDecode(response.body);
-      throw Exception(error['error'] ?? 'Failed to create shipment');
+      throw Exception(error['message'] ?? 'Failed to create shipment');
     }
   }
 
@@ -83,7 +91,7 @@ class ShipmentService {
   Future<List<dynamic>> getTrackingEvents(String shipmentId) async {
     final headers = await _getHeaders();
     final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/Shipment/$shipmentId/tracking'),
+      Uri.parse('${ApiConfig.baseUrl}/shipments/$shipmentId/tracking'),
       headers: headers,
     );
 
@@ -94,18 +102,21 @@ class ShipmentService {
     }
   }
 
-  /// Get insurance records for a shipment
-  Future<List<dynamic>> getInsuranceRecords(String shipmentId) async {
+  /// Get insurance record for a shipment (returns single object or null)
+  Future<Map<String, dynamic>?> getInsuranceRecord(String shipmentId) async {
     final headers = await _getHeaders();
     final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/Shipment/$shipmentId/insurance'),
+      Uri.parse('${ApiConfig.baseUrl}/shipments/$shipmentId/insurance'),
       headers: headers,
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body) as List<dynamic>;
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else if (response.statusCode == 404) {
+      // No insurance record found - this is OK
+      return null;
     } else {
-      throw Exception('Failed to load insurance records: ${response.body}');
+      throw Exception('Failed to load insurance record: ${response.body}');
     }
   }
 
@@ -113,7 +124,7 @@ class ShipmentService {
   Future<Map<String, dynamic>> generateShippingPlan(String shipmentId) async {
     final headers = await _getHeaders();
     final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/Shipment/$shipmentId/plan'),
+      Uri.parse('${ApiConfig.baseUrl}/shipments/$shipmentId/plan'),
       headers: headers,
     );
 
@@ -121,20 +132,23 @@ class ShipmentService {
       return jsonDecode(response.body) as Map<String, dynamic>;
     } else {
       final error = jsonDecode(response.body);
-      throw Exception(error['error'] ?? 'Failed to generate shipping plan');
+      throw Exception(error['message'] ?? 'Failed to generate shipping plan');
     }
   }
 
   /// Get shipping plan
-  Future<Map<String, dynamic>> getShippingPlan(String shipmentId) async {
+  Future<Map<String, dynamic>?> getShippingPlan(String shipmentId) async {
     final headers = await _getHeaders();
     final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/Shipment/$shipmentId/plan'),
+      Uri.parse('${ApiConfig.baseUrl}/shipments/$shipmentId/plan'),
       headers: headers,
     );
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
+    } else if (response.statusCode == 404) {
+      // No plan generated yet - this is OK
+      return null;
     } else {
       throw Exception('Failed to load shipping plan: ${response.body}');
     }

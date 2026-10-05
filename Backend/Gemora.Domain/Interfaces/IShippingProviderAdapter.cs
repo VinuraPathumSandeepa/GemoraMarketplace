@@ -26,6 +26,14 @@ public interface IShippingProviderAdapter
     Task<TrackingStatusResult> GetTrackingStatusAsync(
         TrackingStatusRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Books a shipment with the simulated courier provider.
+    /// THIS IS A SIMULATION - NOT A REAL COURIER BOOKING.
+    /// </summary>
+    Task<CourierBookingResult> BookShipmentAsync(
+        CourierBookingRequest request,
+        CancellationToken cancellationToken = default);
 }
 
 // Request/Response Models
@@ -88,5 +96,29 @@ public class TrackingStatusResult
     public string? CurrentStatus { get; set; }
     public string? Location { get; set; }
     public DateTime? LastUpdated { get; set; }
+    public string? ErrorMessage { get; set; }
+}
+
+// Booking Models (Phase 3)
+
+public class CourierBookingRequest
+{
+    public string ShipmentNumber { get; set; } = string.Empty;
+    public string Origin { get; set; } = string.Empty;
+    public string Destination { get; set; } = string.Empty;
+    public string PackageDescription { get; set; } = string.Empty;
+    public decimal DeclaredValue { get; set; }
+    public string Currency { get; set; } = string.Empty;
+    public string ServiceType { get; set; } = string.Empty;
+    public decimal? Weight { get; set; }
+}
+
+public class CourierBookingResult
+{
+    public bool Success { get; set; }
+    public string? CourierName { get; set; }
+    public string? ExternalShipmentReference { get; set; }
+    public string? TrackingNumber { get; set; }
+    public string? SelectedService { get; set; }
     public string? ErrorMessage { get; set; }
 }

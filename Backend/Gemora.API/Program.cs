@@ -85,6 +85,27 @@ builder.Services.AddScoped<
     Gemora.Application.Services.IShippingAgentService,
     ShippingAgentService>();
 
+// Courier provider adapter (MOCK/SIMULATION)
+builder.Services.AddScoped<
+    Gemora.Domain.Interfaces.IShippingProviderAdapter,
+    Gemora.Infrastructure.Adapters.MockShippingProviderAdapter>(sp =>
+{
+    var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Gemora.Infrastructure.Adapters.MockShippingProviderAdapter>>();
+    return new Gemora.Infrastructure.Adapters.MockShippingProviderAdapter(
+        logger,
+        maxRetryAttempts: 3,
+        timeoutSeconds: 30,
+        simulateFailures: false // Set to true for testing failure scenarios
+    );
+});
+
+// Real shipping agent: model-selected read-only tools followed by validated JSON output.
+builder.Services.AddHttpClient<
+    Gemora.Domain.Interfaces.ILlmProvider,
+    Gemora.Infrastructure.Providers.GeminiShippingAgentProvider>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(50);
+});
 
 // ------------------------------------------------------------
 // Gem listing management
@@ -586,16 +607,21 @@ using (var scope = app.Services.CreateScope())
     }
 
     // ======================================================
-    // ENSURE COMPONENT 3 TABLES EXIST
+    // COMPONENT 3 TABLES NOW MANAGED BY EF CORE MIGRATIONS (Phase 2)
+    // Manual SQL below is DISABLED - see migration CompleteShippingWorkflowSchema
     // ======================================================
     
+    /* DISABLED: EF migrations now manage Component 3 schema
     try
     {
         Console.WriteLine("Ensuring Component 3 tables exist...");
         
-        // Create Shipments table
+        // Create Shipments table (Phase 3: Added booking fields)
         await dbContext.Database.ExecuteSqlRawAsync(
-            @"CREATE TABLE IF NOT EXISTS ""Shipments"" (
+            @"DROP TABLE IF EXISTS ""Shipments"" CASCADE;"
+        );
+        await dbContext.Database.ExecuteSqlRawAsync(
+            @"CREATE TABLE ""Shipments"" (
                 ""Id"" uuid NOT NULL PRIMARY KEY,
                 ""OrderId"" uuid NOT NULL,
                 ""SellerId"" uuid NOT NULL,
@@ -618,8 +644,11 @@ using (var scope = app.Services.CreateScope())
                 ""RiskLevel"" character varying(20) NULL,
                 ""TrackingNumber"" character varying(100) NULL,
                 ""CourierName"" character varying(200) NULL,
+                ""ExternalShipmentReference"" character varying(200) NULL,
+                ""SelectedService"" character varying(200) NULL,
                 ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT NOW(),
                 ""UpdatedAt"" timestamp with time zone NULL,
+                ""BookedAt"" timestamp with time zone NULL,
                 ""ShippedAt"" timestamp with time zone NULL,
                 ""DeliveredAt"" timestamp with time zone NULL,
                 CONSTRAINT ""FK_Shipments_Orders_OrderId"" FOREIGN KEY (""OrderId"") REFERENCES ""Orders""(""Id""),
@@ -628,9 +657,12 @@ using (var scope = app.Services.CreateScope())
             );"
         );
         
-        // Create ShippingPlans table
+        // Create ShippingPlans table (Phase 7: Added GenerationSource and ExecutionSummary)
         await dbContext.Database.ExecuteSqlRawAsync(
-            @"CREATE TABLE IF NOT EXISTS ""ShippingPlans"" (
+            @"DROP TABLE IF EXISTS ""ShippingPlans"" CASCADE;"
+        );
+        await dbContext.Database.ExecuteSqlRawAsync(
+            @"CREATE TABLE ""ShippingPlans"" (
                 ""Id"" uuid NOT NULL PRIMARY KEY,
                 ""ShipmentId"" uuid NOT NULL,
                 ""RiskLevel"" character varying(20) NOT NULL DEFAULT 'Medium',
@@ -641,6 +673,8 @@ using (var scope = app.Services.CreateScope())
                 ""HandlingRequirements"" text NULL,
                 ""RequiredDocuments"" text NULL,
                 ""Warnings"" text NULL,
+                ""GenerationSource"" character varying(50) NOT NULL DEFAULT 'FallbackRules',
+                ""ExecutionSummary"" text NULL,
                 ""IsApproved"" boolean NOT NULL DEFAULT false,
                 ""ApprovedBy"" uuid NULL,
                 ""ApprovedAt"" timestamp with time zone NULL,
@@ -652,16 +686,22 @@ using (var scope = app.Services.CreateScope())
             );"
         );
         
-        // Create InsuranceRecords table
+        // Create InsuranceRecords table (Phase 4: Added DeclaredValue, PolicyReference, PremiumAmount)
         await dbContext.Database.ExecuteSqlRawAsync(
-            @"CREATE TABLE IF NOT EXISTS ""InsuranceRecords"" (
+            @"DROP TABLE IF EXISTS ""InsuranceRecords"" CASCADE;"
+        );
+        await dbContext.Database.ExecuteSqlRawAsync(
+            @"CREATE TABLE ""InsuranceRecords"" (
                 ""Id"" uuid NOT NULL PRIMARY KEY,
                 ""ShipmentId"" uuid NOT NULL,
+                ""DeclaredValue"" numeric(18,2) NOT NULL DEFAULT 0,
                 ""CoverageAmount"" numeric(18,2) NOT NULL,
                 ""Currency"" character varying(20) NOT NULL DEFAULT 'USD',
                 ""CoverageType"" character varying(50) NOT NULL DEFAULT 'Standard',
                 ""PolicyNumber"" character varying(100) NULL,
+                ""PolicyReference"" character varying(200) NULL,
                 ""ProviderName"" character varying(200) NULL,
+                ""PremiumAmount"" numeric(18,2) NOT NULL DEFAULT 0,
                 ""PolicyStartDate"" timestamp with time zone NULL,
                 ""PolicyEndDate"" timestamp with time zone NULL,
                 ""Status"" character varying(50) NOT NULL DEFAULT 'Pending',
@@ -671,8 +711,7 @@ using (var scope = app.Services.CreateScope())
             );"
         );
         
-        // Create ShipmentTrackingEvents table WITH OccurredAt and RecordedAt
-        // First drop if exists to ensure correct schema
+        // Create ShipmentTrackingEvents table WITH OccurredAt, RecordedAt, ExternalEventCode (Phase 4)
         await dbContext.Database.ExecuteSqlRawAsync(
             @"DROP TABLE IF EXISTS ""ShipmentTrackingEvents"" CASCADE;"
         );
@@ -683,6 +722,7 @@ using (var scope = app.Services.CreateScope())
                 ""EventType"" character varying(50) NOT NULL,
                 ""Location"" character varying(200) NOT NULL,
                 ""Description"" character varying(1000) NOT NULL,
+                ""ExternalEventCode"" character varying(100) NULL,
                 ""OccurredAt"" timestamp with time zone NOT NULL,
                 ""RecordedAt"" timestamp with time zone NOT NULL,
                 CONSTRAINT ""FK_ShipmentTrackingEvents_Shipments_ShipmentId"" FOREIGN KEY (""ShipmentId"") REFERENCES ""Shipments""(""Id"")
@@ -712,6 +752,7 @@ using (var scope = app.Services.CreateScope())
     {
         Console.WriteLine($"Error updating migration history: {ex.Message}");
     }
+    */
 
     await DbSeeder.SeedAsync(
         dbContext,
