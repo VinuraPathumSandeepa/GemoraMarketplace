@@ -1,36 +1,91 @@
-
 using Gemora.Domain.Interfaces;
 
 namespace Gemora.Infrastructure.Services;
 
 /// <summary>
-/// Stores new gemstone images in Supabase Storage.
+/// Hybrid storage implementation used during the Gemora
+/// migration to persistent Supabase Storage.
 ///
-/// During migration:
-/// - New gem images use Supabase.
-/// - Certificates continue using existing local storage.
-/// - Existing local files can still be deleted.
+/// New files:
+///
+/// - Gemstone images
+///     -> Public Supabase "gem-images" bucket.
+///
+/// - Certificates
+///     -> Private Supabase "gem-certificates" bucket.
+///
+/// Existing legacy files:
+///
+/// - /uploads/... references
+///     -> Continue using LocalFileStorageService for cleanup.
+///
+/// This allows existing database records to continue working
+/// while all new evidence is stored persistently in Supabase.
 /// </summary>
 public sealed class HybridFileStorageService : IFileStorageService
 {
+    // ============================================================
+    // SIZE LIMITS
+    // ============================================================
+
     private const long MaxGemImageSize =
         5L * 1024 * 1024;
+
+    private const long MaxCertificateSize =
+        10L * 1024 * 1024;
+
+    // ============================================================
+    // SUPABASE BUCKETS
+    // ============================================================
+
+    private const string GemImagesBucket =
+        "gem-images";
+
+    private const string CertificatesBucket =
+        "gem-certificates";
+
+    // ============================================================
+    // DEPENDENCIES
+    // ============================================================
 
     private readonly SupabaseStorageClient _supabaseStorage;
 
     private readonly LocalFileStorageService _localStorage;
 
+    // ============================================================
+    // CONSTRUCTOR
+    // ============================================================
+
     public HybridFileStorageService(
         SupabaseStorageClient supabaseStorage,
         LocalFileStorageService localStorage)
     {
-        _supabaseStorage = supabaseStorage;
+        _supabaseStorage =
+            supabaseStorage
+            ?? throw new ArgumentNullException(
+                nameof(supabaseStorage)
+            );
 
-        _localStorage = localStorage;
+        _localStorage =
+            localStorage
+            ?? throw new ArgumentNullException(
+                nameof(localStorage)
+            );
     }
 
     // ============================================================
     // SAVE GEMSTONE IMAGE TO SUPABASE
+    //
+    // Bucket:
+    // gem-images
+    //
+    // Visibility:
+    // Public
+    //
+    // PostgreSQL stores:
+    //
+    // https://PROJECT.supabase.co/storage/v1/object/public/
+    // gem-images/filename.jpg
     // ============================================================
 
     public async Task<string> SaveGemImageAsync(
@@ -39,6 +94,10 @@ public sealed class HybridFileStorageService : IFileStorageService
         string contentType,
         long fileLength)
     {
+        // --------------------------------------------------------
+        // 1. VALIDATE SIZE
+        // --------------------------------------------------------
+
         if (fileLength <= 0)
         {
             throw new InvalidOperationException(
@@ -53,7 +112,14 @@ public sealed class HybridFileStorageService : IFileStorageService
             );
         }
 
-        if (fileStream == null || !fileStream.CanRead)
+        // --------------------------------------------------------
+        // 2. VALIDATE STREAM
+        // --------------------------------------------------------
+
+        if (
+            fileStream == null ||
+            !fileStream.CanRead
+        )
         {
             throw new InvalidOperationException(
                 "The selected gemstone image cannot be read."
@@ -61,24 +127,37 @@ public sealed class HybridFileStorageService : IFileStorageService
         }
 
         // --------------------------------------------------------
-        // Validate extension and MIME type together.
+        // 3. VALIDATE FILENAME
+        // --------------------------------------------------------
+
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            throw new InvalidOperationException(
+                "The gemstone image filename is invalid."
+            );
+        }
+
+        // --------------------------------------------------------
+        // 4. VALIDATE EXTENSION AND CONTENT TYPE
         // --------------------------------------------------------
 
         var extension =
-            Path.GetExtension(fileName).ToLowerInvariant();
+            Path.GetExtension(fileName)
+                .ToLowerInvariant();
 
-        var expectedContentType = extension switch
-        {
-            ".jpg" => "image/jpeg",
+        var expectedContentType =
+            extension switch
+            {
+                ".jpg" => "image/jpeg",
 
-            ".jpeg" => "image/jpeg",
+                ".jpeg" => "image/jpeg",
 
-            ".png" => "image/png",
+                ".png" => "image/png",
 
-            ".webp" => "image/webp",
+                ".webp" => "image/webp",
 
-            _ => null
-        };
+                _ => null
+            };
 
         if (expectedContentType == null)
         {
@@ -98,74 +177,230 @@ public sealed class HybridFileStorageService : IFileStorageService
         }
 
         // --------------------------------------------------------
-        // Never use the original filename as the storage key.
+        // 5. GENERATE SAFE STORAGE OBJECT NAME
+        //
+        // Never use the Seller's original filename.
         // --------------------------------------------------------
 
         var objectName =
             $"{Guid.NewGuid():N}{extension}";
 
         // --------------------------------------------------------
-        // Upload to the PUBLIC gem-images Supabase bucket.
-        //
-        // The client independently enforces its size limit.
+        // 6. UPLOAD TO PUBLIC SUPABASE GEM IMAGE BUCKET
         // --------------------------------------------------------
 
         var imageUrl =
             await _supabaseStorage.UploadAsync(
-                bucket: "gem-images",
+                bucket: GemImagesBucket,
                 objectName: objectName,
                 source: fileStream,
                 contentType: expectedContentType,
                 maximumBytes: MaxGemImageSize
             );
 
+        // --------------------------------------------------------
+        // 7. RETURN PUBLIC SUPABASE URL
+        // --------------------------------------------------------
+
         return imageUrl;
     }
 
     // ============================================================
-    // CERTIFICATE UPLOAD
+    // SAVE CERTIFICATE TO PRIVATE SUPABASE STORAGE
     //
-    // Temporary migration behavior:
+    // Bucket:
+    // gem-certificates
     //
-    // Keep the existing implementation until the private
-    // certificate access endpoint is implemented.
+    // Visibility:
+    // PRIVATE
+    //
+    // PostgreSQL stores:
+    //
+    // supabase-private://gem-certificates/filename.pdf
+    //
+    // The permanent Storage URL is never exposed publicly.
+    //
+    // GemCertificatesController checks authorization and creates
+    // a temporary signed URL when the Seller or Gemologist needs
+    // to view the certificate.
     // ============================================================
 
-    public Task<string> SaveCertificateAsync(
+    public async Task<string> SaveCertificateAsync(
         Stream fileStream,
         string fileName,
         string contentType,
         long fileLength)
     {
-        return _localStorage.SaveCertificateAsync(
-            fileStream,
-            fileName,
-            contentType,
-            fileLength
-        );
+        // --------------------------------------------------------
+        // 1. VALIDATE SIZE
+        // --------------------------------------------------------
+
+        if (fileLength <= 0)
+        {
+            throw new InvalidOperationException(
+                "Please select a certificate file to upload."
+            );
+        }
+
+        if (fileLength > MaxCertificateSize)
+        {
+            throw new InvalidOperationException(
+                "The certificate file must be 10 MB or smaller."
+            );
+        }
+
+        // --------------------------------------------------------
+        // 2. VALIDATE STREAM
+        // --------------------------------------------------------
+
+        if (
+            fileStream == null ||
+            !fileStream.CanRead
+        )
+        {
+            throw new InvalidOperationException(
+                "The selected certificate file cannot be read."
+            );
+        }
+
+        // --------------------------------------------------------
+        // 3. VALIDATE FILENAME
+        // --------------------------------------------------------
+
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            throw new InvalidOperationException(
+                "The certificate filename is invalid."
+            );
+        }
+
+        // --------------------------------------------------------
+        // 4. VALIDATE EXTENSION AND MIME TYPE
+        //
+        // Supported:
+        //
+        // PDF
+        // JPG / JPEG
+        // PNG
+        // --------------------------------------------------------
+
+        var extension =
+            Path.GetExtension(fileName)
+                .ToLowerInvariant();
+
+        var expectedContentType =
+            extension switch
+            {
+                ".pdf" =>
+                    "application/pdf",
+
+                ".jpg" =>
+                    "image/jpeg",
+
+                ".jpeg" =>
+                    "image/jpeg",
+
+                ".png" =>
+                    "image/png",
+
+                _ => null
+            };
+
+        if (expectedContentType == null)
+        {
+            throw new InvalidOperationException(
+                "Please upload a PDF, JPG or PNG certificate file."
+            );
+        }
+
+        if (!string.Equals(
+                contentType,
+                expectedContentType,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "The certificate format does not match its file extension."
+            );
+        }
+
+        // --------------------------------------------------------
+        // 5. GENERATE RANDOM STORAGE OBJECT NAME
+        //
+        // Example:
+        //
+        // 58d72ef284414f4c9019617c5a95210f.pdf
+        //
+        // Do not expose the Seller's original filename.
+        // --------------------------------------------------------
+
+        var objectName =
+            $"{Guid.NewGuid():N}{extension}";
+
+        // --------------------------------------------------------
+        // 6. UPLOAD TO PRIVATE SUPABASE BUCKET
+        //
+        // SupabaseStorageClient:
+        //
+        // - enforces the certificate bucket
+        // - checks extension/MIME agreement
+        // - enforces the 10 MB certificate limit
+        // - returns a private reference instead of a public URL
+        // --------------------------------------------------------
+
+        var certificateReference =
+            await _supabaseStorage.UploadAsync(
+                bucket: CertificatesBucket,
+                objectName: objectName,
+                source: fileStream,
+                contentType: expectedContentType,
+                maximumBytes: MaxCertificateSize
+            );
+
+        // --------------------------------------------------------
+        // 7. RETURN PRIVATE REFERENCE
+        //
+        // Example:
+        //
+        // supabase-private://gem-certificates/...
+        //
+        // This value is safe to store in PostgreSQL.
+        // --------------------------------------------------------
+
+        return certificateReference;
     }
 
     // ============================================================
     // DELETE FILE
     //
-    // Supports both:
+    // Supports:
     //
-    // 1. Existing /uploads/... references.
-    // 2. New Supabase object URLs.
+    // 1. Legacy local references
     //
-    // SupabaseStorageClient validates Supabase references
-    // before allowing deletion.
+    //    /uploads/gem-images/...
+    //    /uploads/certificates/...
+    //
+    // 2. Public Supabase image URLs
+    //
+    // 3. Private certificate references
+    //
+    //    supabase-private://gem-certificates/...
     // ============================================================
 
     public async Task DeleteFileAsync(
         string? fileUrl)
     {
+        // --------------------------------------------------------
+        // 1. NOTHING TO DELETE
+        // --------------------------------------------------------
+
         if (string.IsNullOrWhiteSpace(fileUrl))
         {
             return;
         }
 
-        // Existing local file.
+        // --------------------------------------------------------
+        // 2. LEGACY LOCAL FILE
+        // --------------------------------------------------------
 
         if (fileUrl.StartsWith(
                 "/uploads/",
@@ -178,7 +413,18 @@ public sealed class HybridFileStorageService : IFileStorageService
             return;
         }
 
-        // New Supabase file.
+        // --------------------------------------------------------
+        // 3. SUPABASE FILE
+        //
+        // SupabaseStorageClient independently validates that the
+        // supplied reference belongs to an allowed Gemora bucket.
+        //
+        // It supports:
+        //
+        // - public gem image URLs
+        // - public profile image URLs
+        // - private certificate references
+        // --------------------------------------------------------
 
         await _supabaseStorage.DeleteAsync(
             fileUrl
