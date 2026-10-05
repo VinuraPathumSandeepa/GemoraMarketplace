@@ -16,6 +16,7 @@ using Gemora.Infrastructure.Services;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -25,32 +26,113 @@ var builder =
 
 
 // ============================================================
-// DATABASE
+// SUPABASE STORAGE CONFIGURATION
+// ============================================================
+
+builder.Services.AddSingleton(
+    new SupabaseStorageOptions
+    {
+        ProjectUrl =
+            builder.Configuration[
+                "SupabaseStorage:ProjectUrl"
+            ] ?? "",
+
+        ServiceRoleKey =
+            builder.Configuration[
+                "SupabaseStorage:ServiceRoleKey"
+            ] ?? ""
+    }
+);
+
+
+// ============================================================
+// SUPABASE STORAGE HTTP CLIENT
+// ============================================================
+
+builder.Services.AddHttpClient<
+    SupabaseStorageClient
+>();
+
+
+// ============================================================
+// WEB ROOT CONFIGURATION
+//
+// Keeps legacy local uploads working together with Supabase.
+// ============================================================
+
+var webRootPath =
+    Path.Combine(
+        builder.Environment.ContentRootPath,
+        "wwwroot"
+    );
+
+Directory.CreateDirectory(
+    webRootPath
+);
+
+var uploadRootPath =
+    Path.Combine(
+        webRootPath,
+        "uploads"
+    );
+
+Directory.CreateDirectory(
+    uploadRootPath
+);
+
+Directory.CreateDirectory(
+    Path.Combine(
+        uploadRootPath,
+        "profiles"
+    )
+);
+
+Directory.CreateDirectory(
+    Path.Combine(
+        uploadRootPath,
+        "gem-images"
+    )
+);
+
+Directory.CreateDirectory(
+    Path.Combine(
+        uploadRootPath,
+        "certificates"
+    )
+);
+
+builder.Environment.WebRootPath =
+    webRootPath;
+
+builder.Environment.WebRootFileProvider =
+    new PhysicalFileProvider(
+        webRootPath
+    );
+
+
+// ============================================================
+// DATABASE - POSTGRESQL / SUPABASE
 // ============================================================
 
 var connectionString =
     builder.Configuration
         .GetConnectionString(
-            "DefaultConnection")
+            "DefaultConnection"
+        )
     ?? throw new InvalidOperationException(
-        "Database connection string 'DefaultConnection' is not configured.");
+        "Database connection string 'DefaultConnection' is not configured."
+    );
 
-builder.Services
-    .AddDbContext<ApplicationDbContext>(
-        options =>
-        {
-            options.UseNpgsql(
-                connectionString);
-        });
-
-
-// ============================================================
-// COMPONENT 4 - FILE STORAGE
-// ============================================================
-
-builder.Services.AddSingleton<
-    Gemora.Application.Interfaces.IFileStorageService,
-    Gemora.API.Services.LocalFileStorageService>();
+builder.Services.AddDbContext<
+    ApplicationDbContext
+>(
+    options =>
+    {
+        options.UseNpgsql(
+            connectionString
+        );
+    }
+);
 
 
 // ============================================================
@@ -59,78 +141,110 @@ builder.Services.AddSingleton<
 
 builder.Services.AddScoped<
     IAuthService,
-    AuthService>();
+    AuthService
+>();
 
 
 // ============================================================
 // PROFILE IMAGE STORAGE
+//
+// Uses the current Supabase-aware profile image service.
 // ============================================================
 
 builder.Services.AddScoped<
     IProfileImageStorageService,
-    ProfileImageStorageService>();
+    ProfileImageStorageService
+>();
 
 
 // ============================================================
-// EMAIL SERVICE
+// EMAIL / OTP SERVICE
 // ============================================================
 
 builder.Services.AddScoped<
     IEmailService,
-    SmtpEmailService>();
+    SmtpEmailService
+>();
 
 
 // ============================================================
-// JWT SERVICE
-// ============================================================
-
-builder.Services.AddScoped<
-    TokenService>();
-
-
-// ============================================================
-// EXPORT / COMPLIANCE
+// JWT TOKEN SERVICE
 // ============================================================
 
 builder.Services.AddScoped<
-    IExportComplianceService,
-    ExportComplianceService>();
+    TokenService
+>();
+
+
+// ============================================================
+// COMPONENT 4 - EXPORT COMPLIANCE FILE STORAGE
+//
+// This interface belongs to Gemora.Application.Interfaces.
+// Do not confuse it with Gemora.Domain.Interfaces.IFileStorageService.
+// ============================================================
+
+builder.Services.AddSingleton<
+    Gemora.Application.Interfaces.IFileStorageService,
+    Gemora.API.Services.LocalFileStorageService
+>();
+
+
+// ============================================================
+// COMPONENT 4 - EXPORT / COMPLIANCE SERVICES
+// ============================================================
 
 builder.Services.AddScoped<
     IComplianceRulesService,
-    ComplianceRulesService>();
+    ComplianceRulesService
+>();
+
+builder.Services.AddScoped<
+    IExportComplianceService,
+    ExportComplianceService
+>();
 
 builder.Services.AddScoped<
     IExportOfficerService,
-    ExportOfficerService>();
+    ExportOfficerService
+>();
 
 builder.Services.AddScoped<
     IComplianceAgentToolService,
-    ComplianceAgentToolService>();
+    ComplianceAgentToolService
+>();
 
 builder.Services.AddScoped<
     IComplianceWorkflowService,
-    ComplianceWorkflowService>();
-
-builder.Services.Configure<
-    GeminiComplianceOptions>(
-        builder.Configuration
-            .GetSection(
-                GeminiComplianceOptions
-                    .SectionName));
-
-builder.Services.AddHttpClient<
-    IComplianceAiClient,
-    GeminiComplianceAiClient>();
+    ComplianceWorkflowService
+>();
 
 
 // ============================================================
-// GEM LISTING SERVICE
+// COMPONENT 4 - GEMINI COMPLIANCE AI
+// ============================================================
+
+builder.Services.Configure<
+    GeminiComplianceOptions
+>(
+    builder.Configuration.GetSection(
+        GeminiComplianceOptions.SectionName
+    )
+);
+
+builder.Services.AddHttpClient<
+    IComplianceAiClient,
+    GeminiComplianceAiClient
+>();
+
+
+// ============================================================
+// GEM LISTING MANAGEMENT
 // ============================================================
 
 builder.Services.AddScoped<
     IGemListingService,
-    GemListingService>();
+    GemListingService
+>();
 
 
 // ============================================================
@@ -139,149 +253,224 @@ builder.Services.AddScoped<
 
 builder.Services.AddScoped<
     IMarketplaceService,
-    MarketplaceService>();
+    MarketplaceService
+>();
 
 builder.Services.AddScoped<
     IOrderService,
-    OrderService>();
+    OrderService
+>();
 
 builder.Services.AddScoped<
     IMarketplaceAgentService,
-    MarketplaceAgentService>();
+    MarketplaceAgentService
+>();
 
 
 // ============================================================
-// GEM VERIFICATION
+// HUMAN GEMOLOGIST VERIFICATION
 // ============================================================
 
 builder.Services.AddScoped<
     IGemVerificationService,
-    GemVerificationService>();
+    GemVerificationService
+>();
+
+
+// ============================================================
+// GEM EVIDENCE VALIDATOR
+// ============================================================
 
 builder.Services.AddScoped<
     IGemEvidenceValidator,
-    GemEvidenceValidator>();
+    GemEvidenceValidator
+>();
+
+
+// ============================================================
+// GEM VERIFICATION AGENT
+// ============================================================
 
 builder.Services.AddScoped<
     IGemVerificationAgent,
-    GemVerificationAgent>();
+    GemVerificationAgent
+>();
 
 
 // ============================================================
-// GEMINI SETTINGS
+// GEM VERIFICATION GEMINI OPTIONS
 // ============================================================
 
 builder.Services.Configure<
-    GeminiOptions>(
-        builder.Configuration
-            .GetSection(
-                GeminiOptions.SectionName));
+    GeminiOptions
+>(
+    builder.Configuration.GetSection(
+        GeminiOptions.SectionName
+    )
+);
 
 
 // ============================================================
-// GEMINI HTTP CLIENT
+// GEM VERIFICATION GEMINI HTTP CLIENT
 // ============================================================
 
 builder.Services.AddHttpClient<
     IGemAiModelClient,
-    GeminiGemAnalysisClient>(
-        client =>
-        {
-            client.BaseAddress =
-                new Uri(
-                    "https://generativelanguage.googleapis.com/");
+    GeminiGemAnalysisClient
+>(
+    client =>
+    {
+        client.BaseAddress =
+            new Uri(
+                "https://generativelanguage.googleapis.com/"
+            );
 
-            client.Timeout =
-                TimeSpan.FromSeconds(
-                    60);
-        });
-
-
-// ============================================================
-// LOCAL GEM FILE STORAGE
-// ============================================================
-
-builder.Services.AddScoped<
-    Gemora.Domain.Interfaces.IFileStorageService>(
-        serviceProvider =>
-        {
-            var environment =
-                serviceProvider
-                    .GetRequiredService<
-                        IWebHostEnvironment>();
-
-            var webRootPath =
-                environment.WebRootPath;
-
-            if (string.IsNullOrWhiteSpace(
-                    webRootPath))
-            {
-                webRootPath =
-                    Path.Combine(
-                        environment
-                            .ContentRootPath,
-                        "wwwroot");
-            }
-
-            Directory.CreateDirectory(
-                webRootPath);
-
-            var uploadRoot =
-                Path.Combine(
-                    webRootPath,
-                    "uploads");
-
-            Directory.CreateDirectory(
-                uploadRoot);
-
-            return new
-                Gemora.Infrastructure.Services
-                    .LocalFileStorageService(
-                        uploadRoot);
-        });
+        client.Timeout =
+            TimeSpan.FromSeconds(
+                60
+            );
+    }
+);
 
 
 // ============================================================
-// GEM IMAGE READER
+// LEGACY LOCAL FILE STORAGE
+//
+// Used by the hybrid storage layer for old /uploads/... files.
 // ============================================================
 
 builder.Services.AddScoped<
-    IGemImageReader>(
-        serviceProvider =>
+    Gemora.Infrastructure.Services.LocalFileStorageService
+>(
+    serviceProvider =>
+    {
+        var environment =
+            serviceProvider
+                .GetRequiredService<
+                    IWebHostEnvironment
+                >();
+
+        var configuredWebRoot =
+            environment.WebRootPath;
+
+        if (
+            string.IsNullOrWhiteSpace(
+                configuredWebRoot
+            )
+        )
         {
-            var environment =
-                serviceProvider
-                    .GetRequiredService<
-                        IWebHostEnvironment>();
-
-            var webRootPath =
-                environment.WebRootPath;
-
-            if (string.IsNullOrWhiteSpace(
-                    webRootPath))
-            {
-                webRootPath =
-                    Path.Combine(
-                        environment
-                            .ContentRootPath,
-                        "wwwroot");
-            }
-
-            Directory.CreateDirectory(
-                webRootPath);
-
-            var uploadRoot =
+            configuredWebRoot =
                 Path.Combine(
-                    webRootPath,
-                    "uploads");
+                    environment.ContentRootPath,
+                    "wwwroot"
+                );
+        }
 
-            Directory.CreateDirectory(
-                uploadRoot);
+        Directory.CreateDirectory(
+            configuredWebRoot
+        );
 
-            return new
-                LocalGemImageReader(
-                    uploadRoot);
-        });
+        var uploadDirectory =
+            Path.Combine(
+                configuredWebRoot,
+                "uploads"
+            );
+
+        Directory.CreateDirectory(
+            uploadDirectory
+        );
+
+        return new
+            Gemora.Infrastructure.Services.LocalFileStorageService(
+                uploadDirectory
+            );
+    }
+);
+
+
+// ============================================================
+// LEGACY LOCAL GEM IMAGE READER
+// ============================================================
+
+builder.Services.AddScoped<
+    LocalGemImageReader
+>(
+    serviceProvider =>
+    {
+        var environment =
+            serviceProvider
+                .GetRequiredService<
+                    IWebHostEnvironment
+                >();
+
+        var configuredWebRoot =
+            environment.WebRootPath;
+
+        if (
+            string.IsNullOrWhiteSpace(
+                configuredWebRoot
+            )
+        )
+        {
+            configuredWebRoot =
+                Path.Combine(
+                    environment.ContentRootPath,
+                    "wwwroot"
+                );
+        }
+
+        Directory.CreateDirectory(
+            configuredWebRoot
+        );
+
+        var uploadDirectory =
+            Path.Combine(
+                configuredWebRoot,
+                "uploads"
+            );
+
+        Directory.CreateDirectory(
+            uploadDirectory
+        );
+
+        return new LocalGemImageReader(
+            uploadDirectory
+        );
+    }
+);
+
+
+// ============================================================
+// GEM VERIFICATION HYBRID FILE STORAGE
+//
+// New gemstone images:
+//   Supabase public storage.
+//
+// New certificates:
+//   Supabase private storage.
+//
+// Legacy /uploads/... paths:
+//   Local storage.
+// ============================================================
+
+builder.Services.AddScoped<
+    Gemora.Domain.Interfaces.IFileStorageService,
+    HybridFileStorageService
+>();
+
+
+// ============================================================
+// HYBRID GEM IMAGE READER
+//
+// Supports both:
+// - Legacy local files
+// - Supabase gemstone images
+// ============================================================
+
+builder.Services.AddScoped<
+    IGemImageReader,
+    HybridGemImageReader
+>();
 
 
 // ============================================================
@@ -311,11 +500,17 @@ builder.Services.AddCors(
                         "https://localhost:5174",
 
                         "http://localhost:5175",
-                        "https://localhost:5175")
+                        "https://localhost:5175",
+
+                        "https://gemora-marketplace-web.onrender.com",
+                        "http://gemora-marketplace-web.onrender.com"
+                    )
                     .AllowAnyHeader()
                     .AllowAnyMethod();
-            });
-    });
+            }
+        );
+    }
+);
 
 
 // ============================================================
@@ -324,24 +519,29 @@ builder.Services.AddCors(
 
 var jwtKey =
     builder.Configuration[
-        "Jwt:Key"];
+        "Jwt:Key"
+    ];
 
-if (string.IsNullOrWhiteSpace(
-        jwtKey))
+if (
+    string.IsNullOrWhiteSpace(
+        jwtKey
+    )
+)
 {
     throw new InvalidOperationException(
-        "JWT signing key is not configured.");
+        "JWT signing key is not configured."
+    );
 }
-
 
 var jwtIssuer =
     builder.Configuration[
-        "Jwt:Issuer"];
+        "Jwt:Issuer"
+    ];
 
 var jwtAudience =
     builder.Configuration[
-        "Jwt:Audience"];
-
+        "Jwt:Audience"
+    ];
 
 builder.Services
     .AddAuthentication(
@@ -354,7 +554,8 @@ builder.Services
             options.DefaultChallengeScheme =
                 JwtBearerDefaults
                     .AuthenticationScheme;
-        })
+        }
+    )
     .AddJwtBearer(
         options =>
         {
@@ -381,30 +582,30 @@ builder.Services
 
                     IssuerSigningKey =
                         new SymmetricSecurityKey(
-                            Encoding.UTF8
-                                .GetBytes(
-                                    jwtKey)),
+                            Encoding.UTF8.GetBytes(
+                                jwtKey
+                            )
+                        ),
 
                     ClockSkew =
                         TimeSpan.Zero
                 };
-        });
+        }
+    );
 
 
 // ============================================================
 // AUTHORIZATION
 // ============================================================
 
-builder.Services
-    .AddAuthorization();
+builder.Services.AddAuthorization();
 
 
 // ============================================================
 // SWAGGER
 // ============================================================
 
-builder.Services
-    .AddEndpointsApiExplorer();
+builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(
     options =>
@@ -421,8 +622,8 @@ builder.Services.AddSwaggerGen(
 
                 Description =
                     "Gemora Marketplace ASP.NET Core Web API"
-            });
-
+            }
+        );
 
         options.AddSecurityDefinition(
             "Bearer",
@@ -445,8 +646,8 @@ builder.Services.AddSwaggerGen(
 
                 Description =
                     "Enter your JWT token."
-            });
-
+            }
+        );
 
         options.AddSecurityRequirement(
             new OpenApiSecurityRequirement
@@ -458,8 +659,7 @@ builder.Services.AddSwaggerGen(
                             new OpenApiReference
                             {
                                 Type =
-                                    ReferenceType
-                                        .SecurityScheme,
+                                    ReferenceType.SecurityScheme,
 
                                 Id =
                                     "Bearer"
@@ -468,8 +668,10 @@ builder.Services.AddSwaggerGen(
 
                     Array.Empty<string>()
                 }
-            });
-    });
+            }
+        );
+    }
+);
 
 
 // ============================================================
@@ -482,24 +684,22 @@ var app =
 
 // ============================================================
 // DATABASE COMPATIBILITY + SEEDING
-// ============================================================
 //
 // IMPORTANT:
 //
-// Historical EF migrations and current Component 2
-// UUID transaction schema are currently not perfectly
-// aligned.
+// Existing migration history and the current Component 2
+// transaction schema are not fully aligned.
 //
-// Do NOT automatically call Database.Migrate() here.
+// Do not call Database.Migrate() automatically.
 //
-// This compatibility initializer only creates missing
-// Component 2 runtime columns/tables.
-//
-// It does not delete existing orders.
+// This compatibility initializer upgrades missing runtime
+// tables / columns without deleting existing data.
 // ============================================================
 
-using (var scope =
-       app.Services.CreateScope())
+using (
+    var scope =
+        app.Services.CreateScope()
+)
 {
     var services =
         scope.ServiceProvider;
@@ -509,36 +709,39 @@ using (var scope =
         var dbContext =
             services
                 .GetRequiredService<
-                    ApplicationDbContext>();
-
+                    ApplicationDbContext
+                >();
 
         // ----------------------------------------------------
-        // Ensure Marketplace / Transaction schema exists
+        // COMPONENT 2 DATABASE COMPATIBILITY
         // ----------------------------------------------------
 
         await DatabaseCompatibilityInitializer
             .EnsureComponent2SchemaAsync(
-                dbContext);
-
+                dbContext
+            );
 
         // ----------------------------------------------------
-        // Existing project seeding
+        // EXISTING PROJECT SEEDING
         // ----------------------------------------------------
 
         await DbSeeder.SeedAsync(
             dbContext,
-            builder.Configuration);
+            builder.Configuration
+        );
     }
     catch (Exception ex)
     {
         var logger =
             services
                 .GetRequiredService<
-                    ILogger<Program>>();
+                    ILogger<Program>
+                >();
 
         logger.LogError(
             ex,
-            "An error occurred while preparing the Gemora database.");
+            "An error occurred while preparing the Gemora database."
+        );
 
         throw;
     }
@@ -550,24 +753,25 @@ using (var scope =
 // ============================================================
 
 app.UseMiddleware<
-    GlobalExceptionHandler>();
+    GlobalExceptionHandler
+>();
 
 
 // ============================================================
 // HTTPS
-// ============================================================
 //
-// Local frontend:
+// Local development stays on HTTP:
+//
+// frontend:
 // http://localhost:5173
 //
-// Local API:
+// API:
 // http://localhost:5198
-//
-// Avoid HTTP -> HTTPS redirect during local development.
 // ============================================================
 
-if (!app.Environment
-        .IsDevelopment())
+if (
+    !app.Environment.IsDevelopment()
+)
 {
     app.UseHttpsRedirection();
 }
@@ -587,21 +791,72 @@ app.UseSwaggerUI();
 // ============================================================
 
 app.UseCors(
-    "GemoraCorsPolicy");
+    "GemoraCorsPolicy"
+);
+
+
+// ============================================================
+// BLOCK DIRECT ACCESS TO LEGACY CERTIFICATES
+//
+// Certificates must be accessed through the protected API,
+// not directly through /uploads/certificates/...
+//
+// Must remain before UseStaticFiles().
+// ============================================================
+
+app.Use(
+    async (context, next) =>
+    {
+        var requestPath =
+            context.Request.Path.Value;
+
+        if (
+            !string.IsNullOrWhiteSpace(
+                requestPath
+            ) &&
+            (
+                requestPath.Equals(
+                    "/uploads/certificates",
+                    StringComparison.OrdinalIgnoreCase
+                )
+                ||
+                requestPath.StartsWith(
+                    "/uploads/certificates/",
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+        )
+        {
+            context.Response.StatusCode =
+                StatusCodes.Status404NotFound;
+
+            return;
+        }
+
+        await next();
+    }
+);
 
 
 // ============================================================
 // STATIC FILES
-// ============================================================
 //
-// Enables:
+// Keeps public legacy:
 //
-// /uploads/gem-images/...
 // /uploads/profiles/...
-// /uploads/certificates/...
+// /uploads/gem-images/...
+//
+// Legacy certificates are blocked by middleware above.
 // ============================================================
 
-app.UseStaticFiles();
+app.UseStaticFiles(
+    new StaticFileOptions
+    {
+        FileProvider =
+            builder.Environment
+                .WebRootFileProvider
+    }
+);
 
 
 // ============================================================
@@ -626,7 +881,7 @@ app.MapControllers();
 
 
 // ============================================================
-// START API
+// START GEMORA API
 // ============================================================
 
 app.Run();
