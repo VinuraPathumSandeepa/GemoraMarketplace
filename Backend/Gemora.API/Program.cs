@@ -3,6 +3,7 @@ using System.Text;
 using Gemora.API.Middleware;
 using Gemora.API.Services;
 
+using Gemora.Application.Configuration;
 using Gemora.Application.Interfaces;
 using Gemora.Application.Services;
 
@@ -45,6 +46,15 @@ builder.Services.AddDbContext<ApplicationDbContext>(
 // ============================================================
 
 // ------------------------------------------------------------
+// Component 4 Compliance Storage
+// ------------------------------------------------------------
+
+builder.Services.AddSingleton<
+    Gemora.Application.Interfaces.IFileStorageService,
+    Gemora.API.Services.LocalFileStorageService>();
+
+
+// ------------------------------------------------------------
 // Authentication
 // ------------------------------------------------------------
 
@@ -80,6 +90,39 @@ builder.Services.AddScoped<
 // ------------------------------------------------------------
 
 builder.Services.AddScoped<TokenService>();
+
+
+// ------------------------------------------------------------
+// Export Compliance (Component 4)
+// ------------------------------------------------------------
+
+builder.Services.AddScoped<
+    IExportComplianceService,
+    ExportComplianceService>();
+
+builder.Services.AddScoped<
+    IComplianceRulesService,
+    ComplianceRulesService>();
+
+builder.Services.AddScoped<
+    IExportOfficerService,
+    ExportOfficerService>();
+
+builder.Services.AddScoped<
+    IComplianceAgentToolService,
+    ComplianceAgentToolService>();
+
+builder.Services.AddScoped<
+    IComplianceWorkflowService,
+    ComplianceWorkflowService>();
+
+builder.Services.Configure<GeminiComplianceOptions>(
+    builder.Configuration.GetSection(
+        GeminiComplianceOptions.SectionName));
+
+builder.Services.AddHttpClient<
+    IComplianceAiClient,
+    GeminiComplianceAiClient>();
 
 
 // ------------------------------------------------------------
@@ -183,7 +226,7 @@ builder.Services.AddHttpClient<
 //           └── certificates
 // ============================================================
 
-builder.Services.AddScoped<IFileStorageService>(
+builder.Services.AddScoped<Gemora.Domain.Interfaces.IFileStorageService>(
     serviceProvider =>
     {
         var environment =
@@ -214,7 +257,7 @@ builder.Services.AddScoped<IFileStorageService>(
         Directory.CreateDirectory(
             uploadRoot);
 
-        return new LocalFileStorageService(
+        return new Gemora.Infrastructure.Services.LocalFileStorageService(
             uploadRoot);
     });
 

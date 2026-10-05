@@ -3,6 +3,7 @@ using Gemora.Application.Interfaces;
 using Gemora.Domain.Constants;
 using Gemora.Domain.Entities;
 using Gemora.Domain.Interfaces;
+using IFileStorageService = Gemora.Domain.Interfaces.IFileStorageService;
 using Gemora.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
