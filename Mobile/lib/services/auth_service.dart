@@ -20,11 +20,7 @@ class AuthService {
       body: jsonEncode({'email': email.trim(), 'password': password}),
     );
 
-    Map<String, dynamic> responseData = {};
-
-    if (response.body.isNotEmpty) {
-      responseData = jsonDecode(response.body) as Map<String, dynamic>;
-    }
+    final responseData = _decodeResponse(response.body);
 
     if (response.statusCode != 200) {
       throw Exception(responseData['message'] ?? 'Login failed.');
@@ -73,14 +69,51 @@ class AuthService {
       }),
     );
 
-    Map<String, dynamic> responseData = {};
-
-    if (response.body.isNotEmpty) {
-      responseData = jsonDecode(response.body) as Map<String, dynamic>;
-    }
+    final responseData = _decodeResponse(response.body);
 
     if (response.statusCode != 201) {
       throw Exception(responseData['message'] ?? 'Registration failed.');
+    }
+  }
+
+  // ==========================================
+  // VERIFY EMAIL OTP
+  // ==========================================
+
+  Future<void> verifyEmail({
+    required String email,
+    required String code,
+  }) async {
+    final response = await http.post(
+      Uri.parse(ApiConfig.verifyEmail),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email.trim(), 'code': code.trim()}),
+    );
+
+    final responseData = _decodeResponse(response.body);
+
+    if (response.statusCode != 200) {
+      throw Exception(responseData['message'] ?? 'Email verification failed.');
+    }
+  }
+
+  // ==========================================
+  // RESEND VERIFICATION OTP
+  // ==========================================
+
+  Future<void> resendVerificationCode({required String email}) async {
+    final response = await http.post(
+      Uri.parse(ApiConfig.resendVerificationCode),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email.trim()}),
+    );
+
+    final responseData = _decodeResponse(response.body);
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        responseData['message'] ?? 'Unable to resend verification code.',
+      );
     }
   }
 
@@ -126,5 +159,27 @@ class AuthService {
 
   Future<bool> hasToken() async {
     return await _tokenStorage.hasToken();
+  }
+
+  // ==========================================
+  // SAFE JSON RESPONSE
+  // ==========================================
+
+  Map<String, dynamic> _decodeResponse(String body) {
+    if (body.isEmpty) {
+      return {};
+    }
+
+    try {
+      final decoded = jsonDecode(body);
+
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {
+      // Use an empty response if the server did not return JSON.
+    }
+
+    return {};
   }
 }

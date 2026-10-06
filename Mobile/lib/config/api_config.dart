@@ -16,6 +16,11 @@ class ApiConfig {
 
   static const String register = '$baseUrl/Auth/register';
 
+  static const String verifyEmail = '$baseUrl/Auth/verify-email';
+
+  static const String resendVerificationCode =
+      '$baseUrl/Auth/resend-verification-code';
+
   static const String currentUser = '$baseUrl/Auth/me';
 
   // ============================================================

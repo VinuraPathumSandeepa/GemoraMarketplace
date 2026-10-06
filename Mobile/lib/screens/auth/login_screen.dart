@@ -5,25 +5,18 @@ import '../../providers/auth_provider.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({
-    super.key,
-  });
+  const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() =>
-      _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState
-    extends State<LoginScreen> {
-  final _formKey =
-      GlobalKey<FormState>();
+class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
 
-  final _emailController =
-      TextEditingController();
+  final _emailController = TextEditingController();
 
-  final _passwordController =
-      TextEditingController();
+  final _passwordController = TextEditingController();
 
   bool _hidePassword = true;
 
@@ -36,11 +29,9 @@ class _LoginScreenState
       return;
     }
 
-    final authProvider =
-        context.read<AuthProvider>();
+    final authProvider = context.read<AuthProvider>();
 
-    final success =
-        await authProvider.login(
+    final success = await authProvider.login(
       _emailController.text,
       _passwordController.text,
     );
@@ -50,16 +41,26 @@ class _LoginScreenState
     }
 
     if (!success) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        SnackBar(
-          content: Text(
-            authProvider.errorMessage ??
-                'Login failed.',
-          ),
-        ),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(authProvider.errorMessage ?? 'Login failed.')),
       );
+
+      return;
     }
+
+    // ========================================
+    // LOGIN SUCCESS
+    // ========================================
+    //
+    // AuthProvider now contains the logged-in
+    // user and the JWT is already stored.
+    //
+    // Return to the root route so the app can
+    // show the authenticated Gemora marketplace
+    // home instead of leaving LoginScreen on top.
+    // ========================================
+
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   // ==========================================
@@ -80,106 +81,70 @@ class _LoginScreenState
 
   @override
   Widget build(BuildContext context) {
-    final authProvider =
-        context.watch<AuthProvider>();
+    final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Gemora',
-        ),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Gemora'), centerTitle: true),
 
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding:
-                const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
 
             child: ConstrainedBox(
-              constraints:
-                  const BoxConstraints(
-                maxWidth: 450,
-              ),
+              constraints: const BoxConstraints(maxWidth: 450),
 
               child: Form(
                 key: _formKey,
 
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment
-                          .stretch,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
 
                   children: [
-                    const Icon(
-                      Icons.diamond_outlined,
-                      size: 72,
-                    ),
+                    const Icon(Icons.diamond_outlined, size: 72),
 
-                    const SizedBox(
-                      height: 16,
-                    ),
+                    const SizedBox(height: 16),
 
                     const Text(
                       'Gemora Marketplace',
-                      textAlign:
-                          TextAlign.center,
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 28,
-                        fontWeight:
-                            FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
 
-                    const SizedBox(
-                      height: 8,
-                    ),
+                    const SizedBox(height: 8),
 
                     const Text(
                       'Sign in to your account',
-                      textAlign:
-                          TextAlign.center,
+                      textAlign: TextAlign.center,
                     ),
 
-                    const SizedBox(
-                      height: 32,
-                    ),
+                    const SizedBox(height: 32),
 
                     // EMAIL
-
                     TextFormField(
-                      controller:
-                          _emailController,
+                      controller: _emailController,
 
-                      keyboardType:
-                          TextInputType
-                              .emailAddress,
+                      keyboardType: TextInputType.emailAddress,
 
-                      textInputAction:
-                          TextInputAction.next,
+                      textInputAction: TextInputAction.next,
 
-                      decoration:
-                          const InputDecoration(
+                      autocorrect: false,
+
+                      decoration: const InputDecoration(
                         labelText: 'Email',
-                        border:
-                            OutlineInputBorder(),
-                        prefixIcon:
-                            Icon(
-                          Icons.email_outlined,
-                        ),
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.email_outlined),
                       ),
 
                       validator: (value) {
-                        if (value == null ||
-                            value
-                                .trim()
-                                .isEmpty) {
+                        if (value == null || value.trim().isEmpty) {
                           return 'Email is required.';
                         }
 
-                        if (!value
-                            .contains('@')) {
+                        if (!value.contains('@')) {
                           return 'Enter a valid email.';
                         }
 
@@ -187,55 +152,39 @@ class _LoginScreenState
                       },
                     ),
 
-                    const SizedBox(
-                      height: 16,
-                    ),
+                    const SizedBox(height: 16),
 
                     // PASSWORD
-
                     TextFormField(
-                      controller:
-                          _passwordController,
+                      controller: _passwordController,
 
-                      obscureText:
-                          _hidePassword,
+                      obscureText: _hidePassword,
 
-                      textInputAction:
-                          TextInputAction.done,
+                      textInputAction: TextInputAction.done,
 
-                      decoration:
-                          InputDecoration(
-                        labelText:
-                            'Password',
-                        border:
-                            const OutlineInputBorder(),
-                        prefixIcon:
-                            const Icon(
-                          Icons.lock_outline,
-                        ),
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        border: const OutlineInputBorder(),
 
-                        suffixIcon:
-                            IconButton(
+                        prefixIcon: const Icon(Icons.lock_outline),
+
+                        suffixIcon: IconButton(
                           onPressed: () {
                             setState(() {
-                              _hidePassword =
-                                  !_hidePassword;
+                              _hidePassword = !_hidePassword;
                             });
                           },
 
                           icon: Icon(
                             _hidePassword
-                                ? Icons
-                                    .visibility_outlined
-                                : Icons
-                                    .visibility_off_outlined,
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
                           ),
                         ),
                       ),
 
                       validator: (value) {
-                        if (value == null ||
-                            value.isEmpty) {
+                        if (value == null || value.isEmpty) {
                           return 'Password is required.';
                         }
 
@@ -243,63 +192,47 @@ class _LoginScreenState
                       },
 
                       onFieldSubmitted: (_) {
-                        if (!authProvider
-                            .isLoading) {
+                        if (!authProvider.isLoading) {
                           _login();
                         }
                       },
                     ),
 
-                    const SizedBox(
-                      height: 24,
-                    ),
+                    const SizedBox(height: 24),
 
                     // LOGIN BUTTON
+                    SizedBox(
+                      height: 52,
+                      child: FilledButton(
+                        onPressed: authProvider.isLoading ? null : _login,
 
-                    FilledButton(
-                      onPressed:
-                          authProvider.isLoading
-                              ? null
-                              : _login,
-
-                      child:
-                          authProvider.isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child:
-                                      CircularProgressIndicator(
-                                    strokeWidth:
-                                        2,
-                                  ),
-                                )
-                              : const Text(
-                                  'Sign In',
+                        child: authProvider.isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
                                 ),
+                              )
+                            : const Text('Sign In'),
+                      ),
                     ),
 
-                    const SizedBox(
-                      height: 12,
-                    ),
+                    const SizedBox(height: 12),
 
                     // REGISTER BUTTON
-
                     TextButton(
-                      onPressed:
-                          authProvider.isLoading
-                              ? null
-                              : () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const RegisterScreen(),
-                                    ),
-                                  );
-                                },
-                      child: const Text(
-                        'Create a new account',
-                      ),
+                      onPressed: authProvider.isLoading
+                          ? null
+                          : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const RegisterScreen(),
+                                ),
+                              );
+                            },
+                      child: const Text('Create a new account'),
                     ),
                   ],
                 ),

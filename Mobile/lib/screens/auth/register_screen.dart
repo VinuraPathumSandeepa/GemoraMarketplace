@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
+import 'verify_email_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -12,41 +13,27 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   static const Color _darkGreen = Color(0xFF08251E);
-
   static const Color _green = Color(0xFF16483B);
-
   static const Color _gold = Color(0xFFE4BC74);
-
   static const Color _darkGold = Color(0xFFC99242);
-
   static const Color _cream = Color(0xFFFAF7F0);
-
   static const Color _white = Color(0xFFFFFFFF);
-
   static const Color _darkText = Color(0xFF10241F);
-
   static const Color _mutedText = Color(0xFF697771);
-
   static const Color _border = Color(0xFFE7DFD2);
 
   final _formKey = GlobalKey<FormState>();
 
   final _fullNameController = TextEditingController();
-
   final _emailController = TextEditingController();
-
   final _phoneController = TextEditingController();
-
   final _regionController = TextEditingController();
-
   final _passwordController = TextEditingController();
-
   final _confirmPasswordController = TextEditingController();
 
   String _selectedRole = 'Buyer';
 
   bool _hidePassword = true;
-
   bool _hideConfirmPassword = true;
 
   final List<_CountryOption> _countries = const [
@@ -72,10 +59,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _selectedCountry = _countries.first;
   }
 
-  // ==========================================
-  // PHONE NUMBER
-  // ==========================================
-
   String _buildPhoneNumber([String? input]) {
     final raw = (input ?? _phoneController.text).trim();
 
@@ -94,20 +77,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return '${_selectedCountry.dialCode}$localNumber';
   }
 
-  // ==========================================
-  // REGISTER
-  // ==========================================
-
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
+    final email = _emailController.text.trim();
+
     final authProvider = context.read<AuthProvider>();
 
     final success = await authProvider.register(
       fullName: _fullNameController.text,
-      email: _emailController.text,
+      email: email,
       phoneNumber: _buildPhoneNumber(),
       countryCode: _selectedCountry.isoCode,
       region: _regionController.text,
@@ -120,16 +101,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: _green,
-          content: Text(
-            'Registration successful. Please verify your email, then sign in.',
-          ),
-        ),
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => VerifyEmailScreen(email: email)),
       );
-
-      Navigator.pop(context);
 
       return;
     }
@@ -142,10 +116,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // ==========================================
-  // DISPOSE
-  // ==========================================
-
   @override
   void dispose() {
     _fullNameController.dispose();
@@ -157,10 +127,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     super.dispose();
   }
-
-  // ==========================================
-  // INPUT DECORATION
-  // ==========================================
 
   InputDecoration _inputDecoration({
     required String hintText,
@@ -225,10 +191,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return const SizedBox(height: 18);
   }
 
-  // ==========================================
-  // UI
-  // ==========================================
-
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
@@ -263,10 +225,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // --------------------------
-                      // BRAND
-                      // --------------------------
-
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -352,9 +310,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       const SizedBox(height: 32),
 
-                      // --------------------------
-                      // FULL NAME
-                      // --------------------------
                       _fieldLabel('Full Name'),
 
                       TextFormField(
@@ -386,9 +341,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       _fieldSpacing(),
 
-                      // --------------------------
-                      // EMAIL
-                      // --------------------------
                       _fieldLabel('Email'),
 
                       TextFormField(
@@ -407,11 +359,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             return 'Email is required.';
                           }
 
-                          final emailPattern = RegExp(
-                            r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                          );
+                          final pattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
-                          if (!emailPattern.hasMatch(email)) {
+                          if (!pattern.hasMatch(email)) {
                             return 'Enter a valid email address.';
                           }
 
@@ -421,9 +371,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       _fieldSpacing(),
 
-                      // --------------------------
-                      // COUNTRY
-                      // --------------------------
                       _fieldLabel('Country'),
 
                       DropdownButtonFormField<_CountryOption>(
@@ -456,9 +403,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       _fieldSpacing(),
 
-                      // --------------------------
-                      // MOBILE NUMBER
-                      // --------------------------
                       _fieldLabel('Mobile Number'),
 
                       TextFormField(
@@ -495,9 +439,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       _fieldSpacing(),
 
-                      // --------------------------
-                      // REGION
-                      // --------------------------
                       _fieldLabel('Province / State / Region'),
 
                       TextFormField(
@@ -529,9 +470,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       _fieldSpacing(),
 
-                      // --------------------------
-                      // PASSWORD
-                      // --------------------------
                       _fieldLabel('Password'),
 
                       TextFormField(
@@ -574,9 +512,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       _fieldSpacing(),
 
-                      // --------------------------
-                      // CONFIRM PASSWORD
-                      // --------------------------
                       _fieldLabel('Confirm Password'),
 
                       TextFormField(
@@ -615,9 +550,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       _fieldSpacing(),
 
-                      // --------------------------
-                      // ACCOUNT TYPE
-                      // --------------------------
                       _fieldLabel('Account Type'),
 
                       DropdownButtonFormField<String>(
@@ -649,9 +581,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       const SizedBox(height: 28),
 
-                      // --------------------------
-                      // REGISTER BUTTON
-                      // --------------------------
                       SizedBox(
                         height: 56,
                         child: FilledButton(
@@ -698,9 +627,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       const SizedBox(height: 18),
 
-                      // --------------------------
-                      // SIGN IN
-                      // --------------------------
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

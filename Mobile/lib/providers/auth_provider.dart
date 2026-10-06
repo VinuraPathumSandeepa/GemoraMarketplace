@@ -44,7 +44,6 @@ class AuthProvider extends ChangeNotifier {
     } catch (_) {
       _user = null;
 
-      // Remove invalid or expired JWT.
       await _authService.logout();
     } finally {
       _isLoading = false;
@@ -69,7 +68,6 @@ class AuthProvider extends ChangeNotifier {
       return true;
     } catch (error) {
       _user = null;
-
       _errorMessage = _cleanErrorMessage(error);
 
       return false;
@@ -108,6 +106,59 @@ class AuthProvider extends ChangeNotifier {
         password: password,
         role: role,
       );
+
+      return true;
+    } catch (error) {
+      _errorMessage = _cleanErrorMessage(error);
+
+      return false;
+    } finally {
+      _isLoading = false;
+
+      notifyListeners();
+    }
+  }
+
+  // ==========================================
+  // VERIFY EMAIL
+  // ==========================================
+
+  Future<bool> verifyEmail({
+    required String email,
+    required String code,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+
+    notifyListeners();
+
+    try {
+      await _authService.verifyEmail(email: email.trim(), code: code.trim());
+
+      return true;
+    } catch (error) {
+      _errorMessage = _cleanErrorMessage(error);
+
+      return false;
+    } finally {
+      _isLoading = false;
+
+      notifyListeners();
+    }
+  }
+
+  // ==========================================
+  // RESEND VERIFICATION CODE
+  // ==========================================
+
+  Future<bool> resendVerificationCode({required String email}) async {
+    _isLoading = true;
+    _errorMessage = null;
+
+    notifyListeners();
+
+    try {
+      await _authService.resendVerificationCode(email: email.trim());
 
       return true;
     } catch (error) {
