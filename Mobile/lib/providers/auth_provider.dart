@@ -33,16 +33,14 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final hasToken =
-          await _authService.hasToken();
+      final hasToken = await _authService.hasToken();
 
       if (!hasToken) {
         _user = null;
         return;
       }
 
-      _user =
-          await _authService.getCurrentUser();
+      _user = await _authService.getCurrentUser();
     } catch (_) {
       _user = null;
 
@@ -59,27 +57,20 @@ class AuthProvider extends ChangeNotifier {
   // LOGIN
   // ==========================================
 
-  Future<bool> login(
-    String email,
-    String password,
-  ) async {
+  Future<bool> login(String email, String password) async {
     _isLoading = true;
     _errorMessage = null;
 
     notifyListeners();
 
     try {
-      _user = await _authService.login(
-        email.trim(),
-        password,
-      );
+      _user = await _authService.login(email.trim(), password);
 
       return true;
     } catch (error) {
       _user = null;
 
-      _errorMessage =
-          _cleanErrorMessage(error);
+      _errorMessage = _cleanErrorMessage(error);
 
       return false;
     } finally {
@@ -96,6 +87,9 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> register({
     required String fullName,
     required String email,
+    required String phoneNumber,
+    required String countryCode,
+    required String region,
     required String password,
     required String role,
   }) async {
@@ -108,14 +102,16 @@ class AuthProvider extends ChangeNotifier {
       await _authService.register(
         fullName: fullName.trim(),
         email: email.trim(),
+        phoneNumber: phoneNumber.trim(),
+        countryCode: countryCode.trim().toUpperCase(),
+        region: region.trim(),
         password: password,
         role: role,
       );
 
       return true;
     } catch (error) {
-      _errorMessage =
-          _cleanErrorMessage(error);
+      _errorMessage = _cleanErrorMessage(error);
 
       return false;
     } finally {
@@ -152,14 +148,7 @@ class AuthProvider extends ChangeNotifier {
   // CLEAN ERROR MESSAGE
   // ==========================================
 
-  String _cleanErrorMessage(
-    Object error,
-  ) {
-    return error
-        .toString()
-        .replaceFirst(
-          'Exception: ',
-          '',
-        );
+  String _cleanErrorMessage(Object error) {
+    return error.toString().replaceFirst('Exception: ', '');
   }
 }
