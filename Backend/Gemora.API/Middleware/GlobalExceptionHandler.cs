@@ -19,9 +19,14 @@ public class GlobalExceptionHandler
         ILogger<GlobalExceptionHandler> logger,
         IWebHostEnvironment environment)
     {
-        _next = next;
-        _logger = logger;
-        _environment = environment;
+        _next =
+            next;
+
+        _logger =
+            logger;
+
+        _environment =
+            environment;
     }
 
 
@@ -30,50 +35,127 @@ public class GlobalExceptionHandler
     {
         try
         {
-            await _next(context);
+            await _next(
+                context);
         }
+
+        // ========================================================
+        // EXTERNAL HTTP SERVICE ERROR
+        //
+        // Examples:
+        // - Gemini 429
+        // - Gemini 503
+        // - Other external HTTP failures
+        // ========================================================
+
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "External HTTP service error while processing {Method} {Path}: {Message}",
+                context.Request.Method,
+                context.Request.Path,
+                ex.Message
+            );
+
+
+            var statusCode =
+                ex.StatusCode ??
+                HttpStatusCode
+                    .ServiceUnavailable;
+
+
+            // Do not return unusual/non-server HTTP status codes
+            // blindly from external services.
+
+            if (
+                statusCode !=
+                    HttpStatusCode.RequestTimeout
+                &&
+                (int)statusCode != 429
+                &&
+                (int)statusCode < 500
+            )
+            {
+                statusCode =
+                    HttpStatusCode.BadGateway;
+            }
+
+
+            await WriteErrorResponse(
+                context,
+                statusCode,
+                ex.Message,
+                ex
+            );
+        }
+
+        // ========================================================
+        // BUSINESS RULE ERROR
+        // ========================================================
 
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning(
                 ex,
                 "Business rule violation: {Message}",
-                ex.Message);
+                ex.Message
+            );
+
 
             await WriteErrorResponse(
                 context,
                 HttpStatusCode.Conflict,
                 ex.Message,
-                ex);
+                ex
+            );
         }
+
+        // ========================================================
+        // AUTHORIZATION ERROR
+        // ========================================================
 
         catch (UnauthorizedAccessException ex)
         {
             _logger.LogWarning(
                 ex,
                 "Unauthorized operation: {Message}",
-                ex.Message);
+                ex.Message
+            );
+
 
             await WriteErrorResponse(
                 context,
                 HttpStatusCode.Forbidden,
                 ex.Message,
-                ex);
+                ex
+            );
         }
+
+        // ========================================================
+        // NOT FOUND
+        // ========================================================
 
         catch (KeyNotFoundException ex)
         {
             _logger.LogWarning(
                 ex,
                 "Resource not found: {Message}",
-                ex.Message);
+                ex.Message
+            );
+
 
             await WriteErrorResponse(
                 context,
                 HttpStatusCode.NotFound,
                 ex.Message,
-                ex);
+                ex
+            );
         }
+
+        // ========================================================
+        // UNKNOWN SERVER ERROR
+        // ========================================================
 
         catch (Exception ex)
         {
@@ -81,18 +163,26 @@ public class GlobalExceptionHandler
                 ex,
                 "Unhandled exception occurred while processing {Method} {Path}",
                 context.Request.Method,
-                context.Request.Path);
+                context.Request.Path
+            );
+
 
             var message =
-                _environment.IsDevelopment()
+                _environment
+                    .IsDevelopment()
+
                     ? ex.Message
+
                     : "An unexpected server error occurred.";
+
 
             await WriteErrorResponse(
                 context,
-                HttpStatusCode.InternalServerError,
+                HttpStatusCode
+                    .InternalServerError,
                 message,
-                ex);
+                ex
+            );
         }
     }
 
@@ -103,16 +193,22 @@ public class GlobalExceptionHandler
         string message,
         Exception exception)
     {
-        if (context.Response.HasStarted)
+        if (
+            context.Response
+                .HasStarted
+        )
         {
             return;
         }
 
 
-        context.Response.Clear();
+        context.Response
+            .Clear();
+
 
         context.Response.StatusCode =
             (int)statusCode;
+
 
         context.Response.ContentType =
             "application/json";
@@ -121,43 +217,57 @@ public class GlobalExceptionHandler
         object response;
 
 
-        if (_environment.IsDevelopment())
+        if (
+            _environment
+                .IsDevelopment()
+        )
         {
-            response = new
-            {
-                status =
-                    (int)statusCode,
+            response =
+                new
+                {
+                    status =
+                        (int)statusCode,
 
-                error =
-                    statusCode.ToString(),
+                    error =
+                        statusCode
+                            .ToString(),
 
-                message,
+                    message,
 
-                exceptionType =
-                    exception.GetType().FullName,
+                    exceptionType =
+                        exception
+                            .GetType()
+                            .FullName,
 
-                detail =
-                    exception.ToString(),
+                    detail =
+                        exception
+                            .ToString(),
 
-                innerException =
-                    exception.InnerException?.Message,
+                    innerException =
+                        exception
+                            .InnerException?
+                            .Message,
 
-                path =
-                    context.Request.Path.Value
-            };
+                    path =
+                        context.Request
+                            .Path
+                            .Value
+                };
         }
         else
         {
-            response = new
-            {
-                status =
-                    (int)statusCode,
+            response =
+                new
+                {
+                    status =
+                        (int)statusCode,
 
-                error =
-                    statusCode.ToString(),
+                    error =
+                        statusCode
+                            .ToString(),
 
-                message
-            };
+                    message
+                };
         }
 
 
@@ -167,11 +277,14 @@ public class GlobalExceptionHandler
                 new JsonSerializerOptions
                 {
                     PropertyNamingPolicy =
-                        JsonNamingPolicy.CamelCase
-                });
+                        JsonNamingPolicy
+                            .CamelCase
+                }
+            );
 
 
         await context.Response
-            .WriteAsync(json);
+            .WriteAsync(
+                json);
     }
 }

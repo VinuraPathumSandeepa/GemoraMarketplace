@@ -1,13 +1,13 @@
-
 using Gemora.Infrastructure.Services;
+
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace Gemora.API.Services;
 
-public sealed class ProfileImageStorageService :
-    IProfileImageStorageService
+public sealed class ProfileImageStorageService
+    : IProfileImageStorageService
 {
     // ============================================================
     // CONSTANTS
@@ -25,15 +25,23 @@ public sealed class ProfileImageStorageService :
     private const string SupabaseProfilePath =
         "/storage/v1/object/public/profile-images/";
 
+
     // ============================================================
     // DEPENDENCIES
     // ============================================================
 
-    private readonly SupabaseStorageClient _supabaseStorage;
+    private readonly SupabaseStorageClient
+        _supabaseStorage;
 
-    private readonly ILogger<ProfileImageStorageService> _logger;
+    private readonly ILogger<ProfileImageStorageService>
+        _logger;
 
-    private readonly string _webRootPath;
+    private readonly IWebHostEnvironment
+        _environment;
+
+    private readonly string
+        _webRootPath;
+
 
     // ============================================================
     // CONSTRUCTOR
@@ -44,37 +52,42 @@ public sealed class ProfileImageStorageService :
         IWebHostEnvironment environment,
         ILogger<ProfileImageStorageService> logger)
     {
-        _supabaseStorage = supabaseStorage;
+        _supabaseStorage =
+            supabaseStorage;
 
-        _logger = logger;
+        _environment =
+            environment;
+
+        _logger =
+            logger;
+
 
         var configuredWebRoot =
             environment.WebRootPath;
 
-        if (string.IsNullOrWhiteSpace(configuredWebRoot))
+
+        if (
+            string.IsNullOrWhiteSpace(
+                configuredWebRoot)
+        )
         {
-            configuredWebRoot = Path.Combine(
-                environment.ContentRootPath,
-                "wwwroot"
-            );
+            configuredWebRoot =
+                Path.Combine(
+                    environment.ContentRootPath,
+                    "wwwroot"
+                );
         }
 
-        _webRootPath = Path.GetFullPath(
-            configuredWebRoot
-        );
 
-        // New profile uploads do not require a local folder.
-        // Keep the web-root reference only for legacy cleanup.
+        _webRootPath =
+            Path.GetFullPath(
+                configuredWebRoot
+            );
     }
+
 
     // ============================================================
     // SAVE PROFILE IMAGE
-    //
-    // NEW IMPLEMENTATION:
-    // Upload directly to Supabase Storage.
-    //
-    // The returned public URL is stored in PostgreSQL by
-    // the existing AuthController workflow.
     // ============================================================
 
     public async Task<string> SaveAsync(
@@ -82,28 +95,38 @@ public sealed class ProfileImageStorageService :
         IFormFile file,
         CancellationToken cancellationToken = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        cancellationToken
+            .ThrowIfCancellationRequested();
+
 
         // --------------------------------------------------------
-        // 1. VALIDATE FILE
+        // VALIDATE FILE
         // --------------------------------------------------------
 
-        if (file == null || file.Length <= 0)
+        if (
+            file == null ||
+            file.Length <= 0
+        )
         {
             throw new InvalidOperationException(
                 "Please select a profile image."
             );
         }
 
-        if (file.Length > MaxFileSize)
+
+        if (
+            file.Length >
+            MaxFileSize
+        )
         {
             throw new InvalidOperationException(
                 "The profile image must be 5 MB or smaller."
             );
         }
 
+
         // --------------------------------------------------------
-        // 2. VALIDATE DECLARED CONTENT TYPE
+        // VALIDATE CONTENT TYPE
         // --------------------------------------------------------
 
         var allowedContentTypes =
@@ -115,17 +138,20 @@ public sealed class ProfileImageStorageService :
                 "image/webp"
             };
 
-        if (!allowedContentTypes.Contains(file.ContentType))
+
+        if (
+            !allowedContentTypes.Contains(
+                file.ContentType)
+        )
         {
             throw new InvalidOperationException(
                 "Please upload a JPG, PNG, or WebP profile image."
             );
         }
 
+
         // --------------------------------------------------------
-        // 3. DETECT ACTUAL IMAGE FORMAT
-        //
-        // Do not trust the filename alone.
+        // DETECT ACTUAL IMAGE FORMAT
         // --------------------------------------------------------
 
         var extension =
@@ -134,35 +160,44 @@ public sealed class ProfileImageStorageService :
                 cancellationToken
             );
 
-        if (extension == null)
+
+        if (
+            extension == null
+        )
         {
             throw new InvalidOperationException(
                 "The selected file does not appear to be a valid JPG, PNG, or WebP image."
             );
         }
 
+
         // --------------------------------------------------------
-        // 4. VERIFY CONTENT TYPE MATCHES FILE SIGNATURE
+        // VERIFY CONTENT TYPE MATCHES FILE SIGNATURE
         // --------------------------------------------------------
 
-        var expectedContentType = extension switch
-        {
-            ".jpg" => "image/jpeg",
+        var expectedContentType =
+            extension switch
+            {
+                ".jpg" =>
+                    "image/jpeg",
 
-            ".png" => "image/png",
+                ".png" =>
+                    "image/png",
 
-            ".webp" => "image/webp",
+                ".webp" =>
+                    "image/webp",
 
-            _ => null
-        };
+                _ =>
+                    null
+            };
+
 
         if (
             expectedContentType == null ||
             !string.Equals(
                 file.ContentType,
                 expectedContentType,
-                StringComparison.OrdinalIgnoreCase
-            )
+                StringComparison.OrdinalIgnoreCase)
         )
         {
             throw new InvalidOperationException(
@@ -170,107 +205,104 @@ public sealed class ProfileImageStorageService :
             );
         }
 
+
         // --------------------------------------------------------
-        // 5. GENERATE A UNIQUE AND SAFE FILENAME
-        //
-        // Example:
-        // USERGUID_RANDOMGUID.jpg
+        // GENERATE UNIQUE FILENAME
         // --------------------------------------------------------
 
         var objectName =
             $"{userId:N}_{Guid.NewGuid():N}{extension}";
 
+
         // --------------------------------------------------------
-        // 6. OPEN UPLOAD STREAM
+        // OPEN STREAM
         // --------------------------------------------------------
 
         await using var fileStream =
             file.OpenReadStream();
 
+
         // --------------------------------------------------------
-        // 7. UPLOAD TO SUPABASE
-        //
-        // SupabaseStorageClient enforces the maximum file
-        // size again before sending the request.
+        // UPLOAD TO SUPABASE
         // --------------------------------------------------------
 
         var publicImageUrl =
             await _supabaseStorage.UploadAsync(
-                bucket: SupabaseBucket,
-                objectName: objectName,
-                source: fileStream,
-                contentType: expectedContentType,
-                maximumBytes: MaxFileSize,
-                cancellationToken: cancellationToken
+                bucket:
+                    SupabaseBucket,
+
+                objectName:
+                    objectName,
+
+                source:
+                    fileStream,
+
+                contentType:
+                    expectedContentType,
+
+                maximumBytes:
+                    MaxFileSize,
+
+                cancellationToken:
+                    cancellationToken
             );
 
-        // --------------------------------------------------------
-        // 8. LOG SUCCESS
-        //
-        // Never log the Supabase secret API key.
-        // --------------------------------------------------------
 
         _logger.LogInformation(
             "Profile image uploaded to Supabase Storage for user {UserId}.",
             userId
         );
 
-        // --------------------------------------------------------
-        // 9. RETURN PUBLIC URL
-        //
-        // Example:
-        //
-        // https://PROJECT.supabase.co/storage/v1/object/public/
-        // profile-images/filename.jpg
-        // --------------------------------------------------------
 
         return publicImageUrl;
     }
 
+
     // ============================================================
     // DELETE PROFILE IMAGE
-    //
-    // Supports both:
-    //
-    // 1. OLD: /uploads/profiles/filename.jpg
-    // 2. NEW: Supabase profile-images public URL
-    //
-    // This preserves compatibility with existing PostgreSQL
-    // profile-image references.
     // ============================================================
 
     public async Task DeleteAsync(
         string? profileImageUrl,
         CancellationToken cancellationToken = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        cancellationToken
+            .ThrowIfCancellationRequested();
 
-        if (string.IsNullOrWhiteSpace(profileImageUrl))
+
+        if (
+            string.IsNullOrWhiteSpace(
+                profileImageUrl)
+        )
         {
             return;
         }
 
+
         // --------------------------------------------------------
-        // OPTION 1 — DELETE LEGACY LOCAL PROFILE IMAGE
+        // LEGACY LOCAL IMAGE
         // --------------------------------------------------------
 
-        if (profileImageUrl.StartsWith(
+        if (
+            profileImageUrl.StartsWith(
                 LocalProfileUrlPrefix,
-                StringComparison.OrdinalIgnoreCase))
+                StringComparison.OrdinalIgnoreCase)
+        )
         {
-            var fileName = profileImageUrl.Substring(
-                LocalProfileUrlPrefix.Length
-            );
+            var fileName =
+                profileImageUrl.Substring(
+                    LocalProfileUrlPrefix.Length
+                );
 
-            // Reject nested paths and unexpected filenames.
 
             if (
-                string.IsNullOrWhiteSpace(fileName) ||
+                string.IsNullOrWhiteSpace(
+                    fileName) ||
                 !string.Equals(
-                    Path.GetFileName(fileName),
+                    Path.GetFileName(
+                        fileName),
                     fileName,
-                    StringComparison.Ordinal
-                ) ||
+                    StringComparison.Ordinal) ||
                 fileName.Contains('/') ||
                 fileName.Contains('\\') ||
                 fileName.Contains('?') ||
@@ -280,58 +312,67 @@ public sealed class ProfileImageStorageService :
                 return;
             }
 
-            var physicalPath = Path.Combine(
-                _webRootPath,
-                "uploads",
-                "profiles",
-                fileName
-            );
 
-            if (File.Exists(physicalPath))
+            var physicalPath =
+                Path.Combine(
+                    _webRootPath,
+                    "uploads",
+                    "profiles",
+                    fileName
+                );
+
+
+            if (
+                File.Exists(
+                    physicalPath)
+            )
             {
-                File.Delete(physicalPath);
+                File.Delete(
+                    physicalPath
+                );
+
 
                 _logger.LogInformation(
                     "Legacy local profile image deleted successfully."
                 );
             }
 
+
             return;
         }
 
+
         // --------------------------------------------------------
-        // OPTION 2 — DELETE SUPABASE PROFILE IMAGE
-        //
-        // Only accept public profile-images object URLs.
-        // SupabaseStorageClient independently checks that
-        // the URL belongs to our configured Supabase project.
+        // SUPABASE IMAGE
         // --------------------------------------------------------
 
         if (
             !Uri.TryCreate(
                 profileImageUrl,
                 UriKind.Absolute,
-                out var imageUri
-            ) ||
-            imageUri.Scheme != Uri.UriSchemeHttps ||
+                out var imageUri) ||
+            imageUri.Scheme !=
+                Uri.UriSchemeHttps ||
             !imageUri.AbsolutePath.StartsWith(
                 SupabaseProfilePath,
-                StringComparison.Ordinal
-            )
+                StringComparison.Ordinal)
         )
         {
             return;
         }
+
 
         await _supabaseStorage.DeleteAsync(
             profileImageUrl,
             cancellationToken
         );
 
+
         _logger.LogInformation(
             "Supabase profile image cleanup completed."
         );
     }
+
 
     // ============================================================
     // CHECK PROFILE IMAGE EXISTS
@@ -341,56 +382,93 @@ public sealed class ProfileImageStorageService :
         string? profileImageUrl,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(profileImageUrl))
+        cancellationToken
+            .ThrowIfCancellationRequested();
+
+
+        if (
+            string.IsNullOrWhiteSpace(
+                profileImageUrl)
+        )
         {
-            return Task.FromResult(false);
+            return Task.FromResult(
+                false
+            );
         }
 
-        if (!profileImageUrl.StartsWith(
-                "/uploads/profiles/",
-                StringComparison.OrdinalIgnoreCase))
+
+        // --------------------------------------------------------
+        // REMOTE / SUPABASE URL
+        // --------------------------------------------------------
+
+        if (
+            !profileImageUrl.StartsWith(
+                LocalProfileUrlPrefix,
+                StringComparison.OrdinalIgnoreCase)
+        )
         {
-            // Remote/external URLs are not managed by local storage.
-            return Task.FromResult(true);
+            return Task.FromResult(
+                true
+            );
         }
 
-        var fileName = Path.GetFileName(profileImageUrl);
 
-        if (string.IsNullOrWhiteSpace(fileName))
+        // --------------------------------------------------------
+        // LEGACY LOCAL IMAGE
+        // --------------------------------------------------------
+
+        var fileName =
+            Path.GetFileName(
+                profileImageUrl
+            );
+
+
+        if (
+            string.IsNullOrWhiteSpace(
+                fileName)
+        )
         {
-            return Task.FromResult(false);
+            return Task.FromResult(
+                false
+            );
         }
 
-        var webRoot = _environment.WebRootPath;
 
-        if (string.IsNullOrWhiteSpace(webRoot))
+        var webRoot =
+            _environment.WebRootPath;
+
+
+        if (
+            string.IsNullOrWhiteSpace(
+                webRoot)
+        )
         {
-            webRoot = Path.Combine(
-                _environment.ContentRootPath,
-                "wwwroot");
+            webRoot =
+                Path.Combine(
+                    _environment.ContentRootPath,
+                    "wwwroot"
+                );
         }
 
-        var physicalPath = Path.Combine(
-            webRoot,
-            "uploads",
-            "profiles",
-            fileName);
 
-        return Task.FromResult(File.Exists(physicalPath));
+        var physicalPath =
+            Path.Combine(
+                webRoot,
+                "uploads",
+                "profiles",
+                fileName
+            );
+
+
+        return Task.FromResult(
+            File.Exists(
+                physicalPath)
+        );
     }
 
 
     // ============================================================
     // DETECT ACTUAL IMAGE FORMAT
-    //
-    // JPG:
-    // FF D8 FF
-    //
-    // PNG:
-    // 89 50 4E 47 0D 0A 1A 0A
-    //
-    // WEBP:
-    // RIFF .... WEBP
     // ============================================================
 
     private static async Task<string?>
@@ -398,36 +476,49 @@ public sealed class ProfileImageStorageService :
             IFormFile file,
             CancellationToken cancellationToken)
     {
-        var header = new byte[12];
+        var header =
+            new byte[12];
+
 
         await using var stream =
             file.OpenReadStream();
 
-        var bytesRead = 0;
 
-        // Read up to 12 bytes.
-        // Account for streams returning fewer bytes per read.
+        var bytesRead =
+            0;
 
-        while (bytesRead < header.Length)
+
+        while (
+            bytesRead <
+            header.Length
+        )
         {
-            var count = await stream.ReadAsync(
-                header.AsMemory(
-                    bytesRead,
-                    header.Length - bytesRead
-                ),
-                cancellationToken
-            );
+            var count =
+                await stream.ReadAsync(
+                    header.AsMemory(
+                        bytesRead,
+                        header.Length -
+                        bytesRead
+                    ),
+                    cancellationToken
+                );
 
-            if (count == 0)
+
+            if (
+                count == 0
+            )
             {
                 break;
             }
 
-            bytesRead += count;
+
+            bytesRead +=
+                count;
         }
 
+
         // --------------------------------------------------------
-        // JPEG SIGNATURE
+        // JPEG
         // --------------------------------------------------------
 
         if (
@@ -440,8 +531,9 @@ public sealed class ProfileImageStorageService :
             return ".jpg";
         }
 
+
         // --------------------------------------------------------
-        // PNG SIGNATURE
+        // PNG
         // --------------------------------------------------------
 
         if (
@@ -459,8 +551,9 @@ public sealed class ProfileImageStorageService :
             return ".png";
         }
 
+
         // --------------------------------------------------------
-        // WEBP SIGNATURE
+        // WEBP
         // --------------------------------------------------------
 
         if (
@@ -477,6 +570,7 @@ public sealed class ProfileImageStorageService :
         {
             return ".webp";
         }
+
 
         return null;
     }
