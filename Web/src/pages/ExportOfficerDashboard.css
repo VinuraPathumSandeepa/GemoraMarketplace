@@ -1,8 +1,3 @@
-#root:has(.export-officer-container) {
-  width: 1400px;
-  max-width: 94vw;
-}
-
 .export-officer-container {
   display: flex;
   flex-direction: column;
@@ -11,7 +6,7 @@
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
-  padding: 0;
+  padding: 28px 34px;
   box-sizing: border-box;
 }
 
