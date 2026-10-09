@@ -19609,3 +19609,475 @@ article:nth-child(3) {
     min-height: 210px;
   }
 }
+/* ============================================================
+   GEMORA HOME — FINAL DESKTOP WIDTH
+   Reduce unnecessary left/right whitespace
+   ============================================================ */
+
+@media (min-width: 1051px) {
+
+  .gemora-home .home-nav-inner,
+  .gemora-home .home-hero-inner,
+  .gemora-home .home-feature-grid,
+  .gemora-home .home-process-wrapper,
+  .gemora-home .home-trust-panel,
+  .gemora-home .home-gem-showcase-grid,
+  .gemora-home .home-cta-panel,
+  .gemora-home .home-footer-inner {
+    width: min(
+      1560px,
+      calc(100% - 40px)
+    ) !important;
+
+    max-width: none !important;
+
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+}
+/* ============================================================
+   GEMORA HOME — FINAL MOBILE HERO FIX
+   Desktop remains unchanged.
+   ============================================================ */
+
+@media (max-width: 650px) {
+
+  /* ==========================================================
+     MOBILE NAVBAR
+     ========================================================== */
+
+  .gemora-home .home-nav-inner {
+    width: calc(100% - 24px) !important;
+    height: 72px !important;
+
+    gap: 10px;
+  }
+
+  .gemora-home .home-logo {
+    gap: 9px;
+  }
+
+  .gemora-home .home-logo-mark {
+    width: 34px;
+    height: 34px;
+  }
+
+  .gemora-home .home-logo strong {
+    font-size: 18px;
+  }
+
+  .gemora-home .home-logo small {
+    display: none;
+  }
+
+  .gemora-home .home-nav-links {
+    display: none;
+  }
+
+  .gemora-home .home-nav-actions {
+    gap: 10px;
+  }
+
+  /* Keep Sign In visible on mobile */
+
+  .gemora-home .home-login-link {
+    display: inline-flex !important;
+
+    align-items: center;
+    justify-content: center;
+
+    min-height: 38px;
+
+    font-size: 10px;
+
+    white-space: nowrap;
+  }
+
+  .gemora-home .home-signup-button {
+    min-height: 38px;
+
+    padding:
+      0
+      11px !important;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 9px;
+
+    white-space: nowrap;
+  }
+
+
+  /* ==========================================================
+     MOBILE HERO
+     ========================================================== */
+
+  .gemora-home
+  .home-hero.home-hero-cinematic {
+    min-height: auto !important;
+
+    padding:
+      100px
+      16px
+      52px !important;
+
+    align-items: center !important;
+  }
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-hero-inner {
+    width: 100% !important;
+
+    min-height: auto !important;
+
+    display: block !important;
+
+    margin: 0 auto;
+
+    text-align: center;
+  }
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-hero-content {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    padding: 0 !important;
+
+    margin: 0 auto;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+
+  /* ==========================================================
+     EYEBROW
+     ========================================================== */
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-eyebrow {
+    max-width: 100%;
+
+    margin-bottom: 18px;
+
+    justify-content: center;
+
+    gap: 8px;
+
+    font-size: 7px !important;
+
+    line-height: 1.5;
+
+    letter-spacing: 1.15px;
+
+    text-align: center;
+
+    white-space: normal;
+  }
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-eyebrow::before,
+  .gemora-home
+  .home-hero-cinematic
+  .home-eyebrow > span {
+    flex-shrink: 0;
+  }
+
+
+  /* ==========================================================
+     HERO TITLE
+     ========================================================== */
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-hero-content h1 {
+    width: 100%;
+
+    margin: 0;
+
+    font-size:
+      clamp(
+        42px,
+        11vw,
+        50px
+      ) !important;
+
+    line-height: 1.02 !important;
+
+    letter-spacing:
+      -1.2px !important;
+
+    text-align: center;
+  }
+
+
+  /* ==========================================================
+     DESCRIPTION
+     ========================================================== */
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-hero-description {
+    width: 100%;
+    max-width: 390px;
+
+    margin:
+      22px
+      auto
+      0 !important;
+
+    font-size: 13px !important;
+
+    line-height: 1.65;
+
+    text-align: center;
+  }
+
+
+  /* ==========================================================
+     HERO BUTTONS
+     ========================================================== */
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-hero-actions {
+    width: 100%;
+    max-width: 340px;
+
+    margin:
+      26px
+      auto
+      0 !important;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 11px;
+  }
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-primary-button,
+  .gemora-home
+  .home-hero-cinematic
+  .home-secondary-button {
+    width: 100%;
+
+    min-height: 48px;
+
+    padding:
+      0
+      18px;
+
+    justify-content: center;
+  }
+
+
+  /* ==========================================================
+     TRUST ROW
+     ========================================================== */
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-trust-row {
+    width: 100%;
+
+    margin-top: 28px;
+
+    display: grid;
+
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+
+    gap: 7px;
+
+    text-align: center;
+  }
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-trust-divider {
+    display: none;
+  }
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-trust-row strong {
+    font-size: 9px;
+  }
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-trust-row span {
+    font-size: 7px;
+  }
+
+
+  /* ==========================================================
+     BACKGROUND VIDEO
+     ========================================================== */
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-hero-video {
+    object-position:
+      70% center !important;
+
+    filter:
+      saturate(0.82)
+      contrast(1.03)
+      brightness(0.48)
+      !important;
+  }
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-video-overlay {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(2, 18, 14, 0.42) 0%,
+        rgba(2, 18, 14, 0.66) 30%,
+        rgba(2, 18, 14, 0.92) 64%,
+        rgba(2, 18, 14, 0.99) 100%
+      ) !important;
+  }
+
+
+  /* Hide desktop scroll marker on phone */
+
+  .gemora-home .home-scroll-indicator {
+    display: none !important;
+  }
+}
+
+
+/* ============================================================
+   VERY SMALL PHONES
+   ============================================================ */
+
+@media (max-width: 420px) {
+
+  .gemora-home .home-login-link {
+    font-size: 9px;
+  }
+
+  .gemora-home .home-signup-button {
+    padding:
+      0
+      9px !important;
+
+    font-size: 8px;
+  }
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-hero-content h1 {
+    font-size:
+      clamp(
+        38px,
+        11.3vw,
+        46px
+      ) !important;
+  }
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-hero-description {
+    font-size: 12px !important;
+  }
+}
+/* ============================================================
+   GEMORA HOME — MOBILE VIDEO VISIBILITY FIX
+   Keeps text readable while showing gemstones clearly.
+   Desktop is NOT affected.
+   ============================================================ */
+
+@media (max-width: 650px) {
+
+  /* Make the gemstone video brighter and richer */
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-hero-video {
+    opacity: 1 !important;
+
+    object-position:
+      68% center !important;
+
+    filter:
+      saturate(1.02)
+      contrast(1.04)
+      brightness(0.74)
+      !important;
+  }
+
+
+  /* Reduce the excessive dark overlay */
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-video-overlay {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(2, 18, 14, 0.28) 0%,
+        rgba(2, 18, 14, 0.34) 28%,
+        rgba(2, 18, 14, 0.42) 52%,
+        rgba(2, 18, 14, 0.62) 76%,
+        rgba(2, 18, 14, 0.82) 100%
+      ) !important;
+  }
+
+
+  /* Make cinematic vignette softer on mobile */
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-video-vignette {
+    opacity: 0.55 !important;
+  }
+
+
+  /* Keep heading readable over brighter video */
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-hero-content h1 {
+    text-shadow:
+      0 3px 20px
+      rgba(0, 0, 0, 0.34);
+  }
+
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-hero-description {
+    text-shadow:
+      0 2px 12px
+      rgba(0, 0, 0, 0.6);
+  }
+
+
+  /* Slight dark glow behind content without hiding video */
+
+  .gemora-home
+  .home-hero-cinematic
+  .home-hero-content {
+    position: relative;
+    z-index: 6;
+  }
+
+}
