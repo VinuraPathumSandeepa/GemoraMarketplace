@@ -359,6 +359,47 @@ namespace Gemora.Infrastructure.Migrations
                     b.ToTable("ExportRequests");
                 });
 
+            modelBuilder.Entity("Gemora.Domain.Entities.FulfillmentStatusHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<Guid?>("ChangedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NewStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PreviousStatus")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChangedByUserId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("FulfillmentStatusHistories", (string)null);
+                });
+
             modelBuilder.Entity("Gemora.Domain.Entities.GemListing", b =>
                 {
                     b.Property<int>("Id")
@@ -548,8 +589,19 @@ namespace Gemora.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FulfillmentStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<int?>("GemListingId")
                         .HasColumnType("integer");
+
+                    b.Property<DateTime?>("HandedOverAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("PaidAt")
                         .HasColumnType("timestamp with time zone");
@@ -595,6 +647,94 @@ namespace Gemora.Infrastructure.Migrations
                     b.HasIndex("Status");
 
                     b.ToTable("Orders", (string)null);
+                });
+
+            modelBuilder.Entity("Gemora.Domain.Entities.OrderDeliveryDetails", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AddressLine1")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("AddressLine2")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("AlternatePhone")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeliveryInstructions")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("District")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("LastUpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("LockedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NearestLandmark")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PostalCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("RecipientName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("RecipientPhone")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Region")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("SignatureRequired")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.ToTable("OrderDeliveryDetails", (string)null);
                 });
 
             modelBuilder.Entity("Gemora.Domain.Entities.OrderStatusHistory", b =>
@@ -687,6 +827,92 @@ namespace Gemora.Infrastructure.Migrations
                     b.ToTable("PaymentTransactions", (string)null);
                 });
 
+            modelBuilder.Entity("Gemora.Domain.Entities.ProfileImage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ProfileImages");
+                });
+
+            modelBuilder.Entity("Gemora.Domain.Entities.Shipment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CourierName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DispatchNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime?>("ExpectedDeliveryDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("HandedOverAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("TrackingNumber")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("TrackingUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.HasIndex("TrackingNumber")
+                        .IsUnique();
+
+                    b.ToTable("Shipments", (string)null);
+                });
+
             modelBuilder.Entity("Gemora.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -748,6 +974,24 @@ namespace Gemora.Infrastructure.Migrations
                     b.HasIndex("PhoneNumber");
 
                     b.ToTable("Users", (string)null);
+                });
+
+            modelBuilder.Entity("Gemora.Domain.Entities.WishlistItem", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("GemListingId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId", "GemListingId");
+
+                    b.HasIndex("GemListingId");
+
+                    b.ToTable("WishlistItems");
                 });
 
             modelBuilder.Entity("Gemora.Domain.Entities.AgentToolCall", b =>
@@ -831,6 +1075,24 @@ namespace Gemora.Infrastructure.Migrations
                     b.Navigation("ReviewedByUser");
                 });
 
+            modelBuilder.Entity("Gemora.Domain.Entities.FulfillmentStatusHistory", b =>
+                {
+                    b.HasOne("Gemora.Domain.Entities.User", "ChangedByUser")
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Gemora.Domain.Entities.Order", "Order")
+                        .WithMany("FulfillmentStatusHistory")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChangedByUser");
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("Gemora.Domain.Entities.GemListing", b =>
                 {
                     b.HasOne("Gemora.Domain.Entities.User", "Seller")
@@ -860,21 +1122,6 @@ namespace Gemora.Infrastructure.Migrations
                     b.Navigation("Gemologist");
                 });
 
-            modelBuilder.Entity("Gemora.Domain.Entities.AgentWorkflow", b =>
-                {
-                    b.Navigation("Steps");
-                });
-
-            modelBuilder.Entity("Gemora.Domain.Entities.AgentWorkflowStep", b =>
-                {
-                    b.Navigation("ToolCalls");
-                });
-
-            modelBuilder.Entity("Gemora.Domain.Entities.ExportRequest", b =>
-                {
-                    b.Navigation("ComplianceDocuments");
-                });
-
             modelBuilder.Entity("Gemora.Domain.Entities.Order", b =>
                 {
                     b.HasOne("Gemora.Domain.Entities.User", "Buyer")
@@ -899,6 +1146,17 @@ namespace Gemora.Infrastructure.Migrations
                     b.Navigation("GemListing");
 
                     b.Navigation("Seller");
+                });
+
+            modelBuilder.Entity("Gemora.Domain.Entities.OrderDeliveryDetails", b =>
+                {
+                    b.HasOne("Gemora.Domain.Entities.Order", "Order")
+                        .WithOne("DeliveryDetails")
+                        .HasForeignKey("Gemora.Domain.Entities.OrderDeliveryDetails", "OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("Gemora.Domain.Entities.OrderStatusHistory", b =>
@@ -930,6 +1188,56 @@ namespace Gemora.Infrastructure.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("Gemora.Domain.Entities.ProfileImage", b =>
+                {
+                    b.HasOne("Gemora.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Gemora.Domain.Entities.Shipment", b =>
+                {
+                    b.HasOne("Gemora.Domain.Entities.Order", "Order")
+                        .WithOne("Shipment")
+                        .HasForeignKey("Gemora.Domain.Entities.Shipment", "OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("Gemora.Domain.Entities.WishlistItem", b =>
+                {
+                    b.HasOne("Gemora.Domain.Entities.GemListing", null)
+                        .WithMany()
+                        .HasForeignKey("GemListingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Gemora.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Gemora.Domain.Entities.AgentWorkflow", b =>
+                {
+                    b.Navigation("Steps");
+                });
+
+            modelBuilder.Entity("Gemora.Domain.Entities.AgentWorkflowStep", b =>
+                {
+                    b.Navigation("ToolCalls");
+                });
+
+            modelBuilder.Entity("Gemora.Domain.Entities.ExportRequest", b =>
+                {
+                    b.Navigation("ComplianceDocuments");
+                });
+
             modelBuilder.Entity("Gemora.Domain.Entities.GemListing", b =>
                 {
                     b.Navigation("Orders");
@@ -939,6 +1247,12 @@ namespace Gemora.Infrastructure.Migrations
 
             modelBuilder.Entity("Gemora.Domain.Entities.Order", b =>
                 {
+                    b.Navigation("DeliveryDetails");
+
+                    b.Navigation("FulfillmentStatusHistory");
+
+                    b.Navigation("Shipment");
+
                     b.Navigation("StatusHistory");
                 });
 

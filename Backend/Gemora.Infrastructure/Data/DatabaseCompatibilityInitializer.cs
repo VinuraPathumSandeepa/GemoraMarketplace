@@ -486,6 +486,75 @@ public static class DatabaseCompatibilityInitializer
                 "IX_FulfillmentStatusHistories_CreatedAt"
                 ON "FulfillmentStatusHistories"
                 ("CreatedAt");
+                """,
+
+
+                // =================================================
+                // BUYER WISHLIST
+                // =================================================
+
+                """
+                CREATE TABLE IF NOT EXISTS
+                "WishlistItems"
+                (
+                    "UserId" uuid NOT NULL,
+                    "GemListingId" integer NOT NULL,
+                    "CreatedAt" timestamp with time zone NOT NULL DEFAULT NOW(),
+
+                    CONSTRAINT "PK_WishlistItems"
+                        PRIMARY KEY ("UserId", "GemListingId"),
+                    CONSTRAINT "FK_WishlistItems_Users_UserId"
+                        FOREIGN KEY ("UserId")
+                        REFERENCES "Users" ("Id")
+                        ON DELETE CASCADE,
+                    CONSTRAINT "FK_WishlistItems_GemListings_GemListingId"
+                        FOREIGN KEY ("GemListingId")
+                        REFERENCES "GemListings" ("Id")
+                        ON DELETE CASCADE
+                );
+                """,
+
+                // Upgrade a pre-existing wishlist table that predates save timestamps.
+                """
+                ALTER TABLE "WishlistItems"
+                ADD COLUMN IF NOT EXISTS
+                "CreatedAt" timestamp with time zone NOT NULL DEFAULT NOW();
+                """,
+
+                """
+                CREATE INDEX IF NOT EXISTS
+                "IX_WishlistItems_GemListingId"
+                ON "WishlistItems" ("GemListingId");
+                """,
+
+
+                // =================================================
+                // DATABASE-BACKED PROFILE PHOTOS
+                // =================================================
+
+                """
+                CREATE TABLE IF NOT EXISTS
+                "ProfileImages"
+                (
+                    "Id" uuid NOT NULL,
+                    "UserId" uuid NOT NULL,
+                    "Content" bytea NOT NULL,
+                    "ContentType" character varying(32) NOT NULL,
+                    "CreatedAt" timestamp with time zone NOT NULL DEFAULT NOW(),
+
+                    CONSTRAINT "PK_ProfileImages"
+                        PRIMARY KEY ("Id"),
+                    CONSTRAINT "FK_ProfileImages_Users_UserId"
+                        FOREIGN KEY ("UserId")
+                        REFERENCES "Users" ("Id")
+                        ON DELETE CASCADE
+                );
+                """,
+
+                """
+                CREATE INDEX IF NOT EXISTS
+                "IX_ProfileImages_UserId"
+                ON "ProfileImages" ("UserId");
                 """
             };
 

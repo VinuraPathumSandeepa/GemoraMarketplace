@@ -267,6 +267,7 @@
 .gm-buyer .gm-profile-identity { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; }
 .gm-buyer .gm-profile-identity > div { min-width: 0; }
 .gm-buyer .gm-profile-identity h2 { margin: 12px 0 8px; }
+.gm-buyer .gm-profile-photo-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .gm-buyer .gm-profile-overview { display: grid; gap: 16px; }
 .gm-buyer .gm-profile-overview > div { display: flex; gap: 16px; align-items: center; padding: 24px; }
 .gm-buyer .gm-profile-overview small { display: block; color: var(--gm-muted); }
@@ -280,6 +281,8 @@
 .gm-buyer .gm-inline-notice { display: flex; align-items: start; gap: 12px; background: var(--gm-soft); padding: 16px; border-radius: 12px; }
 .gm-buyer .gm-inline-notice p { color: var(--gm-text); font-size: .875rem; }
 .gm-buyer .gm-feedback { margin-top: 16px; font-size: .875rem; }
+.gm-buyer .gm-feedback-error { color: #a52c2c; }
+.gm-buyer .gm-feedback-success { color: var(--gm-green); }
 .gm-buyer .gm-save-bar { position: sticky; bottom: 0; padding: 16px 0 max(16px, env(safe-area-inset-bottom)); background: var(--gm-surface); display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; z-index: 40; }
 .gm-buyer .gm-save-bar > button { flex: 1; }
 .gm-buyer .gm-security-item { display: flex; align-items: start; gap: 16px; margin: 16px 0; }
@@ -296,6 +299,8 @@
 .gm-buyer .gm-gallery-trigger > span { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; min-height: 44px; font-size: .875rem; }
 .gm-buyer .gm-gallery > p { font-size: .875rem; margin: 16px 8px; }
 .gm-buyer .gm-purchase-panel { padding: 24px; }
+.gm-buyer .gm-purchase-panel .gm-wishlist-action { margin-top: 12px; }
+.gm-buyer .gm-wishlist-action > button { width: 100%; }
 .gm-buyer .gm-detail-topline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 24px; }
 .gm-buyer .gm-detail-topline .gm-eyebrow { margin: 0; }
 .gm-buyer .gm-purchase-panel h1 { font-size: clamp(2rem, 1.5rem + 2vw, 3.5rem); }

@@ -5,6 +5,8 @@ namespace Gemora.Infrastructure.Data;
 
 public class ApplicationDbContext : DbContext
 {
+    public DbSet<ProfileImage> ProfileImages => Set<ProfileImage>();
+    public DbSet<WishlistItem> WishlistItems => Set<WishlistItem>();
     public ApplicationDbContext(
         DbContextOptions<ApplicationDbContext> options)
         : base(options)
@@ -86,6 +88,20 @@ public DbSet<FulfillmentStatusHistory>
         ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<ProfileImage>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Content).IsRequired();
+            entity.Property(x => x.ContentType).HasMaxLength(32).IsRequired();
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<WishlistItem>(entity =>
+        {
+            entity.HasKey(x => new { x.UserId, x.GemListingId });
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<GemListing>().WithMany().HasForeignKey(x => x.GemListingId).OnDelete(DeleteBehavior.Cascade);
+        });
 
 
         modelBuilder.Entity<Shipment>(

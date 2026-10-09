@@ -9,10 +9,11 @@ import MarketplaceAiAssistant from "../components/buyer/MarketplaceAiAssistant";
 import { Dialog } from "../components/buyer/BuyerUI";
 import "../styles/buyer.css";
 import "../styles/buyer-theme.css";
+import { WishlistProvider } from "../context/WishlistContext";
 
-const links = [["dashboard", "Dashboard"], ["marketplace", "Marketplace"], ["orders", "My Orders"], ["profile", "Profile"]];
+const links = [["dashboard", "Dashboard"], ["marketplace", "Marketplace"], ["wishlist", "Wishlist"], ["orders", "My Orders"], ["profile", "Profile"]];
 
-export default function BuyerLayout() {
+function BuyerLayoutContent() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -40,4 +41,16 @@ export default function BuyerLayout() {
     <Dialog open={drawer} onClose={() => setDrawer(false)} title="Explore Gemora" className="gm-nav-drawer"><p>Your gateway to Ceylon gemstones.</p><nav className="gm-drawer-links" aria-label="Mobile buyer navigation">{navLinks(true)}</nav><button className="gm-button gm-button-secondary" onClick={signOut}><LogOut size={18} />Sign out</button></Dialog>
     <main id="buyer-content" className="gm-main" tabIndex={-1}><Outlet /></main><SiteFooter /><MarketplaceAiAssistant />
   </div></MotionConfig>;
+}
+
+
+// Wrap the entire buyer layout so all buyer-side components share one wishlist.
+export default function BuyerLayout() {
+  const { user } = useAuth();
+
+  return (
+    <WishlistProvider key={user?.userId || user?.id || user?.email || "buyer"}>
+      <BuyerLayoutContent />
+    </WishlistProvider>
+  );
 }

@@ -13,6 +13,7 @@ import BuyerLayout from "./layouts/BuyerLayout";
 import MarketplacePage from "./pages/buyer/MarketplacePage";
 import MyOrdersPage from "./pages/buyer/MyOrdersPage";
 import BuyerProfilePage from "./pages/buyer/BuyerProfilePage";
+import WishlistPage from "./pages/buyer/WishlistPage";
 import GemDetailsPage from "./pages/buyer/GemDetailsPage";
 import CheckoutPage from "./pages/buyer/CheckoutPage";
 import PaymentPage from "./pages/buyer/PaymentPage";
@@ -246,6 +247,7 @@ function App() {
           path="profile"
           element={<BuyerProfilePage />}
         />
+        <Route path="wishlist" element={<WishlistPage />} />
       </Route>
 
 

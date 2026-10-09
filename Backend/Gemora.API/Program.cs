@@ -158,10 +158,8 @@ builder.Services.AddScoped<
 // Uses the current Supabase-aware profile image service.
 // ============================================================
 
-builder.Services.AddScoped<
-    IProfileImageStorageService,
-    ProfileImageStorageService
->();
+builder.Services.AddScoped<ProfileImageStorageService>();
+builder.Services.AddScoped<IProfileImageStorageService, DatabaseProfileImageStorageService>();
 
 
 // ============================================================
