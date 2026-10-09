@@ -6,6 +6,10 @@ public class Order
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    // Only pre-upgrade conflicting records are exempt from the new unique indexes.
+    // Application availability checks deliberately include these records.
+    public bool IsLegacyDuplicate { get; set; }
+
     public Guid BuyerId { get; set; }
 
     public Guid SellerId { get; set; }
@@ -27,6 +31,11 @@ public class Order
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedAt { get; set; }
+
+    public DateTime? PaymentDueAt { get; set; }
+    public DateTime? BuyerMessageAt { get; set; }
+    public DateTime? BuyerReadAt { get; set; }
+    public DateTime? SellerReadAt { get; set; }
 
     public DateTime? PaidAt { get; set; }
 

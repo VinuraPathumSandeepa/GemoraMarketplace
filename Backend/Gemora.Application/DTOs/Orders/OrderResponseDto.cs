@@ -49,6 +49,11 @@ public class OrderResponseDto
 
     public DateTime? UpdatedAt { get; set; }
 
+    public DateTime? PaymentDueAt { get; set; }
+    public DateTime? BuyerMessageAt { get; set; }
+    public DateTime? BuyerReadAt { get; set; }
+    public DateTime? SellerReadAt { get; set; }
+
     public DateTime? PaidAt { get; set; }
 
     public List<OrderStatusHistoryDto> StatusHistory

@@ -460,3 +460,5 @@ export function completeOrder(
 export {
   API_ORIGIN,
 };
+// Shares authentication and error handling with checkout, including session-only sign-in.
+export const orderInboxRequest = request;

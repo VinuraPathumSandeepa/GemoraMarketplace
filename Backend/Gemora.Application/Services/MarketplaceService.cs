@@ -24,7 +24,7 @@ public class MarketplaceService : IMarketplaceService
     // ONLY:
     // Approved + currently purchasable gemstones.
     //
-    // Any live order reserves the unique gemstone.
+    // Pending requests remain public; seller approval reserves the unique gemstone.
     // =========================================================
 
     public async Task<PagedMarketplaceResponseDto>
@@ -423,6 +423,7 @@ public class MarketplaceService : IMarketplaceService
 
                     IsAvailable =
                         !g.Orders.Any(o =>
+                    o.Status != OrderStatuses.Pending && o.Status != OrderStatuses.Rejected &&
 
                             o.Status !=
                                 OrderStatuses
@@ -470,7 +471,7 @@ public class MarketplaceService : IMarketplaceService
     // Refunded   → available again
     // Failed     → available again
     //
-    // Pending / Confirmed / Paid /
+    // Confirmed / Paid /
     // Completed etc. → reserved/sold.
     // =========================================================
 
@@ -481,6 +482,7 @@ public class MarketplaceService : IMarketplaceService
 
             .Where(g =>
                 !g.Orders.Any(o =>
+                    o.Status != OrderStatuses.Pending && o.Status != OrderStatuses.Rejected &&
 
                     o.Status !=
                         OrderStatuses

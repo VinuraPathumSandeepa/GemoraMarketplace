@@ -761,6 +761,8 @@ builder.Services.AddSwaggerGen(
 // The IServiceCollection becomes read-only after Build().
 // ============================================================
 
+builder.Services.AddHostedService<Gemora.API.Services.OrderExpiryWorker>();
+
 var app =
     builder.Build();
 

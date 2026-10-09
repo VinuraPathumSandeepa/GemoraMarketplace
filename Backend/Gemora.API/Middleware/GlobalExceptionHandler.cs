@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Gemora.API.Middleware;
 
@@ -94,6 +96,14 @@ public class GlobalExceptionHandler
         // BUSINESS RULE ERROR
         // ========================================================
 
+        catch (Exception ex) when (
+            ex is PostgresException { SqlState: "40001" or "40P01" } ||
+            ex is DbUpdateException { InnerException: PostgresException { SqlState: "40001" or "40P01" } } ||
+            ex is DbUpdateException { InnerException: PostgresException { SqlState: "23505", ConstraintName: "IX_Orders_ReservedGem" or "IX_Orders_ActiveBuyerGem" } })
+        {
+            await WriteErrorResponse(context, HttpStatusCode.Conflict,
+                "This order or gemstone changed while you were updating it. Refresh your orders and try again.", ex);
+        }
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning(

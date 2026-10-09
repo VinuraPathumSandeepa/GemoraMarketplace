@@ -454,6 +454,7 @@ public class MarketplaceAgentService
                         GemListingStatuses.Approved
                     &&
                     !g.Orders.Any(o =>
+                    o.Status != OrderStatuses.Pending && o.Status != OrderStatuses.Rejected &&
                         o.Status !=
                             OrderStatuses.Cancelled
                         &&
@@ -809,6 +810,7 @@ public class MarketplaceAgentService
 
                         IsAvailable =
                             !g.Orders.Any(o =>
+                    o.Status != OrderStatuses.Pending && o.Status != OrderStatuses.Rejected &&
                                 o.Status !=
                                     OrderStatuses.Cancelled
                                 &&
@@ -901,6 +903,7 @@ public class MarketplaceAgentService
                         GemListingStatuses.Approved
                     &&
                     !g.Orders.Any(o =>
+                    o.Status != OrderStatuses.Pending && o.Status != OrderStatuses.Rejected &&
                         o.Status !=
                             OrderStatuses.Cancelled
                         &&
@@ -1577,6 +1580,7 @@ public class MarketplaceAgentService
                         GemListingStatuses.Approved
                     &&
                     !g.Orders.Any(o =>
+                    o.Status != OrderStatuses.Pending && o.Status != OrderStatuses.Rejected &&
                         o.Status !=
                             OrderStatuses.Cancelled
                         &&

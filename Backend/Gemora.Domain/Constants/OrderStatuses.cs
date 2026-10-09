@@ -2,6 +2,7 @@ namespace Gemora.Domain.Constants;
 
 public static class OrderStatuses
 {
+    public const string Rejected = "Rejected";
     public const string Pending = "Pending";
 
     public const string Completed = "Completed";
@@ -27,6 +28,7 @@ public static class OrderStatuses
             ShipmentCreated,
             InTransit,
             Delivered,
+            Rejected,
             Cancelled,
             Refunded,
             Failed
@@ -35,6 +37,7 @@ public static class OrderStatuses
     public static readonly IReadOnlySet<string> NonBlocking =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
+            Rejected,
             Cancelled,
             Refunded,
             Failed

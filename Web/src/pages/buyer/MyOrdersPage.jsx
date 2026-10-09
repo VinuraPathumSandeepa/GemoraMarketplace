@@ -1,3 +1,4 @@
+import { PaymentDeadline } from "../../components/OrderInbox";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
@@ -42,12 +43,16 @@ export default function MyOrdersPage() {
 
   useEffect(() => {
     loadOrders();
+    const refresh = () => loadOrders(true);
+    const timer = setInterval(refresh, 15000);
+    window.addEventListener("gemora-orders-changed", refresh);
+    return () => { clearInterval(timer); window.removeEventListener("gemora-orders-changed", refresh); };
   }, []);
 
 
-  async function loadOrders() {
+  async function loadOrders(quiet = false) {
     try {
-      setLoading(true);
+      if (!quiet) setLoading(true);
       setError("");
 
       const response = await getMyOrders();
@@ -486,6 +491,8 @@ function PremiumOrderCard({
 
         {/* CURRENT STATE MESSAGE */}
 
+        {["Confirmed", "AwaitingPayment"].includes(status) && <PaymentDeadline dueAt={order.paymentDueAt} />}
+        {["Rejected", "Cancelled"].includes(status) && order.statusHistory?.at(-1)?.reason && <p className="oi-error">{order.statusHistory.at(-1).reason}</p>}
         <CurrentOrderMessage
           status={status}
           fulfillmentStatus={fulfillmentStatus}
@@ -981,6 +988,7 @@ function CurrentOrderMessage({
         "Your gemstone transaction has been successfully completed.",
     },
 
+    Rejected: { icon: <XCircle size={18} />, title: "Order rejected", text: "See the seller decision above. You can continue exploring the marketplace." },
     Cancelled: {
       icon:
         <XCircle size={18} />,
@@ -1066,6 +1074,7 @@ function OrderProgress({
 }) {
 
   const failureStatuses = [
+    "Rejected",
     "Cancelled",
     "Refunded",
     "Failed",

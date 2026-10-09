@@ -582,6 +582,13 @@ public DbSet<FulfillmentStatusHistory>
         modelBuilder.Entity<Order>(entity =>
         {
             entity.ToTable("Orders");
+            entity.Property(o => o.IsLegacyDuplicate).HasDefaultValue(false);
+            entity.HasIndex(o => o.GemListingId, "IX_Orders_ReservedGem")
+                .IsUnique().HasFilter("NOT \"IsLegacyDuplicate\" AND \"Status\" NOT IN ('Pending', 'Rejected', 'Cancelled', 'Refunded', 'Failed')");
+            entity.HasIndex(o => new { o.GemListingId, o.BuyerId }, "IX_Orders_ActiveBuyerGem")
+                .IsUnique().HasFilter("NOT \"IsLegacyDuplicate\" AND \"Status\" NOT IN ('Rejected', 'Cancelled', 'Refunded', 'Failed')");
+            entity.HasIndex(o => new { o.Status, o.PaymentDueAt });
+
 
             entity.HasKey(o => o.Id);
 

@@ -1,3 +1,5 @@
+import { PaymentDeadline } from "../../components/OrderInbox";
+import { utcTime } from "../../utils/orderTime";
 import { GemImage } from "../../components/buyer/BuyerUI";
 import {
   useEffect,
@@ -57,6 +59,9 @@ const EMPTY_DELIVERY = {
 export default function PaymentPage() {
   const { orderId } =
     useParams();
+
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer); }, []);
 
   const navigate =
     useNavigate();
@@ -567,7 +572,7 @@ export default function PaymentPage() {
       order.status ===
       "AwaitingPayment"
     ) &&
-    deliveryComplete;
+    deliveryComplete && utcTime(order.paymentDueAt) > clock;
 
 
   const alreadyPaid =
@@ -796,6 +801,7 @@ export default function PaymentPage() {
 
             {/* ORDER STATUS */}
 
+            {["Confirmed", "AwaitingPayment"].includes(order.status) && <PaymentDeadline dueAt={order.paymentDueAt} />}
             <div className="payment-order-state">
 
               <div>

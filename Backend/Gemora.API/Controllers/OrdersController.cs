@@ -381,6 +381,14 @@ public class OrdersController : ControllerBase
     // AUTHENTICATED USER ID
     // =========================================================
 
+    [HttpPost("{id:guid}/message/read")]
+    [Authorize(Roles = UserRoles.Buyer)]
+    public async Task<IActionResult> ReadMessage(Guid id, ReadOrderMessageDto request)
+    {
+        await _service.MarkMessageReadAsync(id, CurrentUserId(), false, request.MessageAt);
+        return NoContent();
+    }
+
     private Guid CurrentUserId()
     {
         var value =

@@ -15,6 +15,7 @@ public static class DatabaseCompatibilityInitializer
         var commands =
             new List<string>
             {
+                OrderApprovalSchema.Sql,
                 // =================================================
                 // ORDERS
                 // =================================================

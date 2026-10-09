@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gemora.Application.Services;
 
-public class OrderService : IOrderService
+public partial class OrderService : IOrderService
 
 {
 
@@ -116,7 +116,9 @@ public class OrderService : IOrderService
 
                         o.Status != OrderStatuses.Refunded &&
 
-                        o.Status != OrderStatuses.Failed);
+                        o.Status != OrderStatuses.Failed &&
+                        o.Status != OrderStatuses.Rejected &&
+                        (o.Status != OrderStatuses.Pending || o.BuyerId == buyerId));
 
             if (hasActiveOrder)
 
@@ -653,6 +655,7 @@ public class OrderService : IOrderService
 
     {
 
+        await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         var order =
 
             await _context.Orders
@@ -695,6 +698,7 @@ public class OrderService : IOrderService
 
             "Cancelled by Buyer.");
 
+        await transaction.CommitAsync();
         return (
 
             await LoadOrderAsync(id)
@@ -721,58 +725,28 @@ public class OrderService : IOrderService
 
     {
 
-        var order =
-
-            await _context.Orders
-
-                .FirstOrDefaultAsync(o =>
-
-                    o.Id == id)
-
-            ?? throw new KeyNotFoundException(
-
-                "Order was not found.");
-
-        ValidateSellerOrAdmin(
-
-            order,
-
-            actorId,
-
-            actorRole);
-
-        if (
-
-            order.Status !=
-
-            OrderStatuses.Pending)
-
-        {
-
-            throw new InvalidOperationException(
-
-                $"Order cannot be confirmed from status '{order.Status}'.");
-
-        }
-
-        await ChangeStatusAsync(
-
-            order,
-
-            OrderStatuses.Confirmed,
-
-            actorId,
-
-            reason ??
-
-            "Order confirmed.");
-
-        return (
-
-            await LoadOrderAsync(id)
-
-        )!;
-
+        await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        var order = await _context.Orders.Include(o => o.GemListing).FirstOrDefaultAsync(o => o.Id == id)
+            ?? throw new KeyNotFoundException("Order was not found.");
+        ValidateSellerOrAdmin(order, actorId, actorRole);
+        if (order.Status != OrderStatuses.Pending)
+            throw new InvalidOperationException("Only pending orders can be approved.");
+        if (order.GemListing?.Status != GemListingStatuses.Approved)
+            throw new InvalidOperationException("This gemstone is no longer available.");
+        if (await _context.Orders.AnyAsync(o => o.GemListingId == order.GemListingId &&
+            o.Id != id && o.Status != OrderStatuses.Pending && o.Status != OrderStatuses.Rejected &&
+            o.Status != OrderStatuses.Cancelled && o.Status != OrderStatuses.Refunded && o.Status != OrderStatuses.Failed))
+            throw new InvalidOperationException("Another order has already been approved for this gemstone.");
+        order.PaymentDueAt = DateTime.UtcNow.AddHours(3);
+        await ChangeStatusAsync(order, OrderStatuses.Confirmed, actorId,
+            "Seller approved your order. Complete payment within 3 hours.");
+        var others = await _context.Orders.Where(o => o.GemListingId == order.GemListingId &&
+            o.Id != id && o.Status == OrderStatuses.Pending).ToListAsync();
+        foreach (var other in others)
+            await ChangeStatusAsync(other, OrderStatuses.Rejected, actorId,
+                "Already sold / allocated to another buyer — the seller approved another order.");
+        await transaction.CommitAsync();
+        return (await LoadOrderAsync(id))!;
     }
 
     // =========================================================
@@ -833,6 +807,7 @@ public class OrderService : IOrderService
 
                 OrderStatuses.Refunded ||
 
+            order.Status == OrderStatuses.Rejected ||
             order.Status ==
 
                 OrderStatuses.Failed ||
@@ -998,6 +973,15 @@ public class OrderService : IOrderService
                 ?? throw new KeyNotFoundException(
 
                     "Order was not found.");
+
+            if (order.PaymentDueAt == null || order.PaymentDueAt <= DateTime.UtcNow)
+                throw new InvalidOperationException("The payment window has expired. This order can no longer be paid.");
+
+            // Legacy conflicts remain visible to business rules even when exempt from the new indexes.
+            if (await _context.Orders.AnyAsync(o => o.GemListingId == order.GemListingId &&
+                o.Id != order.Id && o.Status != OrderStatuses.Pending && o.Status != OrderStatuses.Rejected &&
+                o.Status != OrderStatuses.Cancelled && o.Status != OrderStatuses.Refunded && o.Status != OrderStatuses.Failed))
+                throw new InvalidOperationException("This gemstone has another approved or paid order. Payment is blocked until the conflicting orders are resolved.");
 
             // =====================================================
 
@@ -2086,7 +2070,7 @@ public class OrderService : IOrderService
 
         string newStatus,
 
-        Guid actorId,
+        Guid? actorId,
 
         string? reason)
 
@@ -2103,6 +2087,8 @@ public class OrderService : IOrderService
         order.UpdatedAt =
 
             DateTime.UtcNow;
+
+        order.BuyerMessageAt = DateTime.UtcNow;
 
         var history =
 
@@ -2287,6 +2273,10 @@ public class OrderService : IOrderService
                 Status =
 
                     o.Status,
+                PaymentDueAt = o.PaymentDueAt,
+                BuyerMessageAt = o.BuyerMessageAt,
+                BuyerReadAt = o.BuyerReadAt,
+                SellerReadAt = o.SellerReadAt,
 
                 FulfillmentStatus =
 
@@ -2680,6 +2670,10 @@ private static OrderResponseDto
             order.Currency
             ?? "LKR",
 
+        PaymentDueAt = order.PaymentDueAt,
+        BuyerMessageAt = order.BuyerMessageAt,
+        BuyerReadAt = order.BuyerReadAt,
+        SellerReadAt = order.SellerReadAt,
         Status =
             order.Status
             ?? OrderStatuses.Pending,

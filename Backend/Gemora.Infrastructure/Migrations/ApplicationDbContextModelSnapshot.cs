@@ -581,6 +581,12 @@ namespace Gemora.Infrastructure.Migrations
                     b.Property<Guid>("BuyerId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("BuyerMessageAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("BuyerReadAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -603,11 +609,22 @@ namespace Gemora.Infrastructure.Migrations
                     b.Property<DateTime?>("HandedOverAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsLegacyDuplicate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("PaymentDueAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("SellerId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("SellerReadAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ShippingAddress")
                         .IsRequired()
@@ -645,6 +662,16 @@ namespace Gemora.Infrastructure.Migrations
                     b.HasIndex("SellerId");
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("Status", "PaymentDueAt");
+
+                    b.HasIndex(new[] { "GemListingId", "BuyerId" }, "IX_Orders_ActiveBuyerGem")
+                        .IsUnique()
+                        .HasFilter("NOT \"IsLegacyDuplicate\" AND \"Status\" NOT IN ('Rejected', 'Cancelled', 'Refunded', 'Failed')");
+
+                    b.HasIndex(new[] { "GemListingId" }, "IX_Orders_ReservedGem")
+                        .IsUnique()
+                        .HasFilter("NOT \"IsLegacyDuplicate\" AND \"Status\" NOT IN ('Pending', 'Rejected', 'Cancelled', 'Refunded', 'Failed')");
 
                     b.ToTable("Orders", (string)null);
                 });

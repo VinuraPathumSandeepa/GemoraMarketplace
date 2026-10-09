@@ -1,3 +1,4 @@
+import OrderInbox from "../components/OrderInbox";
 import { useState } from "react";
 
 import {
@@ -298,6 +299,7 @@ function DashboardLayout({ children }) {
               ================================================== */}
 
           <div className="gemora-user-area">
+            {user?.role === "Seller" && <OrderInbox seller key={user?.userId || user?.id || user?.email} />}
 
             {/* ROLE */}
 
