@@ -164,20 +164,51 @@ public class OrdersController : ControllerBase
     // BUYER - PAYMENT
     // =========================================================
 
-    [HttpPost("{id:guid}/payment")]
+    [HttpPost("{id:guid}/payment/intent")]
+    [Authorize(Roles = UserRoles.Buyer)]
+    public async Task<ActionResult<PaymentIntentResponseDto>>
+        CreatePaymentIntent(
+            Guid id,
+            CreatePaymentIntentRequestDto request)
+    {
+        var intent =
+            await _service.CreatePaymentIntentAsync(
+                id,
+                CurrentUserId(),
+                request);
+
+        return Ok(intent);
+    }
+
+    [HttpPost("{id:guid}/payment/confirm")]
     [Authorize(Roles = UserRoles.Buyer)]
     public async Task<ActionResult<PaymentResponseDto>>
-        Pay(
+        ConfirmPayment(
             Guid id,
-            CreatePaymentRequestDto request)
+            ConfirmPaymentRequestDto request)
     {
         var payment =
-            await _service.PayAsync(
+            await _service.ConfirmPaymentAsync(
                 id,
                 CurrentUserId(),
                 request);
 
         return Ok(payment);
+    }
+
+    // Compatibility route for clients that already know the payment API.
+    // It still requires a server-created intent and an opaque payment token.
+    [HttpPost("{id:guid}/payment")]
+    [Authorize(Roles = UserRoles.Buyer)]
+    public async Task<ActionResult<PaymentResponseDto>>
+        Pay(
+            Guid id,
+            ConfirmPaymentRequestDto request)
+    {
+        return Ok(await _service.ConfirmPaymentAsync(
+            id,
+            CurrentUserId(),
+            request));
     }
 
 

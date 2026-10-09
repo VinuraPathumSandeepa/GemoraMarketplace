@@ -29,8 +29,9 @@ import {
 } from "react-router-dom";
 
 import {
+  confirmPayment,
+  createPaymentIntent,
   getOrderById,
-  payOrder,
   resolveMediaUrl,
   updateOrderDeliveryDetails,
 } from "../../services/buyerApi";
@@ -94,6 +95,26 @@ export default function PaymentPage() {
     paymentError,
     setPaymentError,
   ] = useState("");
+
+  const [
+    paymentStep,
+    setPaymentStep,
+  ] = useState("entry");
+
+  const [
+    paymentIntent,
+    setPaymentIntent,
+  ] = useState(null);
+
+  const [
+    cardForm,
+    setCardForm,
+  ] = useState({
+    cardholderName: "",
+    cardNumber: "",
+    expiry: "",
+    cvc: "",
+  });
 
 
 
@@ -347,22 +368,27 @@ export default function PaymentPage() {
   // PAYMENT
   // =========================================================
 
-  async function handlePayment() {
-    if (!order) {
-      return;
-    }
+  function updateCardField(event) {
+    const { name, value } = event.target;
 
-    if (
-      !hasCompleteDeliveryDetails(
-        order.deliveryDetails
-      )
-    ) {
-      setPaymentError(
-        "Complete your delivery details before making payment."
-      );
+    setCardForm((current) => ({
+      ...current,
+      [name]:
+        name === "cardNumber"
+          ? formatCardNumber(value)
+          : name === "expiry"
+            ? formatExpiry(value)
+            : value,
+    }));
+  }
 
-      setEditingDelivery(true);
+  async function handleCardDetailsSubmit(event) {
+    event.preventDefault();
 
+    const validationMessage = validateCardForm(cardForm);
+
+    if (validationMessage) {
+      setPaymentError(validationMessage);
       return;
     }
 
@@ -370,33 +396,57 @@ export default function PaymentPage() {
       setProcessing(true);
       setPaymentError("");
 
-      const result =
-        await payOrder(
-          order.id,
-          "Card"
-        );
-
-      setPaymentSuccess(
-        result
+      const intent = await createPaymentIntent(order.id, "Card");
+      setPaymentIntent(intent);
+      setPaymentStep("review");
+    } catch (err) {
+      console.error("Unable to create payment intent:", err);
+      setPaymentError(
+        err.message ||
+        "Unable to prepare the card payment."
       );
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  function editCardDetails() {
+    setPaymentError("");
+    setPaymentStep("entry");
+  }
+
+  async function handleConfirmPayment() {
+    if (!paymentIntent) {
+      setPaymentError("Start the card payment again before confirming.");
+      setPaymentStep("entry");
+      return;
+    }
+
+    try {
+      setProcessing(true);
+      setPaymentError("");
+
+      const paymentMethodToken =
+        await createDemoPaymentMethodToken(cardForm);
+
+      const result = await confirmPayment(
+        order.id,
+        {
+          paymentIntentId:
+            paymentIntent.paymentIntentId,
+          paymentMethodToken,
+          paymentMethod: "Card",
+        }
+      );
+
+      setPaymentSuccess(result);
 
       if (result?.order) {
-        setOrder(
-          result.order
-        );
-
-        setDeliveryForm(
-          buildDeliveryForm(
-            result.order
-          )
-        );
+        setOrder(result.order);
+        setDeliveryForm(buildDeliveryForm(result.order));
       }
     } catch (err) {
-      console.error(
-        "Payment failed:",
-        err
-      );
-
+      console.error("Payment failed:", err);
       setPaymentError(
         err.message ||
         "Payment could not be completed."
@@ -405,7 +455,6 @@ export default function PaymentPage() {
       setProcessing(false);
     }
   }
-
 
   // =========================================================
   // HELPERS
@@ -1351,26 +1400,17 @@ export default function PaymentPage() {
             ================================================== */}
 
             <div className="payment-method-panel">
-
               <div className="payment-method-heading">
-
-                <CreditCard
-                  size={23}
-                />
+                <CreditCard size={23} />
 
                 <div>
-                  <h3>
-                    Card Payment
-                  </h3>
+                  <h3>Card Payment</h3>
 
                   <p>
-                    Secure Gemora payment
-                    processing
+                    Secure Gemora payment processing
                   </p>
                 </div>
-
               </div>
-
 
               {paymentError && (
                 <div className="payment-warning">
@@ -1378,109 +1418,213 @@ export default function PaymentPage() {
                 </div>
               )}
 
-
               {!deliveryComplete &&
                 !alreadyPaid && (
-
                   <div className="payment-warning">
-                    Complete all required
-                    delivery information
+                    Complete all required delivery information
                     before making payment.
                   </div>
                 )}
 
-
               {!canPay &&
                 !alreadyPaid &&
                 deliveryComplete && (
-
                   <div className="payment-warning">
-
-                    This order must be
-                    confirmed by the seller
+                    This order must be confirmed by the seller
                     before payment can be made.
-
                   </div>
                 )}
 
-
               {alreadyPaid && (
                 <div className="payment-already-completed">
-
-                  <CheckCircle2
-                    size={20}
-                  />
+                  <CheckCircle2 size={20} />
 
                   <div>
-                    <strong>
-                      Payment completed
-                    </strong>
+                    <strong>Payment completed</strong>
 
                     <p>
-                      This order has already
-                      been paid. Delivery
-                      details can still be
-                      changed until courier
+                      This order has already been paid. Delivery
+                      details can still be changed until courier
                       handover.
                     </p>
                   </div>
-
                 </div>
               )}
 
+              {!alreadyPaid &&
+                canPay &&
+                !editingDelivery && (
+                  paymentStep === "entry" ? (
+                    <form
+                      className="payment-card-form"
+                      onSubmit={handleCardDetailsSubmit}
+                    >
+                      <div className="payment-card-form-note">
+                        <ShieldCheck size={18} />
 
-              {!alreadyPaid && (
-                <button
-                  type="button"
-                  className="checkout-submit-btn"
+                        <span>
+                          Enter your card details. Gemora creates a
+                          secure payment token in this browser; raw
+                          card data is never stored in the order.
+                        </span>
+                      </div>
 
-                  disabled={
-                    !canPay ||
-                    processing ||
-                    editingDelivery ||
-                    savingDelivery
-                  }
+                      <label>
+                        <span>Cardholder Name *</span>
 
-                  onClick={
-                    handlePayment
-                  }
-                >
-                  <LockKeyhole
-                    size={19}
-                  />
+                        <input
+                          name="cardholderName"
+                          value={cardForm.cardholderName}
+                          onChange={updateCardField}
+                          autoComplete="cc-name"
+                          placeholder="Name on card"
+                          required
+                        />
+                      </label>
 
-                  {processing
-                    ? "Processing Payment..."
+                      <label>
+                        <span>Card Number *</span>
 
-                    : canPay
-                      ? `Pay ${formatPrice(
-                          order.agreedPrice,
-                          order.currency
-                        )}`
+                        <input
+                          name="cardNumber"
+                          value={cardForm.cardNumber}
+                          onChange={updateCardField}
+                          inputMode="numeric"
+                          autoComplete="cc-number"
+                          maxLength={19}
+                          placeholder="4242 4242 4242 4242"
+                          required
+                        />
+                      </label>
 
-                      : `Order ${order.status}`}
-                </button>
-              )}
+                      <div className="payment-card-fields-row">
+                        <label>
+                          <span>Expiry *</span>
 
+                          <input
+                            name="expiry"
+                            value={cardForm.expiry}
+                            onChange={updateCardField}
+                            inputMode="numeric"
+                            autoComplete="cc-exp"
+                            maxLength={5}
+                            placeholder="MM/YY"
+                            required
+                          />
+                        </label>
+
+                        <label>
+                          <span>Security Code *</span>
+
+                          <input
+                            name="cvc"
+                            value={cardForm.cvc}
+                            onChange={updateCardField}
+                            inputMode="numeric"
+                            autoComplete="cc-csc"
+                            maxLength={4}
+                            placeholder="123"
+                            required
+                          />
+                        </label>
+                      </div>
+
+                      <div className="payment-card-form-actions">
+                        <span>
+                          You will review these details before
+                          payment is submitted.
+                        </span>
+
+                        <button
+                          type="submit"
+                          className="checkout-submit-btn"
+                          disabled={processing}
+                        >
+                          <CreditCard size={18} />
+
+                          {processing
+                            ? "Preparing Secure Payment..."
+                            : "Review Card Details"}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="payment-card-review">
+                      <div className="payment-card-review-header">
+                        <div className="payment-card-preview">
+                          <CreditCard size={22} />
+
+                          <div>
+                            <strong>
+                              {getCardBrand(cardForm.cardNumber)} ending in{" "}
+                              {lastFourDigits(cardForm.cardNumber)}
+                            </strong>
+
+                            <span>
+                              {cardForm.cardholderName} · Expires{" "}
+                              {cardForm.expiry}
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="delivery-edit-btn"
+                          onClick={editCardDetails}
+                          disabled={processing}
+                        >
+                          <Pencil size={15} />
+                          Edit Details
+                        </button>
+                      </div>
+
+                      <div className="payment-review-confirmation">
+                        <CheckCircle2 size={18} />
+
+                        <span>
+                          Review complete. Confirming will authorize{" "}
+                          {formatPrice(order.agreedPrice, order.currency)}
+                          {" "}and save the order as Paid after the gateway
+                          approves it.
+                        </span>
+                      </div>
+
+                      <div className="payment-card-form-actions">
+                        <span>
+                          Payment intent expires{" "}
+                          {formatDate(paymentIntent?.expiresAt)}.
+                        </span>
+
+                        <button
+                          type="button"
+                          className="checkout-submit-btn"
+                          onClick={handleConfirmPayment}
+                          disabled={processing}
+                        >
+                          <LockKeyhole size={18} />
+
+                          {processing
+                            ? "Confirming Payment..."
+                            : "Confirm & Pay " + formatPrice(
+                                order.agreedPrice,
+                                order.currency
+                              )}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                )}
 
               {alreadyPaid && (
                 <button
                   type="button"
                   className="checkout-submit-btn"
-                  onClick={() =>
-                    navigate(
-                      "/buyer/orders"
-                    )
-                  }
+                  onClick={() => navigate("/buyer/orders")}
                 >
-                  <ReceiptText
-                    size={19}
-                  />
-
+                  <ReceiptText size={19} />
                   View Order
                 </button>
               )}
-
             </div>
 
           </section>
@@ -1642,6 +1786,149 @@ export default function PaymentPage() {
 
     </div>
   );
+}
+
+
+// =========================================================
+// CARD PAYMENT HELPERS
+// =========================================================
+
+function formatCardNumber(value) {
+  return value
+    .replace(/\D/g, "")
+    .slice(0, 19)
+    .replace(/(.{4})/g, "$1 ")
+    .trim();
+}
+
+function formatExpiry(value) {
+  const digits = value
+    .replace(/\D/g, "")
+    .slice(0, 4);
+
+  if (digits.length <= 2) {
+    return digits;
+  }
+
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+}
+
+function lastFourDigits(cardNumber) {
+  return cardNumber
+    .replace(/\D/g, "")
+    .slice(-4);
+}
+
+function getCardBrand(cardNumber) {
+  const digits = cardNumber.replace(/\D/g, "");
+
+  if (digits.startsWith("4")) {
+    return "Visa";
+  }
+
+  if (/^(5[1-5]|2[2-7])/.test(digits)) {
+    return "Mastercard";
+  }
+
+  if (/^3[47]/.test(digits)) {
+    return "American Express";
+  }
+
+  return "Card";
+}
+
+function validateCardForm(card) {
+  const number = card.cardNumber.replace(/\D/g, "");
+
+  if (!card.cardholderName.trim()) {
+    return "Enter the name shown on the card.";
+  }
+
+  if (
+    number.length < 13 ||
+    number.length > 19 ||
+    !passesLuhnCheck(number)
+  ) {
+    return "Enter a valid card number.";
+  }
+
+  const expiryMatch = /^(0[1-9]|1[0-2])\/(\d{2})$/.exec(
+    card.expiry.trim()
+  );
+
+  if (!expiryMatch) {
+    return "Enter the expiry date as MM/YY.";
+  }
+
+  const now = new Date();
+  const expiryMonth = Number(expiryMatch[1]);
+  const expiryYear = 2000 + Number(expiryMatch[2]);
+
+  if (
+    expiryYear < now.getFullYear() ||
+    (
+      expiryYear === now.getFullYear() &&
+      expiryMonth <= now.getMonth()
+    )
+  ) {
+    return "The card expiry date has passed.";
+  }
+
+  if (!/^\d{3,4}$/.test(card.cvc.trim())) {
+    return "Enter a valid 3 or 4 digit security code.";
+  }
+
+  return "";
+}
+
+function passesLuhnCheck(number) {
+  let sum = 0;
+  let shouldDouble = false;
+
+  for (let index = number.length - 1; index >= 0; index--) {
+    let digit = Number(number[index]);
+
+    if (shouldDouble) {
+      digit *= 2;
+      if (digit > 9) {
+        digit -= 9;
+      }
+    }
+
+    sum += digit;
+    shouldDouble = !shouldDouble;
+  }
+
+  return sum % 10 === 0;
+}
+
+async function createDemoPaymentMethodToken(card) {
+  if (!globalThis.crypto?.subtle) {
+    throw new Error(
+      "Secure card tokenization is not available in this browser."
+    );
+  }
+
+  const payload = [
+    "gemora-demo-card",
+    card.cardNumber.replace(/\D/g, ""),
+    card.expiry,
+    card.cvc,
+  ].join(":");
+
+  const bytes = new TextEncoder().encode(payload);
+  const digest = await globalThis.crypto.subtle.digest(
+    "SHA-256",
+    bytes
+  );
+
+  const token = Array.from(
+    new Uint8Array(digest)
+  )
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+
+  return `demo_card_${token}`;
 }
 
 

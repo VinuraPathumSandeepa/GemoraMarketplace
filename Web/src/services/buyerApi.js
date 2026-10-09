@@ -412,12 +412,12 @@ export function
 // PAYMENT
 // ============================================================
 
-export function payOrder(
+export function createPaymentIntent(
   orderId,
   paymentMethod = "Card"
 ) {
   return request(
-    `/api/orders/${orderId}/payment`,
+    `/api/orders/${orderId}/payment/intent`,
     {
       method:
         "POST",
@@ -428,6 +428,48 @@ export function payOrder(
         }),
     },
     true
+  );
+}
+
+export function confirmPayment(
+  orderId,
+  {
+    paymentIntentId,
+    paymentMethodToken,
+    paymentMethod = "Card",
+  }
+) {
+  return request(
+    `/api/orders/${orderId}/payment/confirm`,
+    {
+      method:
+        "POST",
+
+      body:
+        JSON.stringify({
+          paymentIntentId,
+          paymentMethodToken,
+          paymentMethod,
+        }),
+    },
+    true
+  );
+}
+
+// Kept for older components; new payment UI uses the explicit two-step API.
+export function payOrder(
+  orderId,
+  paymentIntentId,
+  paymentMethodToken,
+  paymentMethod = "Card"
+) {
+  return confirmPayment(
+    orderId,
+    {
+      paymentIntentId,
+      paymentMethodToken,
+      paymentMethod,
+    }
   );
 }
 

@@ -271,6 +271,11 @@ builder.Services.AddScoped<
     MarketplaceService
 >();
 
+builder.Services.AddScoped<
+    IPaymentGateway,
+    SandboxPaymentGateway
+>();
+
 
 builder.Services.AddScoped<
     IOrderService,

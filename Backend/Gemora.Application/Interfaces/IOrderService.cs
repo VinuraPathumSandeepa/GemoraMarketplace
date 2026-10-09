@@ -40,10 +40,21 @@ public interface IOrderService
         string? reason);
 
 
+    Task<PaymentIntentResponseDto> CreatePaymentIntentAsync(
+        Guid orderId,
+        Guid buyerId,
+        CreatePaymentIntentRequestDto dto);
+
+    Task<PaymentResponseDto> ConfirmPaymentAsync(
+        Guid orderId,
+        Guid buyerId,
+        ConfirmPaymentRequestDto dto);
+
+    // Backward-compatible service wrapper for existing internal callers.
     Task<PaymentResponseDto> PayAsync(
-Guid orderId,
-Guid buyerId,
-CreatePaymentRequestDto dto);
+        Guid orderId,
+        Guid buyerId,
+        CreatePaymentRequestDto dto);
 
 
 

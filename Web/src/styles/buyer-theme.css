@@ -482,6 +482,25 @@
 .gm-buyer .payment-success-icon { background: var(--gm-gold); color: var(--gm-ink); box-shadow: none; }
 .gm-buyer .payment-order-state > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: transparent; border: 0; color: var(--gm-text); padding: 4px 0; }
 .gm-buyer .payment-order-state span { font-size: .75rem; color: var(--gm-muted); }
+.gm-buyer .payment-card-form { display: grid; gap: 16px; margin-top: 20px; }
+.gm-buyer .payment-card-form label { display: grid; gap: 8px; color: var(--gm-text); font-size: .875rem; }
+.gm-buyer .payment-card-form label > span { color: var(--gm-text); }
+.gm-buyer .payment-card-form input { width: 100%; min-height: 48px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--gm-control-border); background: var(--gm-surface); color: var(--gm-text); font-size: 16px; }
+.gm-buyer .payment-card-form input::placeholder { color: var(--gm-muted); }
+.gm-buyer .payment-card-fields-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.gm-buyer :is(.payment-card-form-note,.payment-review-confirmation) { display: flex; align-items: flex-start; gap: 10px; padding: 14px; border: 1px solid var(--gm-border); border-radius: 12px; background: var(--gm-soft); color: var(--gm-muted); font-size: .8125rem; line-height: 1.5; }
+.gm-buyer :is(.payment-card-form-note,.payment-review-confirmation) svg { flex: 0 0 auto; color: var(--gm-label); margin-top: 2px; }
+.gm-buyer .payment-card-form-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-top: 4px; }
+.gm-buyer .payment-card-form-actions > span { max-width: 360px; color: var(--gm-muted); font-size: .75rem; line-height: 1.5; }
+.gm-buyer .payment-card-form-actions .checkout-submit-btn { width: auto; min-width: min(100%, 240px); margin-left: auto; }
+.gm-buyer .payment-card-review { display: grid; gap: 16px; margin-top: 20px; }
+.gm-buyer .payment-card-review-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.gm-buyer .payment-card-preview { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.gm-buyer .payment-card-preview > svg { flex: 0 0 auto; color: var(--gm-label); }
+.gm-buyer .payment-card-preview strong, .gm-buyer .payment-card-preview span { display: block; }
+.gm-buyer .payment-card-preview strong { color: var(--gm-text); font-size: .9rem; }
+.gm-buyer .payment-card-preview span { color: var(--gm-muted); font-size: .8rem; margin-top: 4px; }
+@media (max-width: 520px) { .gm-buyer .payment-card-fields-row { grid-template-columns: minmax(0, 1fr); } .gm-buyer .payment-card-form-actions .checkout-submit-btn { width: 100%; } }
 @media (min-width: 768px) { .gm-buyer :is(.checkout-two-column,.delivery-form-row,.payment-success-details) { grid-template-columns: repeat(2, minmax(0, 1fr)); } .gm-buyer :is(.checkout-form-card,.payment-main-card) { padding: 32px; } }
 @media (min-width: 1024px) { .gm-buyer :is(.checkout-layout,.payment-page-grid) { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); } .gm-buyer :is(.checkout-summary-card,.payment-order-summary) { position: sticky; top: 112px; } }
 

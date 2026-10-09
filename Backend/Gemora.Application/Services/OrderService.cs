@@ -19,12 +19,16 @@ public partial class OrderService : IOrderService
 {
 
     private readonly ApplicationDbContext _context;
+    private readonly IPaymentGateway _paymentGateway;
 
-    public OrderService(ApplicationDbContext context)
+    public OrderService(
+        ApplicationDbContext context,
+        IPaymentGateway? paymentGateway = null)
 
     {
 
         _context = context;
+        _paymentGateway = paymentGateway ?? new SandboxPaymentGateway();
 
     }
 
@@ -934,324 +938,336 @@ public partial class OrderService : IOrderService
 
     // =========================================================
 
-    public async Task<PaymentResponseDto> PayAsync(
-
+    public async Task<PaymentIntentResponseDto> CreatePaymentIntentAsync(
         Guid orderId,
-
         Guid buyerId,
-
-        CreatePaymentRequestDto dto)
-
+        CreatePaymentIntentRequestDto dto)
     {
+        ValidateCardPaymentMethod(dto.PaymentMethod);
 
         await using var transaction =
+            await _context.Database.BeginTransactionAsync(
+                IsolationLevel.Serializable);
 
-            await _context.Database
-
-                .BeginTransactionAsync(
-
-                    IsolationLevel.Serializable);
+        var committed = false;
 
         try
-
         {
-
             var order =
-
                 await _context.Orders
-
-                    .Include(o =>
-
-                        o.DeliveryDetails)
-
+                    .Include(o => o.DeliveryDetails)
                     .FirstOrDefaultAsync(o =>
-
                         o.Id == orderId &&
-
                         o.BuyerId == buyerId)
-
                 ?? throw new KeyNotFoundException(
-
                     "Order was not found.");
 
-            if (order.PaymentDueAt == null || order.PaymentDueAt <= DateTime.UtcNow)
-                throw new InvalidOperationException("The payment window has expired. This order can no longer be paid.");
+            await ValidatePaymentEligibilityAsync(order);
 
-            // Legacy conflicts remain visible to business rules even when exempt from the new indexes.
-            if (await _context.Orders.AnyAsync(o => o.GemListingId == order.GemListingId &&
-                o.Id != order.Id && o.Status != OrderStatuses.Pending && o.Status != OrderStatuses.Rejected &&
-                o.Status != OrderStatuses.Cancelled && o.Status != OrderStatuses.Refunded && o.Status != OrderStatuses.Failed))
-                throw new InvalidOperationException("This gemstone has another approved or paid order. Payment is blocked until the conflicting orders are resolved.");
+            var existingPayment =
+                await _context.PaymentTransactions
+                    .Where(p =>
+                        p.OrderId == order.Id &&
+                        p.Status == PaymentStatuses.Pending)
+                    .OrderByDescending(p => p.CreatedAt)
+                    .FirstOrDefaultAsync();
 
-            // =====================================================
-
-            // PAYMENT ALLOWED ONLY AFTER CONFIRMATION
-
-            // =====================================================
-
-            if (
-
-                order.Status !=
-
-                    OrderStatuses.Confirmed &&
-
-                order.Status !=
-
-                    OrderStatuses.AwaitingPayment)
-
+            if (existingPayment != null)
             {
+                await transaction.CommitAsync();
+                committed = true;
 
-                throw new InvalidOperationException(
-
-                    $"Payment cannot be completed from status '{order.Status}'.");
-
-            }
-
-            // =====================================================
-
-            // DELIVERY MUST BE COMPLETE BEFORE PAYMENT
-
-            // =====================================================
-
-            if (
-
-                order.DeliveryDetails ==
-
-                null)
-
-            {
-
-                throw new InvalidOperationException(
-
-                    "Complete your delivery details before making payment.");
-
-            }
-
-            ValidateStoredDeliveryDetails(
-
-                order.DeliveryDetails);
-
-            // =====================================================
-
-            // PREVENT DUPLICATE PAYMENT
-
-            // =====================================================
-
-            var successfulPaymentExists =
-
-                await _context
-
-                    .PaymentTransactions
-
-                    .AnyAsync(p =>
-
-                        p.OrderId ==
-
-                            order.Id &&
-
-                        p.Status ==
-
-                            PaymentStatuses
-
-                                .Succeeded);
-
-            if (
-
-                successfulPaymentExists ||
-
-                order.PaidAt.HasValue ||
-
-                order.Status ==
-
-                    OrderStatuses.Paid)
-
-            {
-
-                throw new InvalidOperationException(
-
-                    "This order has already been paid.");
-
-            }
-
-            // =====================================================
-
-            // PAYMENT TRANSACTION
-
-            //
-
-            // Currently GemoraDemo provider.
-
-            //
-
-            // Later:
-
-            // real gateway + webhook confirmation.
-
-            // =====================================================
-
-            var now =
-
-                DateTime.UtcNow;
-
-            var externalReference =
-
-                $"GEM-PAY-{Guid.NewGuid():N}"
-
-                    .ToUpperInvariant();
-
-            var payment =
-
-                new PaymentTransaction
-
+                return new PaymentIntentResponseDto
                 {
-
-                    Id =
-
-                        Guid.NewGuid(),
-
-                    OrderId =
-
-                        order.Id,
-
-                    Provider =
-
-                        "GemoraDemo",
-
-                    ExternalReference =
-
-                        externalReference,
-
-                    Amount =
-
-                        order.TotalAmount,
-
-                    Currency =
-
-                        order.Currency,
-
-                    Status =
-
-                        PaymentStatuses
-
-                            .Succeeded,
-
-                    CreatedAt =
-
-                        now,
-
-                    UpdatedAt =
-
-                        now
-
+                    PaymentIntentId = existingPayment.ExternalReference,
+                    OrderId = existingPayment.OrderId,
+                    Provider = existingPayment.Provider,
+                    Amount = existingPayment.Amount,
+                    Currency = existingPayment.Currency,
+                    Status = existingPayment.Status,
+                    ExpiresAt = order.PaymentDueAt!.Value
                 };
+            }
 
-            _context
+            var gatewayIntent =
+                await _paymentGateway.CreatePaymentIntentAsync(
+                    order.Id,
+                    order.TotalAmount,
+                    order.Currency);
 
-                .PaymentTransactions
-
-                .Add(payment);
-
-            order.PaidAt =
-
-                now;
-
-            // After payment it has NOT been
-
-            // handed to courier yet.
-
-            order.FulfillmentStatus =
-
-                FulfillmentStatuses.Pending;
-
-            await ChangeStatusAsync(
-
-                order,
-
-                OrderStatuses.Paid,
-
-                buyerId,
-
-                string.IsNullOrWhiteSpace(
-
-                    dto.PaymentMethod)
-
-                    ? "Payment completed by Buyer."
-
-                    : $"Payment completed by Buyer using {dto.PaymentMethod.Trim()}.");
-
-            await transaction
-
-                .CommitAsync();
-
-            var updatedOrder =
-
-                await LoadOrderAsync(
-
-                    order.Id)
-
-                ?? throw new InvalidOperationException(
-
-                    "Unable to reload the paid order.");
-
-            return new PaymentResponseDto
-
+            var now = DateTime.UtcNow;
+            var payment = new PaymentTransaction
             {
-
-                Id =
-
-                    payment.Id,
-
-                OrderId =
-
-                    payment.OrderId,
-
-                Provider =
-
-                    payment.Provider,
-
-                ExternalReference =
-
-                    payment.ExternalReference,
-
-                Amount =
-
-                    payment.Amount,
-
-                Currency =
-
-                    payment.Currency,
-
-                Status =
-
-                    payment.Status,
-
-                CreatedAt =
-
-                    payment.CreatedAt,
-
-                Order =
-
-                    updatedOrder
-
+                Id = Guid.NewGuid(),
+                OrderId = order.Id,
+                Provider = gatewayIntent.Provider,
+                ExternalReference = gatewayIntent.PaymentIntentId,
+                Amount = gatewayIntent.Amount,
+                Currency = gatewayIntent.Currency,
+                Status = PaymentStatuses.Pending,
+                CreatedAt = now,
+                UpdatedAt = now
             };
 
+            _context.PaymentTransactions.Add(payment);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            committed = true;
+
+            return new PaymentIntentResponseDto
+            {
+                PaymentIntentId = payment.ExternalReference,
+                OrderId = payment.OrderId,
+                Provider = payment.Provider,
+                Amount = payment.Amount,
+                Currency = payment.Currency,
+                Status = payment.Status,
+                ExpiresAt = order.PaymentDueAt!.Value
+            };
         }
-
         catch
-
         {
-
-            await transaction
-
-                .RollbackAsync();
+            if (!committed)
+            {
+                await transaction.RollbackAsync();
+            }
 
             throw;
-
         }
-
     }
 
-    // =========================================================
+    public async Task<PaymentResponseDto> ConfirmPaymentAsync(
+        Guid orderId,
+        Guid buyerId,
+        ConfirmPaymentRequestDto dto)
+    {
+        ValidateCardPaymentMethod(dto.PaymentMethod);
+
+        if (string.IsNullOrWhiteSpace(dto.PaymentIntentId))
+        {
+            throw new InvalidOperationException(
+                "A payment intent is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.PaymentMethodToken))
+        {
+            throw new InvalidOperationException(
+                "A payment method token is required.");
+        }
+
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync(
+                IsolationLevel.Serializable);
+
+        var committed = false;
+
+        try
+        {
+            var order =
+                await _context.Orders
+                    .Include(o => o.DeliveryDetails)
+                    .FirstOrDefaultAsync(o =>
+                        o.Id == orderId &&
+                        o.BuyerId == buyerId)
+                ?? throw new KeyNotFoundException(
+                    "Order was not found.");
+
+            var payment =
+                await _context.PaymentTransactions
+                    .FirstOrDefaultAsync(p =>
+                        p.OrderId == order.Id &&
+                        p.ExternalReference == dto.PaymentIntentId.Trim());
+
+            if (payment == null)
+            {
+                throw new KeyNotFoundException(
+                    "Payment intent was not found for this order.");
+            }
+
+            if (payment.Status == PaymentStatuses.Succeeded)
+            {
+                await transaction.CommitAsync();
+                committed = true;
+
+                return new PaymentResponseDto
+                {
+                    Id = payment.Id,
+                    OrderId = payment.OrderId,
+                    Provider = payment.Provider,
+                    ExternalReference = payment.ExternalReference,
+                    Amount = payment.Amount,
+                    Currency = payment.Currency,
+                    Status = payment.Status,
+                    CreatedAt = payment.CreatedAt,
+                    Order = (await LoadOrderAsync(order.Id))!
+                };
+            }
+
+            if (payment.Status != PaymentStatuses.Pending)
+            {
+                throw new InvalidOperationException(
+                    "This payment intent is no longer available.");
+            }
+
+            await ValidatePaymentEligibilityAsync(order);
+
+            if (payment.Amount != order.TotalAmount ||
+                !string.Equals(
+                    payment.Currency,
+                    order.Currency,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    "The payment amount no longer matches the order.");
+            }
+
+            var confirmation =
+                await _paymentGateway.ConfirmPaymentAsync(
+                    payment.ExternalReference,
+                    dto.PaymentMethodToken.Trim(),
+                    payment.Amount,
+                    payment.Currency);
+
+            var now = DateTime.UtcNow;
+
+            if (!confirmation.Succeeded)
+            {
+                payment.Status = PaymentStatuses.Failed;
+                payment.UpdatedAt = now;
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                committed = true;
+
+                throw new InvalidOperationException(
+                    confirmation.FailureReason ??
+                    "The card payment was declined.");
+            }
+
+            payment.Status = PaymentStatuses.Succeeded;
+            payment.UpdatedAt = now;
+
+            order.PaidAt = now;
+            order.FulfillmentStatus = FulfillmentStatuses.Pending;
+
+            await ChangeStatusAsync(
+                order,
+                OrderStatuses.Paid,
+                buyerId,
+                "Payment completed by Buyer using Card.");
+
+            await transaction.CommitAsync();
+            committed = true;
+
+            return new PaymentResponseDto
+            {
+                Id = payment.Id,
+                OrderId = payment.OrderId,
+                Provider = payment.Provider,
+                ExternalReference = payment.ExternalReference,
+                Amount = payment.Amount,
+                Currency = payment.Currency,
+                Status = payment.Status,
+                CreatedAt = payment.CreatedAt,
+                Order = (await LoadOrderAsync(order.Id))!
+            };
+        }
+        catch
+        {
+            if (!committed)
+            {
+                await transaction.RollbackAsync();
+            }
+
+            throw;
+        }
+    }
+
+    // Backward-compatible service wrapper for existing internal callers.
+    public async Task<PaymentResponseDto> PayAsync(
+        Guid orderId,
+        Guid buyerId,
+        CreatePaymentRequestDto dto)
+    {
+        var intent =
+            await CreatePaymentIntentAsync(
+                orderId,
+                buyerId,
+                new CreatePaymentIntentRequestDto
+                {
+                    PaymentMethod = dto.PaymentMethod
+                });
+
+        return await ConfirmPaymentAsync(
+            orderId,
+            buyerId,
+            new ConfirmPaymentRequestDto
+            {
+                PaymentIntentId = intent.PaymentIntentId,
+                PaymentMethod = dto.PaymentMethod,
+                PaymentMethodToken =
+                    SandboxPaymentGateway.LegacyPaymentMethodToken
+            });
+    }
+
+    private async Task ValidatePaymentEligibilityAsync(Order order)
+    {
+        if (order.PaymentDueAt == null ||
+            order.PaymentDueAt <= DateTime.UtcNow)
+        {
+            throw new InvalidOperationException(
+                "The payment window has expired. This order can no longer be paid.");
+        }
+
+        if (await _context.Orders.AnyAsync(o =>
+                o.GemListingId == order.GemListingId &&
+                o.Id != order.Id &&
+                o.Status != OrderStatuses.Pending &&
+                o.Status != OrderStatuses.Rejected &&
+                o.Status != OrderStatuses.Cancelled &&
+                o.Status != OrderStatuses.Refunded &&
+                o.Status != OrderStatuses.Failed))
+        {
+            throw new InvalidOperationException(
+                "This gemstone has another approved or paid order. Payment is blocked until the conflicting orders are resolved.");
+        }
+
+        if (order.Status != OrderStatuses.Confirmed &&
+            order.Status != OrderStatuses.AwaitingPayment)
+        {
+            throw new InvalidOperationException(
+                $"Payment cannot be completed from status '{order.Status}'.");
+        }
+
+        if (order.DeliveryDetails == null)
+        {
+            throw new InvalidOperationException(
+                "Complete your delivery details before making payment.");
+        }
+
+        ValidateStoredDeliveryDetails(order.DeliveryDetails);
+
+        if (await _context.PaymentTransactions.AnyAsync(p =>
+                p.OrderId == order.Id &&
+                p.Status == PaymentStatuses.Succeeded) ||
+            order.PaidAt.HasValue ||
+            order.Status == OrderStatuses.Paid)
+        {
+            throw new InvalidOperationException(
+                "This order has already been paid.");
+        }
+    }
+
+    private static void ValidateCardPaymentMethod(string? paymentMethod)
+    {
+        if (!string.Equals(
+                paymentMethod?.Trim(),
+                "Card",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Only card payments are currently supported.");
+        }
+    }
 
     // SELLER STARTS PREPARING
 
