@@ -3,7 +3,8 @@ import {
   useState,
 } from "react";
 
-import { motion } from "framer-motion";
+import { BuyerGuide } from "../../components/buyer/BuyerUI";
+import { useAuth } from "../../context/AuthContext";
 
 import BuyerHero from "../../components/buyer/BuyerHero";
 import BuyerStats from "../../components/buyer/BuyerStats";
@@ -18,26 +19,9 @@ import {
   getMyOrders,
 } from "../../services/buyerApi";
 
-const reveal = {
-  hidden: {
-    opacity: 0,
-    y: 70,
-    scale: 0.96,
-  },
-
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-
-    transition: {
-      duration: 0.8,
-      ease: [0.16, 1, 0.3, 1],
-    },
-  },
-};
 
 export default function BuyerDashboard() {
+  const { user } = useAuth();
   const [stats, setStats] =
     useState(null);
 
@@ -106,53 +90,5 @@ export default function BuyerDashboard() {
     loadDashboard();
   }, []);
 
-  return (
-    <div className="buyer-dashboard-page">
-      <BuyerHero />
-
-      <motion.section
-        variants={reveal}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{
-          once: true,
-          amount: 0.16,
-        }}
-      >
-        <BuyerStats
-          stats={stats}
-          loading={loading}
-        />
-      </motion.section>
-
-      <motion.section
-        className="buyer-dashboard-grid"
-        variants={reveal}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{
-          once: true,
-          amount: 0.08,
-        }}
-      >
-        <div className="buyer-left-column">
-          <FeaturedGems
-            gems={gems}
-            loading={loading}
-          />
-
-          <BuyerOrdersPreview
-            orders={orders}
-            loading={loading}
-          />
-        </div>
-
-        <div className="buyer-right-column">
-          <BuyerQuickActions />
-
-          <BuyerProfileSummary />
-        </div>
-      </motion.section>
-    </div>
-  );
+  return <div className="gm-page gm-dashboard"><div className="gm-welcome"><span>YOUR GEMORA</span><p>Welcome back, {user?.fullName?.split(" ")[0] || "collector"}.</p></div><BuyerHero /><BuyerStats stats={stats} loading={loading} /><div className="gm-dashboard-grid"><div className="gm-dashboard-main"><FeaturedGems gems={gems} loading={loading} /><BuyerOrdersPreview orders={orders} loading={loading} /></div><aside className="gm-dashboard-side"><BuyerQuickActions /><BuyerProfileSummary /></aside></div><BuyerGuide /></div>;
 }

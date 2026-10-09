@@ -1,8 +1,8 @@
+import { GemImage } from "../../components/buyer/BuyerUI";
 import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   CheckCircle2,
-  Gem,
   MapPin,
   ShieldCheck,
   Truck,
@@ -76,34 +76,6 @@ export default function CheckoutPage() {
 
 
 
-  const requiredFields = [
-    "recipientName",
-    "recipientPhone",
-    "addressLine1",
-    "city",
-    "district",
-    "region",
-    "postalCode",
-    "countryCode",
-  ];
-
-  const hasMissingField =
-    requiredFields.some(
-      (field) =>
-        !form[field]?.trim()
-    );
-
-  if (hasMissingField) {
-    setError(
-      "Please complete all required delivery information."
-    );
-
-    return;
-  }
-
-
-
-
   function handleChange(e) {
     const { name, value } = e.target;
 
@@ -116,14 +88,13 @@ export default function CheckoutPage() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (
-      !form.shippingAddress.trim() ||
-      !form.shippingRegion.trim() ||
-      !form.shippingCountryCode.trim()
-    ) {
-      setError(
-        "Please complete all shipping information."
-      );
+    const requiredFields = [
+      "recipientName", "recipientPhone", "addressLine1",
+      "city", "district", "region", "postalCode", "countryCode",
+    ];
+
+    if (requiredFields.some((field) => !form[field]?.trim())) {
+      setError("Please complete all required delivery information.");
       return;
     }
 
@@ -273,47 +244,63 @@ export default function CheckoutPage() {
             className="checkout-form"
             onSubmit={handleSubmit}
           >
-            <label>
-              <span>
-                <MapPin size={16} />
-                Shipping Address
-              </span>
+            <div className="checkout-two-column">
+              <label>
+                <span>Recipient Name *</span>
+                <input name="recipientName" value={form.recipientName} onChange={handleChange} required placeholder="Full name" />
+              </label>
+              <label>
+                <span>Phone Number *</span>
+                <input name="recipientPhone" value={form.recipientPhone} onChange={handleChange} required placeholder="0712345678" />
+              </label>
+            </div>
 
-              <textarea
-                name="shippingAddress"
-                value={form.shippingAddress}
-                onChange={handleChange}
-                placeholder="House number, street, city"
-                rows="4"
-              />
+            <label>
+              <span>Alternate Phone (optional)</span>
+              <input name="alternatePhone" value={form.alternatePhone} onChange={handleChange} placeholder="Alternative contact number" />
+            </label>
+
+            <label>
+              <span><MapPin size={16} /> Address Line 1 *</span>
+              <input name="addressLine1" value={form.addressLine1} onChange={handleChange} required placeholder="House number and street" />
+            </label>
+
+            <label>
+              <span>Address Line 2 (optional)</span>
+              <input name="addressLine2" value={form.addressLine2} onChange={handleChange} placeholder="Apartment, building or additional details" />
             </label>
 
             <div className="checkout-two-column">
               <label>
-                <span>Region / Province</span>
-
-                <input
-                  name="shippingRegion"
-                  value={form.shippingRegion}
-                  onChange={handleChange}
-                  placeholder="Western"
-                />
+                <span>City *</span>
+                <input name="city" value={form.city} onChange={handleChange} required placeholder="Colombo" />
               </label>
-
               <label>
-                <span>Country Code</span>
-
-                <input
-                  name="shippingCountryCode"
-                  value={
-                    form.shippingCountryCode
-                  }
-                  onChange={handleChange}
-                  maxLength="2"
-                  placeholder="LK"
-                />
+                <span>District *</span>
+                <input name="district" value={form.district} onChange={handleChange} required placeholder="Colombo" />
+              </label>
+              <label>
+                <span>Province / Region *</span>
+                <input name="region" value={form.region} onChange={handleChange} required placeholder="Western" />
+              </label>
+              <label>
+                <span>Postal Code *</span>
+                <input name="postalCode" value={form.postalCode} onChange={handleChange} required placeholder="10350" />
+              </label>
+              <label>
+                <span>Country Code *</span>
+                <input name="countryCode" value={form.countryCode} onChange={handleChange} required maxLength={2} placeholder="LK" />
+              </label>
+              <label>
+                <span>Nearest Landmark (optional)</span>
+                <input name="nearestLandmark" value={form.nearestLandmark} onChange={handleChange} placeholder="Near main junction" />
               </label>
             </div>
+
+            <label>
+              <span>Delivery Instructions (optional)</span>
+              <textarea name="deliveryInstructions" value={form.deliveryInstructions} onChange={handleChange} placeholder="Additional instructions for delivery" rows={3} />
+            </label>
 
             <div className="checkout-security-row">
               <ShieldCheck size={20} />
@@ -352,14 +339,7 @@ export default function CheckoutPage() {
           </span>
 
           <div className="checkout-gem-image">
-            {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt={gem.title}
-              />
-            ) : (
-              <Gem size={48} />
-            )}
+            <GemImage src={imageUrl} alt={gem.title} />
           </div>
 
           <div>

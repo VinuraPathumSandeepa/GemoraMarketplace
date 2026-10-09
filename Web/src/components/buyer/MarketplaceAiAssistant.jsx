@@ -1,3 +1,4 @@
+import { Dialog } from "./BuyerUI";
 import {
   useRef,
   useState,
@@ -216,10 +217,11 @@ export default function MarketplaceAiAssistant() {
           FLOATING BUTTON
           ====================================================== */}
 
-      {!isOpen && (
+      {(
         <button
           type="button"
           className="gemora-ai-floating-button"
+          hidden={isOpen}
           onClick={() =>
             setIsOpen(true)
           }
@@ -240,7 +242,7 @@ export default function MarketplaceAiAssistant() {
           CHAT PANEL
           ====================================================== */}
 
-      {isOpen && (
+      <Dialog open={isOpen} onClose={() => setIsOpen(false)} title="Ask Gemora" className="gm-assistant-dialog">
         <section className="gemora-ai-panel">
 
           {/* ==================================================
@@ -300,7 +302,7 @@ export default function MarketplaceAiAssistant() {
               MESSAGES
               ================================================== */}
 
-          <div className="gemora-ai-messages">
+          <div className="gemora-ai-messages" role="log" aria-live="polite" aria-label="Conversation">
 
             {messages.map(
               (item) => (
@@ -415,6 +417,7 @@ export default function MarketplaceAiAssistant() {
               onKeyDown={
                 handleKeyDown
               }
+              aria-label="Your message to Gemora"
               placeholder="Ask about gems, orders or delivery..."
               rows={2}
               disabled={loading}
@@ -446,7 +449,7 @@ export default function MarketplaceAiAssistant() {
           </div>
 
         </section>
-      )}
+      </Dialog>
     </>
   );
 }

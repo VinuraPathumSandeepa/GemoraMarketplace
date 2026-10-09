@@ -55,7 +55,7 @@ export default function BuyerStats({
   ];
 
   return (
-    <div className="buyer-stats-grid">
+    <div className="gm-stats-grid">
       {data.map((item, index) => (
         <BuyerStatCard
           key={item.title}

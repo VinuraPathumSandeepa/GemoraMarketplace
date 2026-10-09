@@ -1,65 +1,8 @@
-import { useAuth }
-  from "../../context/AuthContext";
-
+import { ArrowUpRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import UserAvatar from "../UserAvatar";
 export default function BuyerProfileSummary() {
-  const { user } =
-    useAuth();
-
-  const name =
-    user?.fullName ||
-    user?.name ||
-    "Buyer";
-
-  const initials =
-    name
-      .split(" ")
-      .filter(Boolean)
-      .map((part) => part[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
-
-  return (
-    <section className="section-block liquid-card">
-      <div className="profile-summary-top">
-        <div className="profile-avatar-large">
-          {initials}
-        </div>
-
-        <div>
-          <h3>{name}</h3>
-
-          <p>
-            {user?.role || "Buyer"}
-          </p>
-        </div>
-      </div>
-
-      <div className="profile-summary-details">
-        <div>
-          <span>Email</span>
-          <strong>
-            {user?.email ||
-              "Not provided"}
-          </strong>
-        </div>
-
-        <div>
-          <span>Phone</span>
-          <strong>
-            {user?.phoneNumber ||
-              "Not provided"}
-          </strong>
-        </div>
-
-        <div>
-          <span>Region</span>
-          <strong>
-            {user?.region ||
-              "Not provided"}
-          </strong>
-        </div>
-      </div>
-    </section>
-  );
+  const { user } = useAuth();
+  return <section className="gm-profile-summary gm-glass"><div className="gm-profile-summary-head"><UserAvatar user={user} size={48} /><div><h3>{user?.fullName || user?.name || "Gemora buyer"}</h3><p>{user?.role || "Buyer"} account</p></div></div><dl><div><dt>Email</dt><dd>{user?.email || "Not provided"}</dd></div><div><dt>Region</dt><dd>{user?.region || "Not provided"}</dd></div></dl><Link to="/buyer/profile" className="gm-text-link">View profile <ArrowUpRight size={17} /></Link></section>;
 }

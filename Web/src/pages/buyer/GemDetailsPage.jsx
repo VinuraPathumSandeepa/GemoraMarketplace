@@ -1,19 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { motion } from "framer-motion";
-import {
-  ArrowLeft,
-  BadgeCheck,
-  Gem,
-  MapPin,
-  ShieldCheck,
-  Store,
-  Sparkles,
-  Truck,
-  WalletCards,
-  CalendarDays,
-  ScanSearch,
-} from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { BuyingNotes, Dialog, EmptyState, GemImage, SectionHeading } from "../../components/buyer/BuyerUI";
+import { ArrowLeft, ArrowUpRight, CheckCircle2, FileCheck2, MapPin, ScanSearch, Store } from "lucide-react";
 
 import {
   resolveMediaUrl,
@@ -22,9 +10,9 @@ import {
 
 export default function GemDetailsPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
 
   const [gem, setGem] = useState(null);
+  const [zoom, setZoom] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -103,7 +91,8 @@ export default function GemDetailsPage() {
         "Verified",
       sellerName: gem.sellerName || gem.seller?.fullName || "Verified Seller",
       sellerRegion: gem.region || gem.sellerRegion || "Sri Lanka",
-      availability: gem.status || gem.availabilityStatus || "Available",
+      isAvailable: gem.isAvailable === true,
+      availability: gem.isAvailable === true ? "Available" : "Reserved or Purchased",
       certificateNumber:
         gem.certificateNumber || gem.certificationNumber || "Available on request",
       createdAt: gem.createdAt,
@@ -119,298 +108,20 @@ export default function GemDetailsPage() {
     })}`;
   };
 
-  if (loading) {
-    return (
-      <div className="gem-details-page">
-        <div className="gem-details-loading glass-card">
-          <p>Loading gemstone details...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !normalized) {
-    return (
-      <div className="gem-details-page">
-        <div className="gem-details-error glass-card">
-          <h2>Unable to load gemstone</h2>
-          <p>{error || "Gem details could not be found."}</p>
-
-          <div className="gem-details-error-actions">
-            <button
-              className="ghost-btn"
-              onClick={() => navigate(-1)}
-            >
-              Go Back
-            </button>
-
-            <Link
-              to="/buyer/marketplace"
-              className="hero-btn primary"
-            >
-              Back to Marketplace
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="gem-details-page">
-      {/* top breadcrumb */}
-      <motion.div
-        className="gem-details-breadcrumb"
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
-      >
-        <button
-          className="back-inline-btn"
-          onClick={() => navigate(-1)}
-        >
-          <ArrowLeft size={18} />
-          Back
-        </button>
-
-        <span>/</span>
-
-        <Link to="/buyer/marketplace">Marketplace</Link>
-
-        <span>/</span>
-
-        <strong>{normalized.title}</strong>
-      </motion.div>
-
-      {/* hero */}
-      <motion.section
-        className="gem-details-hero glass-card"
-        initial={{ opacity: 0, y: 22 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45 }}
-      >
-        <div className="gem-details-hero-grid">
-          {/* left image */}
-          <div className="gem-visual-panel">
-            <div className="gem-main-image-wrap">
-              {normalized.imageUrl ? (
-                <img
-                  src={normalized.imageUrl}
-                  alt={normalized.title}
-                  className="gem-main-image"
-                />
-              ) : (
-                <div className="gem-main-image-fallback">
-                  <Gem size={56} />
-                  <p>Image unavailable</p>
-                </div>
-              )}
-
-              <div className="gem-image-glow"></div>
-
-              <div className="gem-floating-badge verified">
-                <BadgeCheck size={16} />
-                {normalized.certificationStatus}
-              </div>
-
-              <div className="gem-floating-badge availability">
-                <Sparkles size={16} />
-                {normalized.availability}
-              </div>
-            </div>
-          </div>
-
-          {/* right content */}
-          <div className="gem-content-panel">
-            <div className="gem-details-topline">
-              <span className="section-mini-title">Luxury Marketplace Selection</span>
-            </div>
-
-            <h1>{normalized.title}</h1>
-
-            <p className="gem-details-description">
-              {normalized.description}
-            </p>
-
-            <div className="gem-price-showcase">
-              <span className="price-caption">Listed Price</span>
-              <strong>{formatPrice(normalized.price, normalized.currency)}</strong>
-            </div>
-
-            <div className="gem-details-highlights">
-              <div className="detail-highlight-item">
-                <Gem size={18} />
-                <div>
-                  <span>Gem Type</span>
-                  <strong>{normalized.type}</strong>
-                </div>
-              </div>
-
-              <div className="detail-highlight-item">
-                <Store size={18} />
-                <div>
-                  <span>Seller</span>
-                  <strong>{normalized.sellerName}</strong>
-                </div>
-              </div>
-
-              <div className="detail-highlight-item">
-                <MapPin size={18} />
-                <div>
-                  <span>Origin</span>
-                  <strong>{normalized.origin}</strong>
-                </div>
-              </div>
-
-              <div className="detail-highlight-item">
-                <CalendarDays size={18} />
-                <div>
-                  <span>Listed</span>
-                  <strong>
-                    {normalized.createdAt
-                      ? new Date(normalized.createdAt).toLocaleDateString()
-                      : "Recently added"}
-                  </strong>
-                </div>
-              </div>
-            </div>
-
-            <div className="gem-details-actions">
-              {normalized.isAvailable ? (
-                <button
-                  className="hero-btn primary"
-                  onClick={() =>
-                    navigate(
-                      `/buyer/checkout/${normalized.id}`
-                    )
-                  }
-                >
-                  Request Purchase
-                </button>
-              ) : (
-                <div className="gem-unavailable-notice">
-                  <ShieldCheck size={18} />
-                  This gemstone is currently reserved or purchased.
-                </div>
-              )}
-            </div>
-
-            
-
-            <div className="trust-strip">
-              <div>
-                <ShieldCheck size={18} />
-                <span>Verified marketplace listing</span>
-              </div>
-              <div>
-                <Truck size={18} />
-                <span>Secure delivery coordination</span>
-              </div>
-              <div>
-                <WalletCards size={18} />
-                <span>Protected transaction flow</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.section>
-
-      {/* lower section */}
-      <div className="gem-details-lower-grid">
-        <motion.section
-          className="glass-card gem-specs-card"
-          initial={{ opacity: 0, y: 26 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.08 }}
-        >
-          <div className="section-head">
-            <div>
-              <span className="section-mini-title">Specifications</span>
-              <h3>Gemstone Details</h3>
-            </div>
-          </div>
-
-          <div className="spec-grid">
-            <div className="spec-item">
-              <span>Carat</span>
-              <strong>{normalized.carat}</strong>
-            </div>
-
-            <div className="spec-item">
-              <span>Color</span>
-              <strong>{normalized.color}</strong>
-            </div>
-
-            <div className="spec-item">
-              <span>Clarity</span>
-              <strong>{normalized.clarity}</strong>
-            </div>
-
-            <div className="spec-item">
-              <span>Cut</span>
-              <strong>{normalized.cut}</strong>
-            </div>
-
-            <div className="spec-item">
-              <span>Shape</span>
-              <strong>{normalized.shape}</strong>
-            </div>
-
-            <div className="spec-item">
-              <span>Treatment</span>
-              <strong>{normalized.treatment}</strong>
-            </div>
-          </div>
-        </motion.section>
-
-        <motion.aside
-          className="glass-card gem-side-card"
-          initial={{ opacity: 0, y: 26 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.12 }}
-        >
-          <div className="section-head">
-            <div>
-              <span className="section-mini-title">Trust & Seller</span>
-              <h3>Marketplace Confidence</h3>
-            </div>
-          </div>
-
-          <div className="mini-info-stack">
-            <div className="mini-info-box">
-              <Store size={18} />
-              <div>
-                <span>Seller Name</span>
-                <strong>{normalized.sellerName}</strong>
-              </div>
-            </div>
-
-            <div className="mini-info-box">
-              <MapPin size={18} />
-              <div>
-                <span>Seller Region</span>
-                <strong>{normalized.sellerRegion}</strong>
-              </div>
-            </div>
-
-            <div className="mini-info-box">
-              <BadgeCheck size={18} />
-              <div>
-                <span>Certification</span>
-                <strong>{normalized.certificationStatus}</strong>
-              </div>
-            </div>
-
-            <div className="mini-info-box">
-              <ScanSearch size={18} />
-              <div>
-                <span>Certificate Ref</span>
-                <strong>{normalized.certificateNumber}</strong>
-              </div>
-            </div>
-          </div>
-        </motion.aside>
-      </div>
-    </div>
-  );
+  if (loading) return <EmptyState title="A closer look is on its way" description="Loading the gemstone details…" />;
+  if (error || !normalized) return <EmptyState title="This gemstone couldn't be loaded" description={error || "The listing is not available right now."}><Link to="/buyer/marketplace" className="gm-button">Back to the collection</Link></EmptyState>;
+  const specs = [["Gem type", normalized.type], ["Carat weight", normalized.carat], ["Colour", normalized.color], ["Clarity", normalized.clarity], ["Cut", normalized.cut], ["Shape", normalized.shape], ["Treatment", normalized.treatment], ["Country / region", [gem.region, gem.countryCode === "LK" ? "Sri Lanka" : gem.countryCode].filter(Boolean).join(", ") || "Not specified"]];
+  const certificate = gem.certificateNumber || gem.certificationNumber;
+  return <div className="gm-page gm-details-page">
+    <nav className="gm-breadcrumb" aria-label="Breadcrumb"><Link to="/buyer/marketplace"><ArrowLeft size={16} />The collection</Link><span>/</span><span aria-current="page">{normalized.title}</span></nav>
+    <div className="gm-details-hero"><section className="gm-gallery"><button className="gm-gallery-trigger" onClick={() => setZoom(true)} aria-label={`Enlarge image of ${normalized.title}`}><GemImage src={normalized.imageUrl} alt={normalized.title} /><span><ScanSearch size={18} />Take a closer look</span></button><p>Every stone has its own character. Review the specifications and certificate details before choosing.</p></section>
+      <section className="gm-purchase-panel gm-glass"><div className="gm-detail-topline"><span className="gm-eyebrow">THE CEYLON COLLECTION</span><span className="gm-badge">{normalized.isAvailable ? "Available" : "Reserved or purchased"}</span></div><h1>{normalized.title}</h1><div className="gm-chip-list"><span>{normalized.type}</span><span>{normalized.carat} ct</span><span>{normalized.color}</span></div><p className="gm-detail-description">{gem.description || "Explore this gemstone's individual specifications, seller information and certificate reference below."}</p><div className="gm-detail-price"><small>Listed price</small><p className="gm-price">{formatPrice(normalized.price, normalized.currency)}</p><span>Review all details before placing an order request.</span></div>
+        {normalized.isAvailable ? <Link className="gm-button gm-full" to={`/buyer/checkout/${normalized.id}`}>Place an order request <ArrowUpRight size={18} /></Link> : <div className="gm-inline-notice"><CheckCircle2 size={20} /><p>This gemstone is currently reserved or purchased.</p></div>}
+        <p className="gm-purchase-note">Seller confirmation comes first. Payment is available after your order is confirmed.</p><div className="gm-seller-mini"><Store size={22} /><div><small>Listed by</small><strong>{normalized.sellerName}</strong></div><a href="#gem-seller" className="gm-icon-button" aria-label="See seller information"><ArrowUpRight size={19} /></a></div>
+      </section></div>
+    <div className="gm-details-lower"><section className="gm-detail-section gm-glass"><SectionHeading eyebrow="THE FINER DETAILS" title="Gemstone specifications" /><dl className="gm-specs">{specs.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section><div className="gm-details-aside"><section className="gm-detail-section gm-glass"><SectionHeading eyebrow="KNOW WHAT YOU'RE CHOOSING" title="Certificate details" /><FileCheck2 size={30} strokeWidth={1.3} /><dl className="gm-specs"><div><dt>Certificate reference</dt><dd>{certificate || "Not supplied"}</dd></div><div><dt>Issuing authority</dt><dd>{gem.certificateAuthority || "Not supplied"}</dd></div></dl><p className="gm-detail-footnote">Compare the report reference and its findings with the listing information before making your decision.</p></section><section id="gem-seller" className="gm-detail-section gm-glass"><SectionHeading eyebrow="BEHIND THE LISTING" title="Meet the seller" /><div className="gm-security-item"><Store size={26} /><div><strong>{normalized.sellerName}</strong><p><MapPin size={15} /> {normalized.sellerRegion}</p></div></div><div className="gm-key-value"><span>Listed</span><strong>{normalized.createdAt ? new Date(normalized.createdAt).toLocaleDateString("en-LK") : "Date not supplied"}</strong></div><p>Order updates and seller confirmation appear in My Orders.</p></section></div></div>
+    <BuyingNotes /><section className="gm-discover-more gm-glass"><div><span className="gm-eyebrow">THERE'S MORE TO DISCOVER</span><h2>Continue your search for something special.</h2></div><Link className="gm-button" to="/buyer/marketplace">Explore the collection <ArrowUpRight size={18} /></Link></section>
+    <div className="gm-mobile-buy"><div><small>Listed price</small><strong>{formatPrice(normalized.price, normalized.currency)}</strong></div>{normalized.isAvailable ? <Link className="gm-button" to={`/buyer/checkout/${normalized.id}`}>Place order <ArrowUpRight size={17} /></Link> : <span className="gm-badge">Unavailable</span>}</div>
+    <Dialog open={zoom} onClose={() => setZoom(false)} title={normalized.title} className="gm-zoom-dialog"><GemImage src={normalized.imageUrl} alt={normalized.title} /></Dialog>
+  </div>;
 }

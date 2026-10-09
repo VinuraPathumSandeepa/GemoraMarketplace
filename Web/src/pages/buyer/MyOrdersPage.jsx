@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { BuyerGuide, GemImage, PageHeading } from "../../components/buyer/BuyerUI";
 
 import {
   ArrowRight,
@@ -14,7 +15,6 @@ import {
   PackageCheck,
   RefreshCw,
   Search,
-  ShieldCheck,
   Store,
   Truck,
   XCircle,
@@ -23,7 +23,6 @@ import {
 import {
   completeOrder,
   getMyOrders,
-  resolveMediaUrl,
 } from "../../services/buyerApi";
 
 
@@ -180,68 +179,8 @@ export default function MyOrdersPage() {
   return (
     <div className="buyer-orders-experience">
 
-      {/* ================= HERO ================= */}
-
-      <motion.section
-        className="orders-luxury-hero"
-        initial={{
-          opacity: 0,
-          y: 25,
-        }}
-        animate={{
-          opacity: 1,
-          y: 0,
-        }}
-      >
-        <div className="orders-hero-copy">
-
-          <span className="orders-kicker">
-            <PackageCheck size={15} />
-            Buyer Transactions
-          </span>
-
-          <h1>
-            Your gemstone
-            <span> journey.</span>
-          </h1>
-
-          <p>
-            Follow every purchase from order
-            placement and seller confirmation
-            through secure payment and delivery.
-          </p>
-
-          {!loading && (
-            <div className="orders-hero-meta">
-              <span>
-                <Gem size={15} />
-                {orders.length} orders
-              </span>
-
-              <span>
-                <ShieldCheck size={15} />
-                Secure marketplace transactions
-              </span>
-            </div>
-          )}
-
-        </div>
-
-        <div className="orders-total-panel">
-          <span>Total Orders</span>
-
-          <strong>
-            {orders.length}
-          </strong>
-
-          <small>
-            Gemora purchases
-          </small>
-        </div>
-
-      </motion.section>
-
-
+      <PageHeading eyebrow="YOUR GEMSTONE JOURNEY" title="Every purchase. Every milestone." description="Follow your orders from that first discovery to the moment your gemstone arrives." />
+      <div className="gm-order-summary">{[["Total orders", orders.length, "Your Gemora purchases"], ["Awaiting payment", orders.filter(o => ["Confirmed", "AwaitingPayment"].includes(o.status)).length, "Confirmed by the seller"], ["Completed", orders.filter(o => o.status === "Completed").length, "A journey fulfilled"]].map(([label, count, caption]) => <article className="gm-glass" key={label}><span>{label}</span><strong>{loading ? "—" : count}</strong><small>{caption}</small></article>)}</div>
       {/* ================= CONTROLS ================= */}
 
       <section className="orders-control-bar">
@@ -254,6 +193,7 @@ export default function MyOrdersPage() {
             onChange={(e) =>
               setSearch(e.target.value)
             }
+            aria-label="Search your orders"
             placeholder="Search order, gemstone or seller..."
           />
         </div>
@@ -263,6 +203,7 @@ export default function MyOrdersPage() {
           {statuses.map((status) => (
             <button
               key={status}
+              aria-pressed={activeStatus === status}
               type="button"
               className={
                 activeStatus === status
@@ -341,12 +282,11 @@ export default function MyOrdersPage() {
           <div className="orders-premium-list">
 
             {filteredOrders.map(
-              (order, index) => (
+              (order) => (
 
                 <PremiumOrderCard
                   key={order.id}
                   order={order}
-                  index={index}
 
                   expanded={
                     expandedOrder ===
@@ -427,6 +367,7 @@ export default function MyOrdersPage() {
           </section>
         )}
 
+      <BuyerGuide />
     </div>
   );
 }
@@ -435,7 +376,6 @@ export default function MyOrdersPage() {
 
 function PremiumOrderCard({
   order,
-  index,
   expanded,
   toggleExpanded,
   onPay,
@@ -445,14 +385,6 @@ function PremiumOrderCard({
   formatDate,
 }) {
 
-  const imageUrl =
-    resolveMediaUrl(
-      order.gemImageUrl
-    );
-
-  const [imageFailed, setImageFailed] =
-    useState(false);
-
   const status =
     order.status || "Pending";
 
@@ -461,64 +393,13 @@ function PremiumOrderCard({
 
 
   return (
-    <motion.article
-      className="premium-order-card"
-
-      initial={{
-        opacity: 0,
-        y: 28,
-      }}
-
-      whileInView={{
-        opacity: 1,
-        y: 0,
-      }}
-
-      viewport={{
-        once: true,
-        amount: 0.1,
-      }}
-
-      transition={{
-        duration: 0.42,
-        delay:
-          Math.min(
-            index * 0.04,
-            0.16
-          ),
-      }}
-    >
+    <article className="premium-order-card">
 
       {/* IMAGE */}
 
       <div className="premium-order-image">
 
-        {imageUrl &&
-        !imageFailed ? (
-
-          <img
-            src={imageUrl}
-            alt={
-              order.gemTitle ||
-              "Gemstone"
-            }
-            loading="lazy"
-            onError={() =>
-              setImageFailed(true)
-            }
-          />
-
-        ) : (
-
-          <div className="premium-order-image-fallback">
-            <Gem size={44} />
-
-            <span>
-              Image unavailable
-            </span>
-          </div>
-
-        )}
+        <GemImage src={order.gemImageUrl} alt={order.gemTitle || "Gemstone purchase"} />
 
         <div className="order-image-shade" />
 
@@ -677,6 +558,8 @@ function PremiumOrderCard({
               type="button"
               className="primary-order-action"
               onClick={toggleExpanded}
+              aria-expanded={expanded}
+              aria-controls={`order-details-${order.id}`}
             >
               Order Details
 
@@ -703,6 +586,7 @@ function PremiumOrderCard({
 
             <motion.div
               className="premium-order-expanded"
+              id={`order-details-${order.id}`}
 
               initial={{
                 opacity: 0,
@@ -920,7 +804,7 @@ function PremiumOrderCard({
 
       </div>
 
-    </motion.article>
+    </article>
   );
 }
 
@@ -1273,7 +1157,7 @@ function OrderProgress({
 
 
   return (
-    <div className="ecommerce-order-progress">
+    <div className="ecommerce-order-progress" role="list" aria-label="Order progress">
 
       <div className="order-progress-line" />
 
@@ -1342,6 +1226,8 @@ function OrderProgress({
           return (
             <div
               key={stage.label}
+              role="listitem"
+              aria-current={active ? "step" : undefined}
               className={
                 `order-progress-stage
                 ${

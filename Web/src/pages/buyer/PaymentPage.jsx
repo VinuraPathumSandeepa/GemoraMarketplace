@@ -1,3 +1,4 @@
+import { GemImage } from "../../components/buyer/BuyerUI";
 import {
   useEffect,
   useState,
@@ -8,7 +9,6 @@ import {
   CheckCircle2,
   CreditCard,
   FileText,
-  Gem,
   Landmark,
   LockKeyhole,
   MapPin,
@@ -90,10 +90,6 @@ export default function PaymentPage() {
     setPaymentError,
   ] = useState("");
 
-  const [
-    imageFailed,
-    setImageFailed,
-  ] = useState(false);
 
 
   // =========================================================
@@ -1497,40 +1493,7 @@ export default function PaymentPage() {
 
             <div className="payment-gem-preview">
 
-              {imageUrl &&
-                !imageFailed ? (
-
-                <img
-                  src={
-                    imageUrl
-                  }
-                  alt={
-                    order.gemTitle ||
-                    "Gemstone"
-                  }
-                  onError={() =>
-                    setImageFailed(
-                      true
-                    )
-                  }
-                />
-
-              ) : (
-
-                <div className="payment-image-fallback">
-
-                  <Gem
-                    size={44}
-                  />
-
-                  <span>
-                    Image unavailable
-                  </span>
-
-                </div>
-
-              )}
-
+              <GemImage src={imageUrl} alt={order.gemTitle || "Gemstone purchase"} />
             </div>
 
 

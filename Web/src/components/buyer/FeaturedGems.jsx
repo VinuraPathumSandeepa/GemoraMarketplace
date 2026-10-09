@@ -1,59 +1,7 @@
-import { Link }
-  from "react-router-dom";
-
+import { ArrowUpRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import GemCard from "./GemCard";
-
-export default function FeaturedGems({
-  gems,
-  loading,
-}) {
-  return (
-    <section className="section-block liquid-card">
-      <div className="section-head">
-        <div>
-          <span className="section-mini-title">
-            Live Marketplace
-          </span>
-
-          <h3>
-            Available Verified Gems
-          </h3>
-        </div>
-
-        <Link
-          to="/buyer/marketplace"
-          className="ghost-btn"
-        >
-          View All
-        </Link>
-      </div>
-
-      {loading ? (
-        <div className="buyer-loading-block">
-          Loading marketplace...
-        </div>
-      ) : gems.length === 0 ? (
-        <div className="buyer-empty-state">
-          <h4>
-            No verified gems available
-            right now.
-          </h4>
-
-          <p>
-            Approved listings will appear
-            here automatically.
-          </p>
-        </div>
-      ) : (
-        <div className="gems-grid">
-          {gems.map((gem) => (
-            <GemCard
-              key={gem.id}
-              gem={gem}
-            />
-          ))}
-        </div>
-      )}
-    </section>
-  );
+import { EmptyState, SectionHeading, SkeletonGrid } from "./BuyerUI";
+export default function FeaturedGems({ gems, loading }) {
+  return <section><SectionHeading eyebrow="WORTH A CLOSER LOOK" title="Fresh from the collection"><Link to="/buyer/marketplace" className="gm-text-link">View all <ArrowUpRight size={18} /></Link></SectionHeading>{loading ? <SkeletonGrid count={3} /> : gems.length === 0 ? <EmptyState title="New discoveries are on their way" description="Available listings will appear here. Explore the marketplace to see the latest collection." /> : <div className="gm-featured-grid">{gems.map(gem => <GemCard key={gem.id} gem={gem} />)}</div>}</section>;
 }
