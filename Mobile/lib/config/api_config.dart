@@ -52,4 +52,30 @@ class ApiConfig {
 
   static String uploadGemCertificate(int id) =>
       '$baseUrl/GemListings/$id/certificate';
+
+  // ============================================================
+  // GEM VERIFICATION ENDPOINTS
+  // ============================================================
+
+  static const String pendingGemVerifications =
+      '$baseUrl/GemVerifications/pending';
+
+  static String gemVerification(int verificationId) =>
+      '$baseUrl/GemVerifications/$verificationId';
+
+  static String gemVerificationAiAnalysis(int verificationId) =>
+      '$baseUrl/GemVerifications/$verificationId/ai-analysis';
+
+  static String reviewGemVerification(int verificationId) =>
+      '$baseUrl/GemVerifications/$verificationId/review';
+
+  // ============================================================
+  // PROTECTED CERTIFICATE ENDPOINTS
+  // ============================================================
+
+  static String gemCertificateAccess(int listingId) =>
+      '$baseUrl/GemCertificates/listings/$listingId/access';
+
+  static String gemLegacyCertificate(int listingId) =>
+      '$baseUrl/GemCertificates/listings/$listingId/legacy';
 }
