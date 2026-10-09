@@ -221,7 +221,6 @@ export default function MarketplaceAiAssistant() {
         <button
           type="button"
           className="gemora-ai-floating-button"
-          hidden={isOpen}
           onClick={() =>
             setIsOpen(true)
           }

@@ -16,7 +16,10 @@
   --gm-bg: var(--gm-cream);
   --gm-surface: var(--gm-white);
   --gm-soft: #f2eee5;
-  --gm-glass: rgb(255 255 255 / 84%);
+  --gm-glass: rgb(255 255 255 / 68%);
+  --gm-control-glass: rgb(255 255 255 / 72%);
+  --gm-glass-sheen: rgb(255 255 255 / 48%);
+  --gm-glass-edge: rgb(255 255 255 / 85%);
   --gm-glass-border: rgb(255 255 255 / 96%);
   --gm-shadow: 0 2px 4px rgb(8 37 30 / 2%), 0 16px 40px rgb(8 37 30 / 5%);
   --gm-serif: Georgia, "Times New Roman", serif;
@@ -36,7 +39,10 @@
   --gm-bg: var(--gm-ink);
   --gm-surface: #11382e;
   --gm-soft: var(--gm-green);
-  --gm-glass: rgb(22 72 59 / 88%);
+  --gm-glass: rgb(22 72 59 / 65%);
+  --gm-control-glass: rgb(22 72 59 / 70%);
+  --gm-glass-sheen: rgb(250 247 240 / 8%);
+  --gm-glass-edge: rgb(228 188 116 / 25%);
   --gm-glass-border: rgb(228 188 116 / 12%);
   --gm-text: #faf7f0;
   --gm-muted: #bbcec4;
@@ -69,7 +75,7 @@
 .gm-buyer small { font-size: .75rem; line-height: 1.5; }
 .gm-buyer .gm-main { max-width: 1360px; width: 100%; margin: 0 auto; padding: 24px 16px 64px; min-height: 55dvh; }
 .gm-buyer .gm-page { display: grid; gap: 32px; }
-.gm-buyer .gm-glass { background: var(--gm-glass); border: 1px solid var(--gm-border); border-top-color: var(--gm-glass-border); border-radius: var(--gm-radius); box-shadow: var(--gm-shadow), inset 0 1px 0 var(--gm-glass-border); backdrop-filter: blur(16px) saturate(115%); }
+.gm-buyer .gm-glass { background: linear-gradient(135deg, var(--gm-glass-sheen), transparent 55%), var(--gm-glass); border: 1px solid var(--gm-border); border-top-color: var(--gm-glass-edge); border-radius: var(--gm-radius); box-shadow: var(--gm-shadow), inset 0 1px 0 var(--gm-glass-edge), inset 1px 0 0 var(--gm-glass-sheen); backdrop-filter: blur(24px) saturate(140%); -webkit-backdrop-filter: blur(24px) saturate(140%); }
 .gm-buyer .gm-eyebrow { display: inline-flex; align-items: center; gap: 8px; font: 600 .75rem/1.5 var(--gm-sans); letter-spacing: .13em; color: var(--gm-label); text-transform: uppercase; margin-bottom: 12px; }
 .gm-buyer .gm-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .gm-buyer .gm-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
@@ -88,13 +94,13 @@
 
 /* Navigation / overlays */
 .gm-buyer .gm-topbar { position: sticky; top: 0; z-index: 80; background: color-mix(in srgb, var(--gm-ink) 96%, transparent); backdrop-filter: blur(20px); color: var(--gm-white); border-bottom: 1px solid color-mix(in srgb, var(--gm-gold) 20%, transparent); }
-.gm-buyer .gm-nav-inner { min-height: var(--gm-nav-height); max-width: 1360px; padding: 8px 16px; margin: auto; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.gm-buyer .gm-nav-inner { min-height: var(--gm-nav-height); max-width: 1360px; padding: 8px 16px; margin: auto; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
 .gm-buyer .gm-brand { display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0; color: var(--gm-white); }
 .gm-buyer .gm-brand-symbol { width: 40px; height: 40px; border: 1px solid color-mix(in srgb, var(--gm-gold) 50%, transparent); border-radius: 12px; display: grid; place-items: center; color: var(--gm-gold); }
 .gm-buyer .gm-brand strong { display: block; letter-spacing: .18em; font: 600 1.1rem/1.2 var(--gm-sans); }
 .gm-buyer .gm-brand small { display: none; font-size: .75rem; letter-spacing: .08em; margin-top: 4px; color: var(--gm-gold); }
 .gm-buyer .gm-desktop-nav { display: none; }
-.gm-buyer .gm-nav-actions { display: flex; align-items: center; gap: 8px; }
+.gm-buyer .gm-nav-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .gm-buyer .gm-topbar .gm-icon-button { border-color: transparent; }
 .gm-buyer .gm-account { position: relative; }
 .gm-buyer .gm-account-trigger { display: flex; align-items: center; gap: 8px; background: transparent; color: var(--gm-white); border: 0; padding: 4px; min-height: 44px; border-radius: 12px; }
@@ -215,8 +221,8 @@
 .gm-buyer .gm-stat h3 { font-size: .875rem; }
 .gm-buyer .gm-stat p { font-size: .75rem; margin-top: 8px; }
 .gm-buyer .gm-dashboard-grid, .gm-buyer .gm-dashboard-main, .gm-buyer .gm-dashboard-side { display: grid; gap: 32px; min-width: 0; align-content: start; }
-.gm-buyer .gm-featured-grid { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 86%); overflow-x: auto; scroll-snap-type: x mandatory; gap: 16px; padding: 4px 0 20px; }
-.gm-buyer .gm-featured-grid > article { scroll-snap-align: start; }
+.gm-buyer .gm-featured-grid { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 16px; padding: 4px 0 20px; }
+.gm-buyer .gm-featured-grid > article { flex: 0 0 86%; scroll-snap-align: start; }
 .gm-buyer .gm-quick-actions, .gm-buyer .gm-profile-summary, .gm-buyer .gm-recent-orders { padding: 24px; }
 .gm-buyer .gm-quick-actions h2 { font-size: 1.5rem; }
 .gm-buyer .gm-action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -241,7 +247,7 @@
   .gm-buyer .gm-hero-copy { padding: 40px; }
   .gm-buyer .gm-hero-actions { flex-direction: row; flex-wrap: wrap; }
   .gm-buyer .gm-dashboard-hero { grid-template-columns: 1.2fr .8fr; }
-  .gm-buyer .gm-featured-grid { grid-auto-flow: initial; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; padding: 0; }
+  .gm-buyer .gm-featured-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; padding: 0; }
   .gm-buyer .gm-dashboard-side { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (min-width: 1024px) {
@@ -498,6 +504,66 @@
 .gm-buyer .gemora-ai-footer { background: transparent; color: var(--gm-muted); font-size: .75rem; border: 0; padding: 8px 0; }
 @media (min-width: 768px) { .gm-buyer .gemora-ai-floating-button > span { display: inline; } .gm-buyer:has(.gm-mobile-buy) .gemora-ai-floating-button, .gm-buyer:has(.gm-save-bar) .gemora-ai-floating-button { bottom: 24px; } .gm-buyer .gm-assistant-dialog { max-width: 520px; } }
 
+/* Liquid-glass finish across all buyer surfaces and controls. */
+.gm-buyer :is(.gm-search,.orders-search-field,.gm-button-secondary,.gm-icon-button,.gm-form-grid input,.gm-filter-fields input,.gm-filter-fields select,.gm-sort select,.checkout-form input,.checkout-form textarea,.delivery-address-form input,.delivery-address-form textarea,.gemora-ai-input-area textarea) {
+  background: linear-gradient(130deg, var(--gm-glass-sheen), transparent 70%), var(--gm-control-glass);
+  backdrop-filter: blur(16px) saturate(135%);
+  -webkit-backdrop-filter: blur(16px) saturate(135%);
+  box-shadow: inset 0 1px 0 var(--gm-glass-edge), 0 3px 12px rgb(8 37 30 / 3%);
+}
+.gm-buyer :is(.gm-button:not(.gm-button-secondary),.checkout-submit-btn,.premium-pay-btn,.primary-order-action) {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--gm-gold) 80%, var(--gm-white)), var(--gm-gold) 65%, color-mix(in srgb, var(--gm-gold-dark) 65%, var(--gm-gold)));
+  border-color: color-mix(in srgb, var(--gm-gold) 60%, var(--gm-white));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 60%), 0 6px 16px rgb(201 146 66 / 12%);
+  backdrop-filter: blur(16px);
+}
+.gm-buyer :is(.gm-specs > div,.gm-chip-list > span,.gm-badge,.gm-action-grid > a,.gm-action-grid > button,.gm-active-filters button,.gm-inline-notice,.orders-filter-tabs,.premium-order-info > div,.order-current-message,.expanded-order-grid > div,.payment-security-banner,.payment-order-state,.delivery-address-display,.payment-method-panel,.checkout-security-row) {
+  background: linear-gradient(135deg, var(--gm-glass-sheen), transparent 65%), color-mix(in srgb, var(--gm-soft) 72%, transparent);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  box-shadow: inset 0 1px 0 var(--gm-glass-sheen);
+}
+.gm-buyer .premium-order-card {
+  background: linear-gradient(135deg, var(--gm-glass-sheen), transparent 55%), var(--gm-glass);
+  backdrop-filter: blur(24px) saturate(140%);
+  box-shadow: var(--gm-shadow), inset 0 1px 0 var(--gm-glass-edge);
+}
+.gm-buyer :is(.checkout-form-card,.checkout-summary-card,.checkout-state-card,.payment-main-card,.payment-order-summary,.payment-state-card,.payment-success-card) {
+  background: linear-gradient(135deg, var(--gm-glass-sheen), transparent 55%), var(--gm-glass) !important;
+  box-shadow: var(--gm-shadow), inset 0 1px 0 var(--gm-glass-edge) !important;
+}
+.gm-buyer .gm-dialog { background: color-mix(in srgb, var(--gm-surface) 90%, transparent); backdrop-filter: blur(32px) saturate(145%); -webkit-backdrop-filter: blur(32px) saturate(145%); box-shadow: 0 24px 80px rgb(8 37 30 / 22%), inset 0 1px 0 var(--gm-glass-edge); }
+.gm-buyer .gm-account-menu { background: color-mix(in srgb, var(--gm-surface) 90%, transparent); }
+.gm-buyer .gm-topbar { background: color-mix(in srgb, var(--gm-ink) 88%, transparent); box-shadow: inset 0 -1px 0 rgb(228 188 116 / 12%); }
+.gm-buyer .gm-topbar .gm-icon-button { background: rgb(250 247 240 / 8%); color: var(--gm-gold); border: 1px solid rgb(228 188 116 / 20%); box-shadow: inset 0 1px 0 rgb(250 247 240 / 12%); }
+.gm-buyer .gemora-ai-panel { background: transparent; }
+.gm-buyer .gemora-ai-messages { background: transparent; }
+.gm-buyer footer.gm-footer { background: linear-gradient(140deg, rgb(22 72 59 / 28%), transparent 60%), color-mix(in srgb, var(--gm-ink) 96%, transparent); backdrop-filter: blur(20px); }
+
+/* The requested buyerside film fills the complete hero behind both columns. */
+.gm-buyer .gm-dashboard-hero.gm-video-hero { position: relative; isolation: isolate; grid-template-columns: minmax(0, 1fr); background: var(--gm-ink) url("/images/gems/hero-poster.webp") center / cover no-repeat; }
+.gm-buyer .gm-hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; z-index: 0; pointer-events: none; }
+.gm-buyer .gm-hero-video-tint { position: absolute; inset: 0; z-index: 1; background: linear-gradient(90deg, rgb(8 37 30 / 58%), rgb(8 37 30 / 12%) 75%), linear-gradient(0deg, rgb(8 37 30 / 32%), transparent 45%); pointer-events: none; }
+.gm-buyer .gm-video-hero .gm-hero-copy { margin: 72px 16px 16px; padding: 28px 20px; background: linear-gradient(140deg, rgb(250 247 240 / 9%), transparent 60%), rgb(8 37 30 / 54%); border: 1px solid rgb(250 247 240 / 24%); border-radius: 24px; backdrop-filter: blur(18px) saturate(135%); -webkit-backdrop-filter: blur(18px) saturate(135%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 15%), 0 16px 48px rgb(8 37 30 / 12%); z-index: 2; }
+.gm-buyer .gm-video-hero .gm-hero-art { position: static; min-height: 164px; z-index: 2; }
+.gm-buyer .gm-video-hero .gm-hero-caption { right: 20px; bottom: 20px; background: rgb(8 37 30 / 52%); border-color: rgb(228 188 116 / 36%); backdrop-filter: blur(20px) saturate(140%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 12%); }
+.gm-buyer .gm-video-hero .gm-hero-secondary { background: rgb(250 247 240 / 10%); border-color: rgb(250 247 240 / 36%); backdrop-filter: blur(16px); box-shadow: inset 0 1px 0 rgb(255 255 255 / 15%); }
+.gm-buyer :is(.gm-topbar,.gm-video-hero,.gm-footer) :focus-visible { outline-color: var(--gm-gold); }
+@media (min-width: 768px) {
+  .gm-buyer .gm-dashboard-hero.gm-video-hero { grid-template-columns: minmax(0, 1.3fr) minmax(0, .7fr); min-height: 520px; align-items: center; }
+  .gm-buyer .gm-video-hero .gm-hero-copy { margin: 32px 0 32px 32px; padding: 32px; }
+  .gm-buyer .gm-video-hero .gm-hero-art { min-height: 0; }
+  .gm-buyer .gm-video-hero .gm-hero-caption { right: 24px; bottom: 32px; max-width: 27%; }
+}
+@media (min-width: 1280px) {
+  .gm-buyer .gm-video-hero .gm-hero-copy { margin: 40px 0 40px 40px; padding: 40px; }
+  .gm-buyer .gm-dashboard-hero.gm-video-hero { min-height: 580px; }
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .gm-buyer :is(.gm-glass,.gm-dialog,.gm-account-menu,.premium-order-card) { background: var(--gm-surface); }
+  .gm-buyer .gm-video-hero .gm-hero-copy { background: var(--gm-ink); }
+}
+
 /* Footer */
 .gm-buyer .gm-footer { background: var(--gm-ink); color: var(--gm-cream); padding: 40px 16px 96px; }
 .gm-buyer .gm-footer-inner, .gm-buyer .gm-footer-bottom { max-width: 1280px; margin: auto; }
@@ -573,3 +639,20 @@
 @media (prefers-reduced-motion: reduce) {
   .gm-buyer *, .gm-buyer *::before, .gm-buyer *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* Keep the glass sheen without continuously sampling scrolling content/video.
+   Legacy global styles use !important, so this override stays buyer-scoped. */
+.gm-buyer *, .gm-buyer *::before, .gm-buyer *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.gm-buyer .gm-topbar { background: rgb(8 37 30 / 97%); }
+.gm-buyer .gm-video-hero .gm-hero-copy {
+  margin-top: 24px;
+  background: linear-gradient(140deg, rgb(250 247 240 / 9%), transparent 60%), rgb(8 37 30 / 84%);
+}
+.gm-buyer .gm-video-hero .gm-hero-caption { background: rgb(8 37 30 / 88%); }
+.gm-buyer .gm-dialog { background: var(--gm-surface); }
+.gm-buyer .gm-dialog::backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; }
+@media (min-width: 768px) { .gm-buyer .gm-video-hero .gm-hero-copy { margin-top: 32px; } }
+@media (min-width: 1280px) { .gm-buyer .gm-video-hero .gm-hero-copy { margin-top: 40px; } }

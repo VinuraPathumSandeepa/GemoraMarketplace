@@ -1,7 +1,11 @@
 /* Local presentation fixtures only. No calls reach the real API. */
-const { chromium } = require("playwright");
 const fs = require("node:fs");
 const path = require("node:path");
+const moduleRoots = [
+  process.cwd(),
+  process.env.GEMORA_NODE_MODULES || path.join(require("node:os").homedir(), ".cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules"),
+];
+const { chromium } = require(require.resolve("playwright", { paths: moduleRoots }));
 const assert = require("node:assert/strict");
 const root = path.resolve(__dirname, "../..");
 const output = path.join(root, "docs/ui-redesign-qa");
@@ -68,7 +72,7 @@ async function main() {
   const errors = [];
   page.on("pageerror", e => errors.push(e.message));
   const report = [];
-  for (const theme of process.argv.includes("--quick") ? ["light"] : ["light", "dark"]) {
+  if (!process.argv.includes("--interactions-only")) for (const theme of process.argv.includes("--quick") ? ["light"] : ["light", "dark"]) {
     await page.goto(base);
     await page.evaluate(theme => localStorage.setItem("gemora_buyer_theme", theme), theme);
     for (const [name, route] of Object.entries(pages)) {
@@ -92,9 +96,14 @@ async function main() {
       console.log("Checked " + name + " / " + theme + " at " + widths.join(", "));
     }
   }
-  fs.writeFileSync(path.join(output, "matrix.json"), JSON.stringify({ report, errors }, null, 2));
+  if (report.length) fs.writeFileSync(path.join(output, "matrix.json"), JSON.stringify({ report, errors }, null, 2));
   console.log(JSON.stringify({ cells: report.length, overflow: report.filter(r => r.overflow.length || r.documentWidth > r.viewport), smallControls: report.filter(r => r.tiny.length), errors }, null, 2));
-  if (!process.argv.includes("--quick")) await interactions(page);
+  if (!process.argv.includes("--quick")) {
+    await interactions(page);
+    await videoChecks(page);
+    await reflowChecks(page);
+    fs.writeFileSync(path.join(output, "interactions.json"), JSON.stringify({ passed: true, checks: ["drawer focus trap/return", "filters", "pagination", "quick view", "empty/error", "availability", "local profile", "order history/actions", "checkout payload", "payment gating", "assistant focus", "video playback/pause", "video reduced motion", "hero video bounds"] }, null, 2));
+  }
   await browser.close();
   assert.equal(errors.length, 0, "Browser runtime errors");
   assert.equal(report.filter(r => r.overflow.length || r.documentWidth > r.viewport).length, 0, "Viewport overflow");
@@ -161,5 +170,63 @@ async function interactions(page) {
   }
   scenario = "normal";
   console.log("PASS: drawer/focus, filters, pagination, quick view, empty/error, unavailable gem, local profile, order actions/history, checkout payload, payment gating, assistant focus.");
+}
+async function videoChecks(page) {
+  await page.setViewportSize({ width: 1440, height: 960 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(base + pages.dashboard);
+  await page.waitForSelector(".gm-hero-video");
+  assert(await page.locator("video").evaluate(v => v.paused), "Reduced motion must not autoplay");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.waitForFunction(() => document.querySelector(".gm-hero-video")?.currentTime > .1, { timeout: 15000 });
+  const video = await page.locator(".gm-hero-video").evaluate(v => {
+    const parent = v.closest(".gm-video-hero").getBoundingClientRect(), rect = v.getBoundingClientRect();
+    return { src: v.currentSrc, muted: v.muted, loop: v.loop, fit: getComputedStyle(v).objectFit, width: rect.width, height: rect.height, parentWidth: parent.width, parentHeight: parent.height };
+  });
+  assert(video.src.endsWith("/videos/buyerside.mp4"));
+  assert(video.muted && video.loop && video.fit === "cover");
+  assert.equal(video.width, video.parentWidth);
+  assert.equal(video.height, video.parentHeight);
+  assert.equal(await page.locator(".gm-video-control").count(), 0);
+  assert.equal(await page.locator(".gm-hero-copy").evaluate(e => getComputedStyle(e).backdropFilter), "none");
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForFunction(() => document.querySelector(".gm-hero-video").paused);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForFunction(() => !document.querySelector(".gm-hero-video").paused);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.waitForFunction(() => document.querySelector(".gm-hero-video").paused);
+  await page.locator(".gm-video-hero").screenshot({ path: path.join(output, "hero-video-desktop.png") });
+  await page.screenshot({ path: path.join(output, "dashboard-video-desktop.png"), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(500);
+  const mobileCard = await page.locator(".gm-featured-grid > article").first().boundingBox();
+  assert(mobileCard && mobileCard.width > 250, "Mobile featured cards must remain readable in the swipe row");
+  await page.locator(".gm-video-hero").screenshot({ path: path.join(output, "hero-video-mobile.png") });
+  await page.screenshot({ path: path.join(output, "dashboard-video-mobile.png"), fullPage: true });
+  console.log("PASS: no film button; video fills hero, pauses offscreen, resumes onscreen and respects reduced motion; no live hero blur.");
+}
+async function reflowChecks(page) {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const results = [];
+  for (const [name, route] of Object.entries(pages)) {
+    for (const [width, height, mode] of [[844, 390, "phone-landscape"], [720, 480, "200-percent-zoom-equivalent"], [390, 844, "200-percent-text"]]) {
+      await page.setViewportSize({ width, height });
+      await page.goto(base + route);
+      await page.waitForSelector(".gm-buyer");
+      if (mode === "200-percent-text") await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+      await page.waitForTimeout(200);
+      const overflow = await page.evaluate(() => {
+        return Array.from(document.querySelectorAll(".gm-buyer *")).filter(e => {
+          const r = e.getBoundingClientRect();
+          return r.width && r.height && !e.closest("dialog:not([open]),.gm-featured-grid,.orders-filter-tabs") && r.right > innerWidth + 1;
+        }).slice(0, 6).map(e => e.className);
+      });
+      results.push({ name, mode, overflow });
+      await page.screenshot({ path: path.join(output, name + "-" + mode + ".png"), fullPage: true });
+    }
+  }
+  fs.writeFileSync(path.join(output, "reflow.json"), JSON.stringify(results, null, 2));
+  assert.equal(results.filter(r => r.overflow.length).length, 0, "Landscape/text resizing overflow: " + JSON.stringify(results.filter(r => r.overflow.length)));
+  console.log("PASS: all seven buyer pages in short landscape, 200% zoom-equivalent viewport, and 200% root text.");
 }
 main().catch(e => { console.error(e); process.exit(1); });
