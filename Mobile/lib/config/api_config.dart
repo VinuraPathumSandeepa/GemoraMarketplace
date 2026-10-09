@@ -45,7 +45,8 @@ class ApiConfig {
 
   static String deleteGemListing(int id) => '$baseUrl/GemListings/$id';
 
-  static String submitGemListing(int id) => '$baseUrl/GemListings/$id/submit';
+  static String submitGemListing(int id) =>
+      '$baseUrl/GemListings/$id/submit-verification';
 
   static String uploadGemImage(int id) => '$baseUrl/GemListings/$id/image';
 
