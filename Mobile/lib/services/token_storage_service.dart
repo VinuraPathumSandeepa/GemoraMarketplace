@@ -1,37 +1,55 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TokenStorageService {
-  static const FlutterSecureStorage _storage =
-      FlutterSecureStorage();
+  static const String _tokenKey = 'auth_token';
 
-  static const String _tokenKey = 'gemora_token';
+  // Kept for compatibility with older builds that may have
+  // saved the JWT using the simpler "token" key.
+  static const String _legacyTokenKey = 'token';
 
-  // Save JWT
   Future<void> saveToken(String token) async {
-    await _storage.write(
-      key: _tokenKey,
-      value: token,
-    );
+    final preferences = await SharedPreferences.getInstance();
+
+    final cleanToken = token.trim();
+
+    await preferences.setString(_tokenKey, cleanToken);
+
+    await preferences.remove(_legacyTokenKey);
   }
 
-  // Read JWT
   Future<String?> getToken() async {
-    return await _storage.read(
-      key: _tokenKey,
-    );
+    final preferences = await SharedPreferences.getInstance();
+
+    final currentToken = preferences.getString(_tokenKey);
+
+    if (currentToken != null && currentToken.trim().isNotEmpty) {
+      return currentToken.trim();
+    }
+
+    final legacyToken = preferences.getString(_legacyTokenKey);
+
+    if (legacyToken != null && legacyToken.trim().isNotEmpty) {
+      return legacyToken.trim();
+    }
+
+    return null;
   }
 
-  // Delete JWT during logout
-  Future<void> deleteToken() async {
-    await _storage.delete(
-      key: _tokenKey,
-    );
-  }
-
-  // Check whether a token exists
   Future<bool> hasToken() async {
     final token = await getToken();
 
-    return token != null && token.isNotEmpty;
+    return token != null && token.trim().isNotEmpty;
+  }
+
+  Future<void> clearToken() async {
+    final preferences = await SharedPreferences.getInstance();
+
+    await preferences.remove(_tokenKey);
+
+    await preferences.remove(_legacyTokenKey);
+  }
+
+  Future<void> deleteToken() async {
+    await clearToken();
   }
 }
