@@ -8,17 +8,25 @@ import 'create_export_request_screen.dart';
 import 'export_request_detail_screen.dart';
 
 class MyExportRequestsScreen extends StatefulWidget {
-  const MyExportRequestsScreen({super.key});
+  final ExportComplianceService? exportService;
+
+  const MyExportRequestsScreen({super.key, this.exportService});
 
   @override
   State<MyExportRequestsScreen> createState() => _MyExportRequestsScreenState();
 }
 
 class _MyExportRequestsScreenState extends State<MyExportRequestsScreen> {
-  final _exportService = ExportComplianceService();
+  late final ExportComplianceService _exportService;
 
   Future<List<ExportRequestModel>>? _requestsFuture;
   String? _loadedUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    _exportService = widget.exportService ?? ExportComplianceService();
+  }
 
   @override
   void didChangeDependencies() {

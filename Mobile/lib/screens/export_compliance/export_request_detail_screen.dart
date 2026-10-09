@@ -12,10 +12,12 @@ import 'edit_export_request_screen.dart';
 
 class ExportRequestDetailScreen extends StatefulWidget {
   final String requestId;
+  final ExportComplianceService? exportService;
 
   const ExportRequestDetailScreen({
     super.key,
     required this.requestId,
+    this.exportService,
   });
 
   @override
@@ -25,7 +27,7 @@ class ExportRequestDetailScreen extends StatefulWidget {
 
 class _ExportRequestDetailScreenState
     extends State<ExportRequestDetailScreen> {
-  final _exportService = ExportComplianceService();
+  late final ExportComplianceService _exportService;
 
   late Future<ExportRequestModel> _requestFuture;
   late Future<List<ComplianceDocumentModel>> _documentsFuture;
@@ -41,6 +43,7 @@ class _ExportRequestDetailScreenState
   @override
   void initState() {
     super.initState();
+    _exportService = widget.exportService ?? ExportComplianceService();
     _loadData();
   }
 
