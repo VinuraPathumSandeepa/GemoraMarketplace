@@ -964,6 +964,10 @@ public partial class OrderService : IOrderService
 
             await ValidatePaymentEligibilityAsync(order);
 
+            var advanceAmount =
+                PaymentTerms.CalculateAdvanceAmount(
+                    order.TotalAmount);
+
             var existingPayment =
                 await _context.PaymentTransactions
                     .Where(p =>
@@ -982,7 +986,12 @@ public partial class OrderService : IOrderService
                     PaymentIntentId = existingPayment.ExternalReference,
                     OrderId = existingPayment.OrderId,
                     Provider = existingPayment.Provider,
+                    OrderTotalAmount = order.TotalAmount,
+                    AdvancePercentage = PaymentTerms.AdvancePercentage,
                     Amount = existingPayment.Amount,
+                    RemainingAmount = Math.Max(
+                        0,
+                        order.TotalAmount - existingPayment.Amount),
                     Currency = existingPayment.Currency,
                     Status = existingPayment.Status,
                     ExpiresAt = order.PaymentDueAt!.Value
@@ -992,7 +1001,7 @@ public partial class OrderService : IOrderService
             var gatewayIntent =
                 await _paymentGateway.CreatePaymentIntentAsync(
                     order.Id,
-                    order.TotalAmount,
+                    advanceAmount,
                     order.Currency);
 
             var now = DateTime.UtcNow;
@@ -1019,7 +1028,12 @@ public partial class OrderService : IOrderService
                 PaymentIntentId = payment.ExternalReference,
                 OrderId = payment.OrderId,
                 Provider = payment.Provider,
+                OrderTotalAmount = order.TotalAmount,
+                AdvancePercentage = PaymentTerms.AdvancePercentage,
                 Amount = payment.Amount,
+                RemainingAmount = Math.Max(
+                    0,
+                    order.TotalAmount - payment.Amount),
                 Currency = payment.Currency,
                 Status = payment.Status,
                 ExpiresAt = order.PaymentDueAt!.Value
@@ -1095,7 +1109,12 @@ public partial class OrderService : IOrderService
                     OrderId = payment.OrderId,
                     Provider = payment.Provider,
                     ExternalReference = payment.ExternalReference,
+                    OrderTotalAmount = order.TotalAmount,
+                    AdvancePercentage = PaymentTerms.AdvancePercentage,
                     Amount = payment.Amount,
+                    RemainingAmount = Math.Max(
+                        0,
+                        order.TotalAmount - payment.Amount),
                     Currency = payment.Currency,
                     Status = payment.Status,
                     CreatedAt = payment.CreatedAt,
@@ -1111,7 +1130,11 @@ public partial class OrderService : IOrderService
 
             await ValidatePaymentEligibilityAsync(order);
 
-            if (payment.Amount != order.TotalAmount ||
+            var expectedAdvanceAmount =
+                PaymentTerms.CalculateAdvanceAmount(
+                    order.TotalAmount);
+
+            if (payment.Amount != expectedAdvanceAmount ||
                 !string.Equals(
                     payment.Currency,
                     order.Currency,
@@ -1164,7 +1187,12 @@ public partial class OrderService : IOrderService
                 OrderId = payment.OrderId,
                 Provider = payment.Provider,
                 ExternalReference = payment.ExternalReference,
+                OrderTotalAmount = order.TotalAmount,
+                AdvancePercentage = PaymentTerms.AdvancePercentage,
                 Amount = payment.Amount,
+                RemainingAmount = Math.Max(
+                    0,
+                    order.TotalAmount - payment.Amount),
                 Currency = payment.Currency,
                 Status = payment.Status,
                 CreatedAt = payment.CreatedAt,

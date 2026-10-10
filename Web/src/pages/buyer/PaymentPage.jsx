@@ -635,6 +635,19 @@ export default function PaymentPage() {
       order.paidAt
     );
 
+  const advanceAmount = calculateAdvanceAmount(
+    order.agreedPrice
+  );
+
+  const payableAmount = Number(
+    paymentIntent?.amount ?? advanceAmount
+  );
+
+  const remainingAmount = Math.max(
+    0,
+    Number(order.agreedPrice || 0) - payableAmount
+  );
+
 
   const imageUrl =
     resolveMediaUrl(
@@ -711,16 +724,37 @@ export default function PaymentPage() {
 
             <div>
               <span>
-                Amount Paid
+                Advance Paid (60%)
               </span>
 
               <strong>
-                {formatPrice(
+                {formatPaymentAmount(
                   paymentSuccess
                     .amount,
 
                   paymentSuccess
                     .currency
+                )}
+              </strong>
+            </div>
+
+            <div>
+              <span>
+                Remaining Balance
+              </span>
+
+              <strong>
+                {formatPaymentAmount(
+                  paymentSuccess.remainingAmount ??
+                    Math.max(
+                      0,
+                      Number(
+                        paymentSuccess.order?.agreedPrice ||
+                        paymentSuccess.orderTotalAmount ||
+                        0
+                      ) - Number(paymentSuccess.amount || 0)
+                    ),
+                  paymentSuccess.currency
                 )}
               </strong>
             </div>
@@ -1451,6 +1485,34 @@ export default function PaymentPage() {
                 </div>
               )}
 
+              {!alreadyPaid && (
+                <div className="payment-advance-summary">
+                  <div>
+                    <span>Order Total (100%)</span>
+                    <strong>
+                      {formatPrice(order.agreedPrice, order.currency)}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Advance Due Now (60%)</span>
+                    <strong>
+                      {formatPaymentAmount(
+                        advanceAmount,
+                        order.currency
+                      )}
+                    </strong>
+                  </div>
+                  <p>
+                    Only a 60% advance is collected now. The remaining{" "}
+                    {formatPaymentAmount(
+                      remainingAmount,
+                      order.currency
+                    )}{" "}
+                    will be settled in the next payment stage.
+                  </p>
+                </div>
+              )}
+
               {!alreadyPaid &&
                 canPay &&
                 !editingDelivery && (
@@ -1583,8 +1645,8 @@ export default function PaymentPage() {
 
                         <span>
                           Review complete. Confirming will authorize{" "}
-                          {formatPrice(order.agreedPrice, order.currency)}
-                          {" "}and save the order as Paid after the gateway
+                          {formatPaymentAmount(payableAmount, order.currency)}{" "}
+                          as the 60% advance and save the order as Paid after the gateway
                           approves it.
                         </span>
                       </div>
@@ -1605,8 +1667,9 @@ export default function PaymentPage() {
 
                           {processing
                             ? "Confirming Payment..."
-                            : "Confirm & Pay " + formatPrice(
-                                order.agreedPrice,
+                            : "Confirm & Pay " +
+                              formatPaymentAmount(
+                                payableAmount,
                                 order.currency
                               )}
                         </button>
@@ -1750,20 +1813,24 @@ export default function PaymentPage() {
             </div>
 
 
-            <div className="payment-total-row">
+          <div className="payment-summary-row">
+            <span>Order Total (100%)</span>
+            <strong>{formatPrice(order.agreedPrice, order.currency)}</strong>
+          </div>
 
-              <span>
-                Total
-              </span>
+          <div className="payment-total-row">
+            <span>Advance Due (60%)</span>
+            <strong>
+              {formatPaymentAmount(advanceAmount, order.currency)}
+            </strong>
+          </div>
 
-              <strong>
-                {formatPrice(
-                  order.agreedPrice,
-                  order.currency
-                )}
-              </strong>
-
-            </div>
+          <div className="payment-summary-row">
+            <span>Remaining Balance</span>
+            <strong>
+              {formatPaymentAmount(remainingAmount, order.currency)}
+            </strong>
+          </div>
 
 
             <div className="payment-summary-trust">
@@ -1790,6 +1857,17 @@ export default function PaymentPage() {
 
 
 // =========================================================
+function calculateAdvanceAmount(orderTotal) {
+  const total = Number(orderTotal || 0);
+  const advance = total * 0.6;
+
+  return Math.round(advance / 1000) * 1000;
+}
+
+function formatPaymentAmount(amount, currency = "LKR") {
+  return `${currency} ${Math.round(Number(amount || 0)).toLocaleString("en-LK")}`;
+}
+
 // CARD PAYMENT HELPERS
 // =========================================================
 
