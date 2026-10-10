@@ -50,6 +50,8 @@ public class ExportOfficerService : IExportOfficerService
             .AsNoTracking()
             .Include(r => r.RequestedByUser)
             .Include(r => r.ComplianceDocuments)
+            .Include(r => r.Order)
+                .ThenInclude(o => o!.GemListing)
             .Where(r => queueStatuses.Contains(r.Status))
             .OrderBy(r => r.SubmittedAt)
             .ThenBy(r => r.CreatedAt)
@@ -92,6 +94,8 @@ public class ExportOfficerService : IExportOfficerService
             .AsNoTracking()
             .Include(r => r.RequestedByUser)
             .Include(r => r.ComplianceDocuments)
+            .Include(r => r.Order)
+                .ThenInclude(o => o!.GemListing)
             .FirstOrDefaultAsync(r => r.Id == exportRequestId);
 
         if (request == null)
@@ -552,7 +556,11 @@ public class ExportOfficerService : IExportOfficerService
             ReviewedAt = entity.ReviewedAt,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
-            Documents = mappedDocuments
+            Documents = mappedDocuments,
+            OrderId = entity.OrderId,
+            OrderNumber = entity.OrderId.HasValue ? $"GEM-{entity.OrderId.Value.ToString("N")[..8].ToUpperInvariant()}" : null,
+            GemListingId = entity.Order?.GemListingId,
+            GemListingTitle = entity.Order?.GemListing?.Title
         };
     }
 

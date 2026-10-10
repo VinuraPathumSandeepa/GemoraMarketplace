@@ -1,60 +1,13 @@
-/* =========================================================
-   GEMORA GLOBAL STYLES
-   ========================================================= */
-
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #ffffff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-
-  --social-bg: rgba(244, 243, 236, 0.5);
-
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px,
-    rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-  --sans:
-    system-ui,
-    "Segoe UI",
-    Roboto,
-    Arial,
-    sans-serif;
-
-  --heading:
-    system-ui,
-    "Segoe UI",
-    Roboto,
-    Arial,
-    sans-serif;
-
-  --mono:
-    ui-monospace,
-    Consolas,
-    "Courier New",
-    monospace;
-
-  font-family: var(--sans);
-
-  color: var(--text);
-  background: var(--bg);
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+/* ============================================================
+   GEMORA GLOBAL BASE STYLES
+   Keep this file minimal.
+   Page/component styling belongs in App.css or page CSS files.
+   ============================================================ */
 
 
-/* =========================================================
-   GLOBAL BOX MODEL
-   ========================================================= */
+/* ============================================================
+   BOX MODEL
+   ============================================================ */
 
 *,
 *::before,
@@ -63,9 +16,9 @@
 }
 
 
-/* =========================================================
-   HTML / BODY
-   ========================================================= */
+/* ============================================================
+   HTML
+   ============================================================ */
 
 html {
   width: 100%;
@@ -79,6 +32,10 @@ html {
 }
 
 
+/* ============================================================
+   BODY
+   ============================================================ */
+
 body {
   width: 100%;
   min-width: 320px;
@@ -89,34 +46,32 @@ body {
 
   overflow-x: hidden;
 
-  background: var(--bg);
-  color: var(--text);
+  background: #faf7f0;
+  color: #10241f;
 
-  font-family: var(--sans);
+  font-family:
+    Inter,
+    "Segoe UI",
+    Roboto,
+    Arial,
+    sans-serif;
 
-  font-size: 18px;
-  line-height: 1.45;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
 
-  letter-spacing: 0.18px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 
-/* =========================================================
+/* ============================================================
    REACT ROOT
-
-   IMPORTANT:
-   Do NOT give #root a fixed width.
-
-   Previous:
-   width: 1126px;
-
-   That prevented Gemora from using the full browser width.
-   ========================================================= */
+   ============================================================ */
 
 #root {
   width: 100%;
   max-width: none;
-
+  min-width: 0;
   min-height: 100vh;
 
   margin: 0;
@@ -125,15 +80,13 @@ body {
   display: flex;
   flex-direction: column;
 
-  text-align: left;
-
   overflow-x: hidden;
 }
 
 
-/* =========================================================
-   RESPONSIVE MEDIA
-   ========================================================= */
+/* ============================================================
+   MEDIA
+   ============================================================ */
 
 img,
 video,
@@ -143,40 +96,56 @@ iframe {
   max-width: 100%;
 }
 
-
 img,
 video {
   display: block;
 }
 
 
-/* =========================================================
-   LINKS / BUTTONS
-   ========================================================= */
+/* ============================================================
+   FORM ELEMENTS
+   ============================================================ */
 
 button,
 input,
 textarea,
 select {
-  font-family: inherit;
-}
+  max-width: 100%;
 
+  font: inherit;
+}
 
 button {
-  max-width: 100%;
+  cursor: pointer;
 }
 
 
-input,
-textarea,
-select {
-  max-width: 100%;
+/* ============================================================
+   LINKS
+   ============================================================ */
+
+a {
+  color: inherit;
 }
 
 
-/* =========================================================
-   HEADINGS
-   ========================================================= */
+/* ============================================================
+   TYPOGRAPHY RESET
+
+   IMPORTANT:
+   Do NOT set global h1/h2 sizes here.
+   Each Gemora page controls its own typography.
+   ============================================================ */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-top: 0;
+}
 
 h1,
 h2,
@@ -184,503 +153,62 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: var(--heading);
-
-  color: var(--text-h);
+  color: inherit;
 }
-
-
-h1,
-h2 {
-  font-weight: 500;
-}
-
-
-h1 {
-  margin: 32px 0;
-
-  font-size: 56px;
-  line-height: 1.05;
-
-  letter-spacing: -1.68px;
-}
-
-
-h2 {
-  margin: 0 0 8px;
-
-  font-size: 24px;
-  line-height: 1.18;
-
-  letter-spacing: -0.24px;
-}
-
 
 p {
-  margin: 0;
+  margin-bottom: 0;
 }
 
 
-/* =========================================================
-   CODE
-   ========================================================= */
-
-code,
-.counter {
-  display: inline-flex;
-
-  border-radius: 4px;
-
-  color: var(--text-h);
-
-  font-family: var(--mono);
-}
-
-
-code {
-  padding: 4px 8px;
-
-  background: var(--code-bg);
-
-  font-size: 15px;
-  line-height: 1.35;
-}
-
-
-/* =========================================================
-   DARK MODE VARIABLES
-   ========================================================= */
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-
-    --bg: #16171d;
-
-    --border: #2e303a;
-    --code-bg: #1f2028;
-
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-
-    --social-bg: rgba(47, 48, 58, 0.5);
-
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px,
-      rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-
-  #social .button-icon {
-    filter:
-      invert(1)
-      brightness(2);
-  }
-}
-
-
-/* =========================================================
-   RESPONSIVE TYPOGRAPHY
-   ========================================================= */
-
-@media (max-width: 1024px) {
-  body {
-    font-size: 16px;
-  }
-
-
-  h1 {
-    margin: 20px 0;
-
-    font-size: 36px;
-  }
-
-
-  h2 {
-    font-size: 20px;
-  }
-}
-
-
-/* =========================================================
-   COMPONENT 1 — SELLER GEM LISTINGS
-   ========================================================= */
-
-.seller-listings-page {
-  width: 100%;
-  max-width: 100%;
-
-  padding: 30px;
-}
-
-
-.seller-listings-header {
-  display: flex;
-
-  justify-content: space-between;
-  align-items: center;
-
-  gap: 20px;
-
-  margin-bottom: 30px;
-}
-
-
-.seller-listings-header h1 {
-  margin: 0 0 8px;
-}
-
-
-.seller-listings-header p {
-  margin: 0;
-
-  opacity: 0.75;
-}
-
-
-/* =========================================================
-   LISTING GRID
-   ========================================================= */
-
-.listing-grid {
-  width: 100%;
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(
-      auto-fill,
-      minmax(
-        min(300px, 100%),
-        1fr
-      )
-    );
-
-  gap: 24px;
-}
-
-
-.listing-card {
-  min-width: 0;
-
-  overflow: hidden;
-
-  border:
-    1px solid #dddddd;
-
-  border-radius: 14px;
-
-  background: #ffffff;
-
-  box-shadow:
-    0 4px 14px
-    rgba(0, 0, 0, 0.08);
-}
-
-
-/* =========================================================
-   LISTING IMAGE
-   ========================================================= */
-
-.listing-image-wrapper {
-  width: 100%;
-  height: 210px;
-
-  overflow: hidden;
-
-  background: #f3f3f3;
-}
-
-
-.listing-image {
-  width: 100%;
-  height: 100%;
-
-  object-fit: cover;
-}
-
-
-.image-placeholder {
-  width: 100%;
-  height: 100%;
-
-  display: flex;
-
-  align-items: center;
-  justify-content: center;
-
-  color: #777777;
-}
-
-
-/* =========================================================
-   LISTING CARD BODY
-   ========================================================= */
-
-.listing-card-body {
-  min-width: 0;
-
-  padding: 20px;
-}
-
-
-.listing-card-heading {
-  display: flex;
-
-  justify-content: space-between;
-  align-items: flex-start;
-
-  gap: 12px;
-
-  margin-bottom: 18px;
-}
-
-
-.listing-card-heading > * {
+/* ============================================================
+   FLEX / GRID SAFETY
+
+   Prevents children from causing horizontal overflow.
+   ============================================================ */
+
+main,
+section,
+article,
+header,
+footer,
+nav,
+div {
   min-width: 0;
 }
 
 
-.listing-card-heading h2 {
-  margin: 0;
+/* ============================================================
+   ACCESSIBILITY
+   ============================================================ */
 
-  overflow-wrap: anywhere;
-
-  font-size: 20px;
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #c99242;
+  outline-offset: 2px;
 }
 
 
-.listing-information p {
-  margin: 8px 0;
-
-  overflow-wrap: anywhere;
-}
-
-
-/* =========================================================
-   LISTING STATUS
-   ========================================================= */
-
-.status {
-  display: inline-block;
-
-  flex-shrink: 0;
-
-  padding:
-    6px
-    10px;
-
-  border-radius: 20px;
-
-  font-size: 12px;
-  font-weight: 700;
-
-  white-space: nowrap;
-}
-
-
-.status.draft {
-  background: #eeeeee;
-}
-
-
-.status.pending {
-  background: #fff3cd;
-}
-
-
-.status.approved {
-  background: #d1e7dd;
-}
-
-
-.status.changes {
-  background: #ffe5d0;
-}
-
-
-.status.rejected {
-  background: #f8d7da;
-}
-
-
-/* =========================================================
-   LISTING ACTIONS
-   ========================================================= */
-
-.listing-actions {
-  display: flex;
-  flex-wrap: wrap;
-
-  gap: 10px;
-
-  margin-top: 20px;
-}
-
-
-.primary-button,
-.secondary-button,
-.edit-button {
-  display: inline-flex;
-
-  align-items: center;
-  justify-content: center;
-
-  max-width: 100%;
-
-  padding:
-    10px
-    16px;
-
-  border-radius: 8px;
-
-  cursor: pointer;
-
-  text-decoration: none;
-}
-
-
-.primary-button {
-  background: #111111;
-
-  color: #ffffff;
-}
-
-
-.secondary-button {
-  border:
-    1px solid #111111;
-
-  background: transparent;
-
-  color: #111111;
-}
-
-
-.edit-button {
-  background: #eeeeee;
-
-  color: #111111;
-}
-
-
-/* =========================================================
-   MESSAGES
-   ========================================================= */
-
-.error-message {
-  width: 100%;
-
-  margin-bottom: 20px;
-
-  padding: 14px;
-
-  border-radius: 8px;
-
-  background: #f8d7da;
-
-  overflow-wrap: anywhere;
-}
-
-
-/* =========================================================
-   EMPTY STATE
-   ========================================================= */
-
-.empty-state {
-  width: 100%;
-
-  padding:
-    50px
-    20px;
-
-  border:
-    1px dashed #cccccc;
-
-  border-radius: 14px;
-
-  text-align: center;
-}
-
-
-.empty-state .primary-button {
-  margin-top: 15px;
-}
-
-
-/* =========================================================
-   GENERAL FLEX / GRID SAFETY
-
-   Prevents wide children from forcing their parents
-   outside the browser width.
-   ========================================================= */
-
-.gemora-app-shell,
-.gemora-main-content,
-.seller-dashboard-page,
-.seller-listings-page,
-.gem-form-page,
-.gem-form-container,
-.gem-detail-page,
-.verification-details-page {
-  min-width: 0;
-  max-width: 100%;
-}
-
-
-/* =========================================================
-   RESPONSIVE SELLER LISTINGS
-   ========================================================= */
-
-@media (max-width: 700px) {
-  .seller-listings-page {
-    padding: 18px;
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
 
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
 
-  .seller-listings-header {
-    flex-direction: column;
+    transition-duration: 0.01ms !important;
 
-    align-items: flex-start;
-  }
-
-
-  .listing-grid {
-    grid-template-columns: 1fr;
-  }
-
-
-  .listing-actions {
-    flex-direction: column;
-  }
-
-
-  .listing-actions > * {
-    width: 100%;
-  }
-}
-
-
-/* =========================================================
-   VERY SMALL DEVICES
-   ========================================================= */
-
-@media (max-width: 420px) {
-  body {
-    font-size: 15px;
-  }
-
-
-  h1 {
-    font-size: 32px;
-  }
-
-
-  .seller-listings-page {
-    padding:
-      14px
-      12px;
+    scroll-behavior: auto !important;
   }
 }

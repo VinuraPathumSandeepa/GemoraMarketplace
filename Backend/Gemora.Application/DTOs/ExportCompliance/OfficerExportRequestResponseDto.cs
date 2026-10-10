@@ -38,4 +38,12 @@ public class OfficerExportRequestResponseDto
     public ComplianceCheckResultDto? DeterministicCompliance { get; set; }
 
     public ComplianceWorkflowReviewDto? AgentWorkflow { get; set; }
+
+    public Guid? OrderId { get; set; }
+
+    public string? OrderNumber { get; set; }
+
+    public int? GemListingId { get; set; }
+
+    public string? GemListingTitle { get; set; }
 }

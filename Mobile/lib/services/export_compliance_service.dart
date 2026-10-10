@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
 import '../config/api_config.dart';
+import '../models/buyer_export_tracking_model.dart';
 import '../models/compliance_analysis_result_model.dart';
 import '../models/compliance_document_model.dart';
 import '../models/export_request_model.dart';
@@ -507,6 +508,86 @@ class ExportComplianceService {
     final rawRequest = data['request'] as Map<String, dynamic>;
 
     return ExportRequestModel.fromJson(rawRequest);
+  }
+
+  // ==========================================
+  // CREATE EXPORT REQUEST FROM ORDER (SELLER)
+  // ==========================================
+  Future<ExportRequestModel> createExportRequestFromOrder(dynamic orderId) async {
+    final headers = await _getHeaders();
+
+    final response = await http.post(
+      Uri.parse(ApiConfig.exportRequestFromOrder(orderId)),
+      headers: headers,
+    );
+
+    if (response.statusCode != 201) {
+      throw Exception(
+        _parseErrorResponse(
+          response,
+          "Failed to start export clearance for this order.",
+        ),
+      );
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final reqJson = data['request'] as Map<String, dynamic>;
+    return ExportRequestModel.fromJson(reqJson);
+  }
+
+  // ==========================================
+  // GET EXPORT TRACKING FOR ORDER (BUYER-SAFE)
+  // ==========================================
+  Future<BuyerExportTrackingModel> getOrderExportTracking(dynamic orderId) async {
+    final headers = await _getHeaders();
+
+    final response = await http.get(
+      Uri.parse(ApiConfig.orderExportTracking(orderId)),
+      headers: headers,
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        _parseErrorResponse(
+          response,
+          "Export tracking could not be loaded for this order.",
+        ),
+      );
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return BuyerExportTrackingModel.fromJson(data);
+  }
+
+  // ==========================================
+  // GET ALL BUYER EXPORT TRACKING (BUYER-SAFE)
+  // ==========================================
+  Future<List<BuyerExportTrackingModel>> getMyExportTracking() async {
+    final headers = await _getHeaders();
+
+    final response = await http.get(
+      Uri.parse(ApiConfig.myExportTracking),
+      headers: headers,
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        _parseErrorResponse(
+          response,
+          "Failed to load export tracking records.",
+        ),
+      );
+    }
+
+    final data = jsonDecode(response.body);
+    if (data is! List) {
+      return [];
+    }
+
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(BuyerExportTrackingModel.fromJson)
+        .toList();
   }
 }
 
