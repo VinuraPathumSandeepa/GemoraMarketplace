@@ -18,8 +18,6 @@ public class Order
 
     // Order Details
     public decimal TotalAmount { get; set; }
-    public string Currency { get; set; } = "USD";
-    public string Status { get; set; } = "Pending"; // Pending, Paid, Shipped, Delivered, Cancelled
 
     // Shipping Address
     public string Currency { get; set; } = "LKR";
@@ -45,16 +43,11 @@ public class Order
     public DateTime? PaidAt { get; set; }
 
     // Navigation properties
-    public User? Buyer { get; set; }
-    public User? Seller { get; set; }
     public User Buyer { get; set; } = null!;
 
     public User Seller { get; set; } = null!;
 
     public GemListing? GemListing { get; set; }
-    public ICollection<Shipment>? Shipments { get; set; }
-}
-
     public ICollection<OrderStatusHistory> StatusHistory { get; set; }
         = new List<OrderStatusHistory>();
 

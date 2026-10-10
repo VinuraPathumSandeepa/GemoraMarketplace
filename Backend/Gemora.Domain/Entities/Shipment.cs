@@ -16,14 +16,6 @@ public class Shipment
     public string DestinationRegion { get; set; } = string.Empty;
     public string DestinationCountryCode { get; set; } = string.Empty;
 
-    public string CourierName
-        { get; set; } = string.Empty;
-
-
-    public string TrackingNumber
-        { get; set; } = string.Empty;
-
-
     public string? TrackingUrl
         { get; set; }
 
@@ -54,8 +46,6 @@ public class Shipment
     public string? CourierName { get; set; }
     public string? ExternalShipmentReference { get; set; }
     public string? SelectedService { get; set; }
-    public string Status
-        { get; set; } = string.Empty;
 
     // Timestamps
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -64,19 +54,7 @@ public class Shipment
     public DateTime? ShippedAt { get; set; }
     public DateTime? DeliveredAt { get; set; }
 
-    public DateTime CreatedAt
-        { get; set; }
-
-
-    public DateTime? UpdatedAt
-        { get; set; }
-
-
     public DateTime? HandedOverAt
-        { get; set; }
-
-
-    public DateTime? DeliveredAt
         { get; set; }
 
 

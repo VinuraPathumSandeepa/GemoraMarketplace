@@ -7,7 +7,6 @@ using Gemora.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace Gemora.API.Controllers;
 
@@ -20,7 +19,7 @@ public class OrdersController : ControllerBase
     private readonly ApplicationDbContext _context;
 
     public OrdersController(
-        IOrderService service)
+        IOrderService service, ApplicationDbContext context)
     {
         _service = service;
         _context = context;
@@ -46,38 +45,17 @@ public class OrdersController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = UserRoles.Buyer)]
-    public async Task<ActionResult<OrderResponseDto>>
-        Create(CreateOrderRequestDto dto)
+    public async Task<ActionResult<OrderResponseDto>> Create(CreateOrderRequestDto dto)
     {
-        var order =
-            await _service.CreateAsync(
-                CurrentUserId(),
-                dto);
-    /// <summary>
-    /// Get orders eligible for shipment creation (Seller only)
-    /// Returns paid orders belonging to the authenticated seller that don't have active shipments
-    /// </summary>
+        var order = await _service.CreateAsync(CurrentUserId(), dto);
+        return CreatedAtAction(nameof(GetById), new { id = order.Id }, order);
+    }
+
     [HttpGet("my-shipment-eligible")]
+    [Authorize(Roles = UserRoles.Seller)]
     public async Task<IActionResult> GetShipmentEligibleOrders()
     {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var userRole = GetCurrentUserRole();
-
-        return CreatedAtAction(
-            nameof(GetById),
-            new
-            if (userRole != "Seller")
-            {
-                id = order.Id
-            },
-            order);
-    }
-                return Forbid();
-            }
-
-            // Get paid orders for this seller that don't have active shipments
+        var userId = CurrentUserId();
             var eligibleOrders = await _context.Orders
                 .Where(o => o.SellerId == userId && o.Status == "Paid")
                 .Where(o => !_context.Shipments.Any(s => s.OrderId == o.Id))
@@ -100,125 +78,15 @@ public class OrdersController : ControllerBase
                 .ToListAsync();
 
             return Ok(eligibleOrders);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { message = "An error occurred while fetching eligible orders.", error = ex.Message });
-        }
     }
 
-    // =========================================================
-    // BUYER - MY ORDERS
-    // =========================================================
-    /// <summary>
-    /// Get order by ID with authorization check
-    /// </summary>
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetOrderById(Guid id)
-    {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var userRole = GetCurrentUserRole();
-
-            var order = await _context.Orders
-                .Where(o => o.Id == id)
-                .Select(o => new
-                {
-                    o.Id,
-                    o.BuyerId,
-                    o.SellerId,
-                    o.GemListingId,
-                    o.TotalAmount,
-                    o.Currency,
-                    o.Status,
-                    o.ShippingAddress,
-                    o.ShippingRegion,
-                    o.ShippingCountryCode,
-                    o.CreatedAt,
-                    o.UpdatedAt,
-                    o.PaidAt
-                })
-                .FirstOrDefaultAsync();
-
-            if (order == null)
-            {
-                return NotFound(new { message = "Order not found." });
-            }
-
-            // Authorization: Buyer can see own orders, Seller can see own sales
-            if (userRole == "Buyer" && order.BuyerId != userId)
-            {
-                return Forbid();
-            }
-
-            if (userRole == "Seller" && order.SellerId != userId)
-            {
-                return Forbid();
-            }
-
-            return Ok(order);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { message = "An error occurred while fetching the order.", error = ex.Message });
-        }
-    }
-
-    /// <summary>
-    /// Get all orders for authenticated user (Buyer or Seller)
-    /// </summary>
     [HttpGet("my")]
     [Authorize(Roles = UserRoles.Buyer)]
-    public async Task<ActionResult<List<OrderResponseDto>>>
-        GetMyOrders()
+    public async Task<ActionResult<List<OrderResponseDto>>> GetMyOrders()
     {
-        var orders =
-            await _service.GetMyOrdersAsync(
-                CurrentUserId());
-    public async Task<IActionResult> GetMyOrders()
-    {
-        try
-        {
-            var userId = GetCurrentUserId();
-            var userRole = GetCurrentUserRole();
-
-            IQueryable<Order> query = _context.Orders;
-
-            if (userRole == "Buyer")
-            {
-                query = query.Where(o => o.BuyerId == userId);
-            }
-            else if (userRole == "Seller")
-            {
-                query = query.Where(o => o.SellerId == userId);
-            }
-            else
-            {
-                return Forbid();
-            }
-
-            var orders = await query
-                .OrderByDescending(o => o.CreatedAt)
-                .Select(o => new
-                {
-                    o.Id,
-                    o.BuyerId,
-                    o.SellerId,
-                    o.TotalAmount,
-                    o.Currency,
-                    o.Status,
-                    o.ShippingAddress,
-                    o.ShippingRegion,
-                    o.ShippingCountryCode,
-                    o.CreatedAt,
-                    o.PaidAt
-                })
-                .ToListAsync();
-
+        var orders = await _service.GetMyOrdersAsync(CurrentUserId());
         return Ok(orders);
     }
-
 
     // =========================================================
     // BUYER - SINGLE ORDER
@@ -590,11 +458,6 @@ public class OrdersController : ControllerBase
         {
             throw new UnauthorizedAccessException(
                 "Invalid authenticated user.");
-            return Ok(orders);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { message = "An error occurred while fetching orders.", error = ex.Message });
         }
 
         return id;
@@ -621,3 +484,4 @@ public class OrdersController : ControllerBase
         return role;
     }
 }
+

@@ -40,13 +40,6 @@ public class User
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public ICollection<GemListing> GemListings { get; set; }
-        = new List<GemListing>();
-
-    public ICollection<GemVerification> GemVerifications { get; set; }
-        = new List<GemVerification>();
-
     // =========================================================
     // COMPONENT 1 RELATIONSHIPS
     // =========================================================
@@ -64,17 +57,10 @@ public class User
     // =========================================================
     // COMPONENT 2 RELATIONSHIPS
     // =========================================================
-    public ICollection<EmailVerificationCode> EmailVerificationCodes { get; set; }
-        = new List<EmailVerificationCode>();
-
-    public ICollection<Order> PurchasedOrders { get; set; }
-        = new List<Order>();
     // Orders created by this user as a Buyer.
     public ICollection<Order> BuyerOrders { get; set; }
         = new List<Order>();
 
-    public ICollection<Order> SoldOrders { get; set; }
-        = new List<Order>();
     // Orders received by this user as a Seller.
     public ICollection<Order> SellerOrders { get; set; }
         = new List<Order>();

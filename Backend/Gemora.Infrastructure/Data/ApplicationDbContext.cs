@@ -31,8 +31,6 @@ public class ApplicationDbContext : DbContext
         => Set<EmailVerificationCode>();
 
     // Component 3 - Shipping & Insurance
-    public DbSet<Order> Orders => Set<Order>();
-    public DbSet<Shipment> Shipments => Set<Shipment>();
     public DbSet<ShippingPlan> ShippingPlans => Set<ShippingPlan>();
     public DbSet<ShipmentTrackingEvent> ShipmentTrackingEvents => Set<ShipmentTrackingEvent>();
     public DbSet<InsuranceRecord> InsuranceRecords => Set<InsuranceRecord>();
@@ -124,13 +122,13 @@ public DbSet<FulfillmentStatusHistory>
 
         entity.Property(
                 s => s.CourierName)
-            .IsRequired()
+            .IsRequired(false)
             .HasMaxLength(150);
 
 
         entity.Property(
                 s => s.TrackingNumber)
-            .IsRequired()
+            .IsRequired(false)
             .HasMaxLength(150);
 
 
@@ -1086,12 +1084,12 @@ public DbSet<FulfillmentStatusHistory>
             entity.HasIndex(o => o.CreatedAt);
 
             entity.HasOne(o => o.Buyer)
-                .WithMany(u => u.PurchasedOrders)
+                .WithMany(u => u.BuyerOrders)
                 .HasForeignKey(o => o.BuyerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(o => o.Seller)
-                .WithMany(u => u.SoldOrders)
+                .WithMany(u => u.SellerOrders)
                 .HasForeignKey(o => o.SellerId)
                 .OnDelete(DeleteBehavior.Restrict);
         });

@@ -38,7 +38,6 @@ import Profile from "./pages/Profile";
 // ROLE DASHBOARDS
 // ============================================================
 
-import BuyerDashboard from "./pages/BuyerDashboard";
 import SellerDashboard from "./pages/SellerDashboard";
 import SellerShipments from "./pages/SellerShipments";
 import CreateShipment from "./pages/CreateShipment";
