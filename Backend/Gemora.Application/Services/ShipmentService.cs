@@ -69,9 +69,16 @@ public class ShipmentService : IShipmentService
             throw new InvalidOperationException("A shipment already exists for this order.");
         }
 
-        // Derive declared value from order if not provided
-        var declaredValue = request.DeclaredValue ?? order.TotalAmount;
-        var currency = request.Currency ?? order.Currency;
+        // The paid order is authoritative for risk assessment and insurance.
+        if (order.TotalAmount <= 0 || string.IsNullOrWhiteSpace(order.Currency))
+            throw new InvalidOperationException("The paid order must have a positive total and a currency before shipment creation.");
+        if (request.DeclaredValue.HasValue && request.DeclaredValue.Value != order.TotalAmount)
+            throw new InvalidOperationException($"Declared value must match the paid order total ({order.Currency} {order.TotalAmount}).");
+        if (request.Currency != null && !string.Equals(
+            request.Currency.Trim(), order.Currency.Trim(), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException($"Currency must match the paid order currency ({order.Currency}).");
+        var declaredValue = order.TotalAmount;
+        var currency = order.Currency;
 
         var shipment = new Shipment
         {

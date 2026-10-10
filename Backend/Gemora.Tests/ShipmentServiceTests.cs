@@ -116,6 +116,37 @@ public class ShipmentServiceTests : IDisposable
         Assert.Equal("USD", result.Currency);
     }
 
+    [Theory]
+    [InlineData(4999, "USD")]
+    [InlineData(5000, "LKR")]
+    public async Task CreateShipmentAsync_MismatchedOrderFinancialDetails_ShouldRejectBeforeSaving(
+        int declaredValue, string currency)
+    {
+        var request = new CreateShipmentDto
+        {
+            OrderId = _orderId,
+            DeclaredValue = declaredValue,
+            Currency = currency,
+            PackageDescription = "Test package"
+        };
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _shipmentService.CreateShipmentAsync(_sellerId, "Seller", request));
+        Assert.Contains("must match the paid order", exception.Message);
+        Assert.Empty(await _context.Shipments.ToListAsync());
+        Assert.Empty(await _context.ShipmentTrackingEvents.ToListAsync());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(" usd ")]
+    public async Task CreateShipmentAsync_ShouldUseCanonicalPaidOrderFinancialDetails(string? currency)
+    {
+        var result = await _shipmentService.CreateShipmentAsync(_sellerId, "Seller",
+            new CreateShipmentDto { OrderId = _orderId, Currency = currency, PackageDescription = "Test package" });
+        Assert.Equal(5000m, result.DeclaredValue);
+        Assert.Equal("USD", result.Currency);
+    }
+
     [Fact]
     public async Task CreateShipmentAsync_WithNonSellerRole_ShouldThrowUnauthorized()
     {

@@ -35,7 +35,7 @@ function CreateShipment() {
     destinationRegion: "",
     destinationCountryCode: "",
     declaredValue: "",
-    currency: "USD",
+    currency: "",
     packageDescription: "",
     packageWeight: "",
     packageDimensions: "",
@@ -55,6 +55,7 @@ function CreateShipment() {
           destinationAddress: order.shippingAddress || "",
           destinationRegion: order.shippingRegion || "",
           destinationCountryCode: order.shippingCountryCode || "",
+          declaredValue: String(order.totalAmount),
           currency: order.currency,
         }));
         return;
@@ -63,6 +64,7 @@ function CreateShipment() {
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
+      ...(name === "orderId" ? { declaredValue: "", currency: "" } : {}),
     }));
   };
 
@@ -97,9 +99,9 @@ function CreateShipment() {
         destinationRegion: formData.destinationRegion.trim(),
         destinationCountryCode: formData.destinationCountryCode.trim().toUpperCase(),
         packageDescription: formData.packageDescription.trim(),
-        declaredValue: formData.declaredValue
-          ? parseFloat(formData.declaredValue)
-          : undefined,
+        // The backend derives financial details from the paid order.
+        declaredValue: undefined,
+        currency: undefined,
         packageWeight: formData.packageWeight
           ? parseFloat(formData.packageWeight)
           : undefined,
@@ -170,7 +172,7 @@ function CreateShipment() {
           {ordersError ? <small role="alert">{ordersError}</small> :
             !ordersLoading && orders.length === 0 ?
               <small className="form-helper">No paid orders are available for shipment. Orders must belong to your seller account and have no existing shipment.</small> :
-              <small className="form-helper">Selecting an order fills in its delivery address and currency.</small>}
+              <small className="form-helper">Selecting an order fills in its delivery address, value, and currency.</small>}
         </div>
 
         </section>
@@ -276,16 +278,16 @@ function CreateShipment() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="form-group">
               <label className="block text-sm font-medium mb-2">
-                Declared Value
+                Paid Order Value
               </label>
               <input
                 type="number"
                 name="declaredValue"
                 value={formData.declaredValue}
-                onChange={handleChange}
+                readOnly
                 step="0.01"
                 min="0"
-                placeholder="Leave empty to use order total"
+                placeholder="Select a paid order"
                 className="w-full px-3 py-2 border rounded"
               />
             </div>
@@ -296,9 +298,10 @@ function CreateShipment() {
               <select
                 name="currency"
                 value={formData.currency}
-                onChange={handleChange}
+                disabled
                 className="w-full px-3 py-2 border rounded"
               >
+                <option value="">Select a paid order</option>
                 <option value="USD">USD</option>
                 <option value="LKR">LKR</option>
                 <option value="EUR">EUR</option>

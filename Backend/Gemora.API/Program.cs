@@ -1,4 +1,5 @@
 using System.Text;
+using System.Security.Claims;
 
 using Gemora.API.Middleware;
 using Gemora.API.Services;
@@ -17,6 +18,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,10 +34,30 @@ var connectionString =
         "Database connection string 'DefaultConnection' is not configured."
     );
 
+// Respect the configured Supabase endpoint: session and transaction poolers
+// can have different availability and must not be substituted automatically.
+var databaseConnection = new NpgsqlConnectionStringBuilder(connectionString);
+if (databaseConnection.Host?.EndsWith(".pooler.supabase.com", StringComparison.OrdinalIgnoreCase) == true)
+{
+    // Use fresh client connections to avoid reset-command stalls on the pooler.
+    databaseConnection.Pooling = false;
+    if (databaseConnection.Port == 6543)
+    {
+        // Supabase transaction pooling does not support prepared statements.
+        databaseConnection.MaxAutoPrepare = 0;
+        databaseConnection.Multiplexing = false;
+    }
+    databaseConnection.MaxPoolSize = Math.Min(databaseConnection.MaxPoolSize, 5);
+    databaseConnection.MinPoolSize = 0;
+    databaseConnection.ConnectionIdleLifetime = Math.Min(databaseConnection.ConnectionIdleLifetime, 60);
+    databaseConnection.ConnectionPruningInterval = Math.Min(
+        databaseConnection.ConnectionPruningInterval, databaseConnection.ConnectionIdleLifetime);
+}
+
 builder.Services.AddDbContext<ApplicationDbContext>(
     options =>
     {
-        options.UseNpgsql(connectionString);
+        options.UseNpgsql(databaseConnection.ConnectionString);
     }
 );
 
@@ -362,6 +384,40 @@ builder.Services
     .AddJwtBearer(
         options =>
         {
+            options.Events = new JwtBearerEvents
+            {
+                OnTokenValidated = async context =>
+                {
+                    var identity = context.Principal?.Identity as ClaimsIdentity;
+                    if (identity == null || !Guid.TryParse(
+                        identity.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId))
+                    {
+                        context.Fail("Invalid user identity.");
+                        return;
+                    }
+
+                    // Match authorization to /Auth/me, including role changes
+                    // made after this token was issued.
+                    var db = context.HttpContext.RequestServices
+                        .GetRequiredService<ApplicationDbContext>();
+                    var role = await db.Users.AsNoTracking()
+                        .Where(user => user.Id == userId)
+                        .Select(user => user.Role)
+                        .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
+                    if (string.IsNullOrWhiteSpace(role))
+                    {
+                        context.Fail("Account no longer exists or has no role.");
+                        return;
+                    }
+
+                    foreach (var claim in identity.FindAll(identity.RoleClaimType).ToList())
+                    {
+                        identity.RemoveClaim(claim);
+                    }
+                    identity.AddClaim(new Claim(identity.RoleClaimType, role));
+                }
+            };
+
             options.TokenValidationParameters =
                 new TokenValidationParameters
                 {
@@ -600,9 +656,19 @@ using (var scope = app.Services.CreateScope())
         );
         Console.WriteLine("Created indexes for Orders table.");
     }
+    catch (NpgsqlException ex) when (ex.IsTransient)
+    {
+        throw new InvalidOperationException(
+            $"Cannot connect to PostgreSQL at {databaseConnection.Host}:{databaseConnection.Port}. " +
+            "Startup cannot initialize the database. Check that the Supabase project is running, " +
+            "copy the current pooler connection settings from the Supabase Connect dialog, " +
+            "and check firewall/VPN access and database connection limits. " +
+            "Run dotnet run --project Backend/Gemora.Database.Checks from the repository root " +
+            "to test connectivity without changing data.", ex);
+    }
     catch (Exception ex)
     {
-        Console.WriteLine($"Error recreating Orders table: {ex.Message}");
+        Console.WriteLine($"Error initializing Orders table: {ex.Message}");
         throw;
     }
 

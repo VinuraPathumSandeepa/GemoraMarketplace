@@ -118,7 +118,9 @@ function AdminShipmentDetail() {
       alert("Shipping plan approved successfully!");
     } catch (err) {
       console.error("Failed to approve plan:", err);
-      alert(err.response?.data?.message || "Failed to approve plan");
+      alert(err.response?.status === 403
+        ? "Your account does not have permission to approve shipping plans. Sign in again with an Admin account."
+        : err.response?.data?.message || "Failed to approve plan");
     } finally {
       setApproving(false);
     }

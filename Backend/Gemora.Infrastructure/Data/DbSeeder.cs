@@ -11,6 +11,10 @@ public static class DbSeeder
         ApplicationDbContext context,
         IConfiguration configuration)
     {
+        // Existing accounts keep their passwords on normal startup. Resetting
+        // credentials is a deliberate maintenance action, not database seeding.
+        var resetExistingPasswords = bool.TryParse(
+            configuration["SeedUsers:ResetExistingPasswords"], out var reset) && reset;
         // ==========================================
         // READ DEVELOPMENT PASSWORDS
         // FROM SECURE CONFIGURATION
@@ -64,7 +68,7 @@ public static class DbSeeder
             context.Users.Add(admin);
             await context.SaveChangesAsync();
         }
-        else
+        else if (resetExistingPasswords)
         {
             var adminPasswordMatches =
                 BCrypt.Net.BCrypt.Verify(adminPassword, admin.PasswordHash);
@@ -106,7 +110,7 @@ public static class DbSeeder
             context.Users.Add(gemologist);
             await context.SaveChangesAsync();
         }
-        else
+        else if (resetExistingPasswords)
         {
             var gemologistPasswordMatches =
                 BCrypt.Net.BCrypt.Verify(gemologistPassword, gemologist.PasswordHash);
@@ -148,7 +152,7 @@ public static class DbSeeder
             context.Users.Add(exportOfficer);
             await context.SaveChangesAsync();
         }
-        else
+        else if (resetExistingPasswords)
         {
             var exportOfficerPasswordMatches =
                 BCrypt.Net.BCrypt.Verify(exportOfficerPassword, exportOfficer.PasswordHash);
