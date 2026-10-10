@@ -20,7 +20,9 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Npgsql;
 
-var builder = WebApplication.CreateBuilder(args);
+var resetAdminPassword = args.Contains("--reset-admin-password", StringComparer.Ordinal);
+var builder = WebApplication.CreateBuilder(
+    args.Where(arg => arg != "--reset-admin-password").ToArray());
 
 
 // ============================================================
@@ -60,6 +62,29 @@ builder.Services.AddDbContext<ApplicationDbContext>(
         options.UseNpgsql(databaseConnection.ConnectionString);
     }
 );
+
+// Explicit maintenance command: reset only the seeded administrator and exit
+// before migrations, demo seeding, or starting the web server.
+if (resetAdminPassword)
+{
+    var password = builder.Configuration["SeedUsers:AdminPassword"];
+    if (string.IsNullOrWhiteSpace(password))
+        throw new InvalidOperationException("SeedUsers:AdminPassword is not configured.");
+
+    await using var context = new ApplicationDbContext(
+        new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseNpgsql(databaseConnection.ConnectionString).Options);
+    var admin = await context.Users.SingleOrDefaultAsync(
+        user => user.Email.ToLower() == "admin@gemora.com" &&
+                user.Role == Gemora.Domain.Constants.UserRoles.Admin);
+    if (admin is null)
+        throw new InvalidOperationException("The seeded administrator account was not found.");
+
+    admin.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
+    await context.SaveChangesAsync();
+    Console.WriteLine("Administrator password reset to the configured SeedUsers:AdminPassword.");
+    return;
+}
 
 
 // ============================================================
