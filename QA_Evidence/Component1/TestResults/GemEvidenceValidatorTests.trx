@@ -1,0 +1,88 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="99ed4d07-cf24-43bc-84d2-43cbfdbd2259" name="user@DESKTOP-JVB4CT4 2026-10-10 19:19:01" runUser="DESKTOP-JVB4CT4\user" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-10T19:19:01.4920233+05:30" queuing="2026-10-10T19:19:01.4920238+05:30" start="2026-10-10T19:19:00.8972951+05:30" finish="2026-10-10T19:19:01.5174555+05:30" />
+  <TestSettings name="default" id="e9e99ea0-be38-48ad-98d3-e01173f8ab8b">
+    <Deployment runDeploymentRoot="user_DESKTOP-JVB4CT4_2026-10-10_19_19_01" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="b694bf6a-94e8-4f74-8071-1e7235092b00" testId="8e1882fb-b776-1bc8-66cb-9b31049dd8d3" testName="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_10_MissingCharacteristics_AddsThreeWarnings" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0019159" startTime="2026-10-10T19:19:01.4204684+05:30" endTime="2026-10-10T19:19:01.4204959+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b694bf6a-94e8-4f74-8071-1e7235092b00" />
+    <UnitTestResult executionId="5d3bff47-a228-4f45-bee6-bd081d975ca1" testId="77d7ce7e-0d42-f025-52b0-f838cfb5d14c" testName="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_01_ValidCompleteEvidence_IsValidWithFourChecks" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0007623" startTime="2026-10-10T19:19:01.4207977+05:30" endTime="2026-10-10T19:19:01.4208232+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5d3bff47-a228-4f45-bee6-bd081d975ca1" />
+    <UnitTestResult executionId="17e58f19-bbf2-48a5-b0d7-a2ccf0ff35de" testId="3f847150-6b15-696e-4ff6-b2565a69c711" testName="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_06_MissingGemstoneImage_IsInvalid" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0002399" startTime="2026-10-10T19:19:01.4197835+05:30" endTime="2026-10-10T19:19:01.4198313+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="17e58f19-bbf2-48a5-b0d7-a2ccf0ff35de" />
+    <UnitTestResult executionId="be0210d7-9eb4-4766-b14d-e81e1c9495e0" testId="47f5bf38-becc-7d50-2eee-cca8f4451732" testName="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_08_CertificateWithMissingAuthority_AddsWarning" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0000734" startTime="2026-10-10T19:19:01.4207179+05:30" endTime="2026-10-10T19:19:01.4207446+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="be0210d7-9eb4-4766-b14d-e81e1c9495e0" />
+    <UnitTestResult executionId="e0238df2-bfdc-463a-a597-d3609c056986" testId="2ec9e634-a611-8c31-b472-6f34057f13a7" testName="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_02_MissingTitle_IsInvalid" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0000838" startTime="2026-10-10T19:19:01.4206407+05:30" endTime="2026-10-10T19:19:01.4206647+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e0238df2-bfdc-463a-a597-d3609c056986" />
+    <UnitTestResult executionId="2838440b-f70c-4112-a031-00529e9653ae" testId="8e186833-90d5-41ba-89ee-fd38ddb30c0b" testName="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_07_CertificateWithMissingNumber_AddsWarning" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0069395" startTime="2026-10-10T19:19:01.3990497+05:30" endTime="2026-10-10T19:19:01.4115772+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2838440b-f70c-4112-a031-00529e9653ae" />
+    <UnitTestResult executionId="81d4a0bf-0259-4d17-892b-45949211ea6c" testId="3308250f-2e2a-7425-83dd-39e6cebfa5dd" testName="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_09_CertificateMetadataWithoutFile_AddsWarnings" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0000941" startTime="2026-10-10T19:19:01.4203365+05:30" endTime="2026-10-10T19:19:01.4203857+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="81d4a0bf-0259-4d17-892b-45949211ea6c" />
+    <UnitTestResult executionId="cd890696-eaad-46fc-b355-24d78d24075e" testId="1791bb9f-9110-48b3-b1c3-ce49f196bd03" testName="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_05_NegativePrice_IsInvalid" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0001136" startTime="2026-10-10T19:19:01.4205591+05:30" endTime="2026-10-10T19:19:01.4205826+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cd890696-eaad-46fc-b355-24d78d24075e" />
+    <UnitTestResult executionId="37f1576f-aea8-4e76-812e-f2d06b2ad3d4" testId="5bd6046f-83d3-ed0b-205d-ab00009ba6ad" testName="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_03_MissingGemType_IsInvalid" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0000938" startTime="2026-10-10T19:19:01.4202297+05:30" endTime="2026-10-10T19:19:01.4202662+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="37f1576f-aea8-4e76-812e-f2d06b2ad3d4" />
+    <UnitTestResult executionId="c23798ae-3914-490b-862b-e7a199a59dbf" testId="9b638fbb-b79a-70d7-4ecf-dacef6688f2c" testName="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_04_ZeroCaratWeight_IsInvalid" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0001141" startTime="2026-10-10T19:19:01.4414101+05:30" endTime="2026-10-10T19:19:01.4415204+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c23798ae-3914-490b-862b-e7a199a59dbf" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_02_MissingTitle_IsInvalid" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="2ec9e634-a611-8c31-b472-6f34057f13a7">
+      <Execution id="e0238df2-bfdc-463a-a597-d3609c056986" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemEvidenceValidatorTests" name="GEM_VAL_02_MissingTitle_IsInvalid" />
+    </UnitTest>
+    <UnitTest name="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_01_ValidCompleteEvidence_IsValidWithFourChecks" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="77d7ce7e-0d42-f025-52b0-f838cfb5d14c">
+      <Execution id="5d3bff47-a228-4f45-bee6-bd081d975ca1" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemEvidenceValidatorTests" name="GEM_VAL_01_ValidCompleteEvidence_IsValidWithFourChecks" />
+    </UnitTest>
+    <UnitTest name="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_08_CertificateWithMissingAuthority_AddsWarning" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="47f5bf38-becc-7d50-2eee-cca8f4451732">
+      <Execution id="be0210d7-9eb4-4766-b14d-e81e1c9495e0" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemEvidenceValidatorTests" name="GEM_VAL_08_CertificateWithMissingAuthority_AddsWarning" />
+    </UnitTest>
+    <UnitTest name="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_10_MissingCharacteristics_AddsThreeWarnings" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="8e1882fb-b776-1bc8-66cb-9b31049dd8d3">
+      <Execution id="b694bf6a-94e8-4f74-8071-1e7235092b00" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemEvidenceValidatorTests" name="GEM_VAL_10_MissingCharacteristics_AddsThreeWarnings" />
+    </UnitTest>
+    <UnitTest name="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_04_ZeroCaratWeight_IsInvalid" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="9b638fbb-b79a-70d7-4ecf-dacef6688f2c">
+      <Execution id="c23798ae-3914-490b-862b-e7a199a59dbf" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemEvidenceValidatorTests" name="GEM_VAL_04_ZeroCaratWeight_IsInvalid" />
+    </UnitTest>
+    <UnitTest name="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_06_MissingGemstoneImage_IsInvalid" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="3f847150-6b15-696e-4ff6-b2565a69c711">
+      <Execution id="17e58f19-bbf2-48a5-b0d7-a2ccf0ff35de" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemEvidenceValidatorTests" name="GEM_VAL_06_MissingGemstoneImage_IsInvalid" />
+    </UnitTest>
+    <UnitTest name="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_05_NegativePrice_IsInvalid" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="1791bb9f-9110-48b3-b1c3-ce49f196bd03">
+      <Execution id="cd890696-eaad-46fc-b355-24d78d24075e" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemEvidenceValidatorTests" name="GEM_VAL_05_NegativePrice_IsInvalid" />
+    </UnitTest>
+    <UnitTest name="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_07_CertificateWithMissingNumber_AddsWarning" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="8e186833-90d5-41ba-89ee-fd38ddb30c0b">
+      <Execution id="2838440b-f70c-4112-a031-00529e9653ae" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemEvidenceValidatorTests" name="GEM_VAL_07_CertificateWithMissingNumber_AddsWarning" />
+    </UnitTest>
+    <UnitTest name="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_03_MissingGemType_IsInvalid" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="5bd6046f-83d3-ed0b-205d-ab00009ba6ad">
+      <Execution id="37f1576f-aea8-4e76-812e-f2d06b2ad3d4" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemEvidenceValidatorTests" name="GEM_VAL_03_MissingGemType_IsInvalid" />
+    </UnitTest>
+    <UnitTest name="Gemora.Tests.GemEvidenceValidatorTests.GEM_VAL_09_CertificateMetadataWithoutFile_AddsWarnings" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="3308250f-2e2a-7425-83dd-39e6cebfa5dd">
+      <Execution id="81d4a0bf-0259-4d17-892b-45949211ea6c" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemEvidenceValidatorTests" name="GEM_VAL_09_CertificateMetadataWithoutFile_AddsWarnings" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="8e1882fb-b776-1bc8-66cb-9b31049dd8d3" executionId="b694bf6a-94e8-4f74-8071-1e7235092b00" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="77d7ce7e-0d42-f025-52b0-f838cfb5d14c" executionId="5d3bff47-a228-4f45-bee6-bd081d975ca1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3f847150-6b15-696e-4ff6-b2565a69c711" executionId="17e58f19-bbf2-48a5-b0d7-a2ccf0ff35de" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="47f5bf38-becc-7d50-2eee-cca8f4451732" executionId="be0210d7-9eb4-4766-b14d-e81e1c9495e0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2ec9e634-a611-8c31-b472-6f34057f13a7" executionId="e0238df2-bfdc-463a-a597-d3609c056986" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="8e186833-90d5-41ba-89ee-fd38ddb30c0b" executionId="2838440b-f70c-4112-a031-00529e9653ae" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3308250f-2e2a-7425-83dd-39e6cebfa5dd" executionId="81d4a0bf-0259-4d17-892b-45949211ea6c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1791bb9f-9110-48b3-b1c3-ce49f196bd03" executionId="cd890696-eaad-46fc-b355-24d78d24075e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5bd6046f-83d3-ed0b-205d-ab00009ba6ad" executionId="37f1576f-aea8-4e76-812e-f2d06b2ad3d4" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9b638fbb-b79a-70d7-4ecf-dacef6688f2c" executionId="c23798ae-3914-490b-862b-e7a199a59dbf" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="10" executed="10" passed="10" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.12)&#xD;
+[xUnit.net 00:00:00.06]   Discovering: Gemora.Tests&#xD;
+[xUnit.net 00:00:00.11]   Discovered:  Gemora.Tests&#xD;
+[xUnit.net 00:00:00.12]   Starting:    Gemora.Tests&#xD;
+[xUnit.net 00:00:00.19]   Finished:    Gemora.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

@@ -1,0 +1,76 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="fac6f4d2-4a75-45db-97bf-5523b27909be" name="user@DESKTOP-JVB4CT4 2026-10-10 19:40:11" runUser="DESKTOP-JVB4CT4\user" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-10T19:40:11.4561899+05:30" queuing="2026-10-10T19:40:11.4561902+05:30" start="2026-10-10T19:40:10.1679704+05:30" finish="2026-10-10T19:40:11.4613656+05:30" />
+  <TestSettings name="default" id="db028ca1-b7eb-45c3-a6b6-cedfb1732ced">
+    <Deployment runDeploymentRoot="user_DESKTOP-JVB4CT4_2026-10-10_19_40_11" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="b04c40fd-004e-4a30-9831-349744deb675" testId="195b188b-d4c3-bfca-46ad-4208a85f80ca" testName="Gemora.Tests.GemVerificationServiceTests.GEM_VER_04_ChangesRequestedWithoutNotes_IsRejected" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0678356" startTime="2026-10-10T19:40:11.2349425+05:30" endTime="2026-10-10T19:40:11.2955661+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b04c40fd-004e-4a30-9831-349744deb675" />
+    <UnitTestResult executionId="5cbfcaa0-c747-4a5c-8530-c07aac4fb068" testId="3d00f465-2543-d731-fd52-6f8146fd64d4" testName="Gemora.Tests.GemVerificationServiceTests.GEM_VER_06_Approved_UpdatesVerificationAndListing" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0118652" startTime="2026-10-10T19:40:11.3493504+05:30" endTime="2026-10-10T19:40:11.3609965+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5cbfcaa0-c747-4a5c-8530-c07aac4fb068" />
+    <UnitTestResult executionId="73e9992c-d771-4538-bd81-ea9e6ba84a82" testId="4b428fbe-18ad-8376-3641-8e8f76cfe91e" testName="Gemora.Tests.GemVerificationServiceTests.GEM_VER_02_UnknownVerification_ReturnsNull" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0009986" startTime="2026-10-10T19:40:11.3622922+05:30" endTime="2026-10-10T19:40:11.3633400+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="73e9992c-d771-4538-bd81-ea9e6ba84a82" />
+    <UnitTestResult executionId="ac370484-2652-4f01-a6c8-248493a449bb" testId="a2ef0e4a-2d15-26df-7807-b4900083f106" testName="Gemora.Tests.GemVerificationServiceTests.GEM_VER_08_DuplicateReview_IsRejected" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0016000" startTime="2026-10-10T19:40:11.3634382+05:30" endTime="2026-10-10T19:40:11.3648892+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ac370484-2652-4f01-a6c8-248493a449bb" />
+    <UnitTestResult executionId="91a798de-46da-4eff-ab3a-3eb81c10a0a2" testId="4122f269-72aa-b30a-5a31-96370378c059" testName="Gemora.Tests.GemVerificationServiceTests.GEM_VER_07_ChangesRequested_SavesReviewNotes" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0414493" startTime="2026-10-10T19:40:11.3076639+05:30" endTime="2026-10-10T19:40:11.3492289+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="91a798de-46da-4eff-ab3a-3eb81c10a0a2" />
+    <UnitTestResult executionId="2860c20e-ee24-4cce-9d58-86ed39d81b9e" testId="427d172e-2d0d-da28-eb94-fc46ddb171e0" testName="Gemora.Tests.GemVerificationServiceTests.GEM_VER_05_RejectedWithoutNotes_IsRejected" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0120252" startTime="2026-10-10T19:40:11.2962245+05:30" endTime="2026-10-10T19:40:11.3075439+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2860c20e-ee24-4cce-9d58-86ed39d81b9e" />
+    <UnitTestResult executionId="f4e3d4dc-40a4-45f0-bff2-a3675c5fe7e9" testId="7fae94c2-36b3-c6b8-02e8-4800d73cb360" testName="Gemora.Tests.GemVerificationServiceTests.GEM_VER_03_InvalidDecision_IsRejected" computerName="DESKTOP-JVB4CT4" duration="00:00:00.0011716" startTime="2026-10-10T19:40:11.3611111+05:30" endTime="2026-10-10T19:40:11.3622245+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f4e3d4dc-40a4-45f0-bff2-a3675c5fe7e9" />
+    <UnitTestResult executionId="9945b608-2405-4d56-9135-abfcd2a69612" testId="deac0ee3-cce9-fb97-8646-1190713c6e2d" testName="Gemora.Tests.GemVerificationServiceTests.GEM_VER_01_NonGemologistCannotReview" computerName="DESKTOP-JVB4CT4" duration="00:00:00.5479678" startTime="2026-10-10T19:40:10.6738779+05:30" endTime="2026-10-10T19:40:11.2274126+05:30" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9945b608-2405-4d56-9135-abfcd2a69612" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Gemora.Tests.GemVerificationServiceTests.GEM_VER_03_InvalidDecision_IsRejected" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="7fae94c2-36b3-c6b8-02e8-4800d73cb360">
+      <Execution id="f4e3d4dc-40a4-45f0-bff2-a3675c5fe7e9" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemVerificationServiceTests" name="GEM_VER_03_InvalidDecision_IsRejected" />
+    </UnitTest>
+    <UnitTest name="Gemora.Tests.GemVerificationServiceTests.GEM_VER_05_RejectedWithoutNotes_IsRejected" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="427d172e-2d0d-da28-eb94-fc46ddb171e0">
+      <Execution id="2860c20e-ee24-4cce-9d58-86ed39d81b9e" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemVerificationServiceTests" name="GEM_VER_05_RejectedWithoutNotes_IsRejected" />
+    </UnitTest>
+    <UnitTest name="Gemora.Tests.GemVerificationServiceTests.GEM_VER_02_UnknownVerification_ReturnsNull" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="4b428fbe-18ad-8376-3641-8e8f76cfe91e">
+      <Execution id="73e9992c-d771-4538-bd81-ea9e6ba84a82" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemVerificationServiceTests" name="GEM_VER_02_UnknownVerification_ReturnsNull" />
+    </UnitTest>
+    <UnitTest name="Gemora.Tests.GemVerificationServiceTests.GEM_VER_01_NonGemologistCannotReview" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="deac0ee3-cce9-fb97-8646-1190713c6e2d">
+      <Execution id="9945b608-2405-4d56-9135-abfcd2a69612" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemVerificationServiceTests" name="GEM_VER_01_NonGemologistCannotReview" />
+    </UnitTest>
+    <UnitTest name="Gemora.Tests.GemVerificationServiceTests.GEM_VER_07_ChangesRequested_SavesReviewNotes" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="4122f269-72aa-b30a-5a31-96370378c059">
+      <Execution id="91a798de-46da-4eff-ab3a-3eb81c10a0a2" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemVerificationServiceTests" name="GEM_VER_07_ChangesRequested_SavesReviewNotes" />
+    </UnitTest>
+    <UnitTest name="Gemora.Tests.GemVerificationServiceTests.GEM_VER_04_ChangesRequestedWithoutNotes_IsRejected" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="195b188b-d4c3-bfca-46ad-4208a85f80ca">
+      <Execution id="b04c40fd-004e-4a30-9831-349744deb675" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemVerificationServiceTests" name="GEM_VER_04_ChangesRequestedWithoutNotes_IsRejected" />
+    </UnitTest>
+    <UnitTest name="Gemora.Tests.GemVerificationServiceTests.GEM_VER_06_Approved_UpdatesVerificationAndListing" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="3d00f465-2543-d731-fd52-6f8146fd64d4">
+      <Execution id="5cbfcaa0-c747-4a5c-8530-c07aac4fb068" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemVerificationServiceTests" name="GEM_VER_06_Approved_UpdatesVerificationAndListing" />
+    </UnitTest>
+    <UnitTest name="Gemora.Tests.GemVerificationServiceTests.GEM_VER_08_DuplicateReview_IsRejected" storage="c:\users\user\desktop\gemoramarketplace-testing\backend\gemora.tests\bin\debug\net10.0\gemora.tests.dll" id="a2ef0e4a-2d15-26df-7807-b4900083f106">
+      <Execution id="ac370484-2652-4f01-a6c8-248493a449bb" />
+      <TestMethod codeBase="C:\Users\user\Desktop\GemoraMarketplace-Testing\Backend\Gemora.Tests\bin\Debug\net10.0\Gemora.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Gemora.Tests.GemVerificationServiceTests" name="GEM_VER_08_DuplicateReview_IsRejected" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="195b188b-d4c3-bfca-46ad-4208a85f80ca" executionId="b04c40fd-004e-4a30-9831-349744deb675" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3d00f465-2543-d731-fd52-6f8146fd64d4" executionId="5cbfcaa0-c747-4a5c-8530-c07aac4fb068" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4b428fbe-18ad-8376-3641-8e8f76cfe91e" executionId="73e9992c-d771-4538-bd81-ea9e6ba84a82" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a2ef0e4a-2d15-26df-7807-b4900083f106" executionId="ac370484-2652-4f01-a6c8-248493a449bb" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4122f269-72aa-b30a-5a31-96370378c059" executionId="91a798de-46da-4eff-ab3a-3eb81c10a0a2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="427d172e-2d0d-da28-eb94-fc46ddb171e0" executionId="2860c20e-ee24-4cce-9d58-86ed39d81b9e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7fae94c2-36b3-c6b8-02e8-4800d73cb360" executionId="f4e3d4dc-40a4-45f0-bff2-a3675c5fe7e9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="deac0ee3-cce9-fb97-8646-1190713c6e2d" executionId="9945b608-2405-4d56-9135-abfcd2a69612" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="8" executed="8" passed="8" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.12)&#xD;
+[xUnit.net 00:00:00.06]   Discovering: Gemora.Tests&#xD;
+[xUnit.net 00:00:00.11]   Discovered:  Gemora.Tests&#xD;
+[xUnit.net 00:00:00.12]   Starting:    Gemora.Tests&#xD;
+[xUnit.net 00:00:00.84]   Finished:    Gemora.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>
