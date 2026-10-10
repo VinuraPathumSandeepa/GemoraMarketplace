@@ -18,4 +18,12 @@ createRoot(document.getElementById("root")).render(
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>
+
+  // <React.StrictMode>
+  //   <BrowserRouter>
+  //     <AuthProvider>
+  //       <App />
+  //     </AuthProvider>
+  //   </BrowserRouter>
+  // </React.StrictMode>
 );

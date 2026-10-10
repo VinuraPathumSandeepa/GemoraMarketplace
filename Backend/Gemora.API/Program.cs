@@ -23,21 +23,12 @@ using Microsoft.OpenApi.Models;
 using Npgsql;
 
 
-// ============================================================
-// BUILD APPLICATION
-// ============================================================
-
-var builder = WebApplication.CreateBuilder(args);
+var builder =
+    WebApplication.CreateBuilder(args);
 
 
 // ============================================================
 // SUPABASE STORAGE CONFIGURATION
-//
-// Local:
-// .NET User Secrets
-//
-// Render:
-// Environment Variables
 // ============================================================
 
 builder.Services.AddSingleton(
@@ -58,13 +49,6 @@ builder.Services.AddSingleton(
 
 // ============================================================
 // SUPABASE STORAGE HTTP CLIENT
-//
-// Used for:
-// - gemstone images
-// - profile images
-// - private certificates
-// - AI gemstone image reading
-// - certificate signed URLs
 // ============================================================
 
 builder.Services.AddHttpClient<
@@ -75,7 +59,7 @@ builder.Services.AddHttpClient<
 // ============================================================
 // WEB ROOT CONFIGURATION
 //
-// Legacy local files remain supported during migration.
+// Keeps legacy local uploads working together with Supabase.
 // ============================================================
 
 var webRootPath =
@@ -88,6 +72,7 @@ Directory.CreateDirectory(
     webRootPath
 );
 
+
 var uploadRootPath =
     Path.Combine(
         webRootPath,
@@ -98,12 +83,14 @@ Directory.CreateDirectory(
     uploadRootPath
 );
 
+
 Directory.CreateDirectory(
     Path.Combine(
         uploadRootPath,
         "profiles"
     )
 );
+
 
 Directory.CreateDirectory(
     Path.Combine(
@@ -112,6 +99,7 @@ Directory.CreateDirectory(
     )
 );
 
+
 Directory.CreateDirectory(
     Path.Combine(
         uploadRootPath,
@@ -119,8 +107,10 @@ Directory.CreateDirectory(
     )
 );
 
+
 builder.Environment.WebRootPath =
     webRootPath;
+
 
 builder.Environment.WebRootFileProvider =
     new PhysicalFileProvider(
@@ -140,6 +130,7 @@ var connectionString =
     ?? throw new InvalidOperationException(
         "Database connection string 'DefaultConnection' is not configured."
     );
+
 
 builder.Services.AddDbContext<
     ApplicationDbContext
@@ -166,17 +157,15 @@ builder.Services.AddScoped<
 // ============================================================
 // PROFILE IMAGE STORAGE
 //
-// Profile images use Supabase Storage.
+// Uses the current Supabase-aware profile image service.
 // ============================================================
 
-builder.Services.AddScoped<
-    IProfileImageStorageService,
-    ProfileImageStorageService
->();
+builder.Services.AddScoped<ProfileImageStorageService>();
+builder.Services.AddScoped<IProfileImageStorageService, DatabaseProfileImageStorageService>();
 
 
 // ============================================================
-// EMAIL VERIFICATION / OTP
+// EMAIL / OTP SERVICE
 // ============================================================
 
 builder.Services.AddScoped<
@@ -200,11 +189,10 @@ builder.Services.AddScoped<
 // IMPORTANT:
 //
 // This IFileStorageService belongs to:
-//
 // Gemora.Application.Interfaces
 //
-// It is different from the Gem Verification storage interface
-// under Gemora.Domain.Interfaces.
+// It is different from:
+// Gemora.Domain.Interfaces.IFileStorageService
 // ============================================================
 
 builder.Services.AddSingleton<
@@ -214,7 +202,7 @@ builder.Services.AddSingleton<
 
 
 // ============================================================
-// COMPONENT 4 - EXPORT COMPLIANCE SERVICES
+// COMPONENT 4 - EXPORT / COMPLIANCE SERVICES
 // ============================================================
 
 builder.Services.AddScoped<
@@ -222,20 +210,24 @@ builder.Services.AddScoped<
     ComplianceRulesService
 >();
 
+
 builder.Services.AddScoped<
     IExportComplianceService,
     ExportComplianceService
 >();
+
 
 builder.Services.AddScoped<
     IExportOfficerService,
     ExportOfficerService
 >();
 
+
 builder.Services.AddScoped<
     IComplianceAgentToolService,
     ComplianceAgentToolService
 >();
+
 
 builder.Services.AddScoped<
     IComplianceWorkflowService,
@@ -284,6 +276,7 @@ builder.Services.Configure<
     )
 );
 
+
 builder.Services.AddHttpClient<
     IComplianceAiClient,
     GeminiComplianceAiClient
@@ -298,6 +291,75 @@ builder.Services.AddScoped<
     IGemListingService,
     GemListingService
 >();
+
+
+// ============================================================
+// COMPONENT 2 - MARKETPLACE & TRANSACTIONS
+// ============================================================
+
+builder.Services.AddScoped<
+    IMarketplaceService,
+    MarketplaceService
+>();
+
+builder.Services.AddScoped<
+    IPaymentGateway,
+    SandboxPaymentGateway
+>();
+
+
+builder.Services.AddScoped<
+    IOrderService,
+    OrderService
+>();
+
+
+builder.Services.AddScoped<
+    IMarketplaceAgentService,
+    MarketplaceAgentService
+>();
+
+
+// ============================================================
+// COMPONENT 2 - GEMINI MARKETPLACE AI
+//
+// IMPORTANT:
+//
+// ALL service registrations MUST remain BEFORE:
+//
+// var app = builder.Build();
+//
+// GeminiMarketplaceAiClient implementation is located at:
+//
+// Gemora.API/Services/GeminiMarketplaceAiClient.cs
+// ============================================================
+
+builder.Services.Configure<
+    GeminiMarketplaceOptions
+>(
+    builder.Configuration.GetSection(
+        GeminiMarketplaceOptions.SectionName
+    )
+);
+
+
+builder.Services.AddHttpClient<
+    IMarketplaceAiClient,
+    GeminiMarketplaceAiClient
+>(
+    client =>
+    {
+        client.BaseAddress =
+            new Uri(
+                "https://generativelanguage.googleapis.com/"
+            );
+
+        client.Timeout =
+            TimeSpan.FromSeconds(
+                60
+            );
+    }
+);
 
 
 // ============================================================
@@ -359,26 +421,17 @@ builder.Services.AddHttpClient<
             );
 
         client.Timeout =
-            TimeSpan.FromSeconds(60);
+            TimeSpan.FromSeconds(
+                60
+            );
     }
 );
 
 
 // ============================================================
-// LEGACY GEM VERIFICATION LOCAL FILE STORAGE
+// LEGACY LOCAL FILE STORAGE
 //
-// IMPORTANT:
-//
-// This is the Infrastructure LocalFileStorageService.
-//
-// It is different from:
-//
-// Gemora.API.Services.LocalFileStorageService
-//
-// Used for:
-// - legacy gem images
-// - legacy certificates
-// - cleanup of old /uploads/... references
+// Used by the hybrid storage layer for old /uploads/... files.
 // ============================================================
 
 builder.Services.AddScoped<
@@ -392,8 +445,10 @@ builder.Services.AddScoped<
                     IWebHostEnvironment
                 >();
 
+
         var configuredWebRoot =
             environment.WebRootPath;
+
 
         if (
             string.IsNullOrWhiteSpace(
@@ -408,15 +463,23 @@ builder.Services.AddScoped<
                 );
         }
 
+
+        Directory.CreateDirectory(
+            configuredWebRoot
+        );
+
+
         var uploadDirectory =
             Path.Combine(
                 configuredWebRoot,
                 "uploads"
             );
 
+
         Directory.CreateDirectory(
             uploadDirectory
         );
+
 
         return new
             Gemora.Infrastructure.Services.LocalFileStorageService(
@@ -441,8 +504,10 @@ builder.Services.AddScoped<
                     IWebHostEnvironment
                 >();
 
+
         var configuredWebRoot =
             environment.WebRootPath;
+
 
         if (
             string.IsNullOrWhiteSpace(
@@ -457,15 +522,23 @@ builder.Services.AddScoped<
                 );
         }
 
+
+        Directory.CreateDirectory(
+            configuredWebRoot
+        );
+
+
         var uploadDirectory =
             Path.Combine(
                 configuredWebRoot,
                 "uploads"
             );
 
+
         Directory.CreateDirectory(
             uploadDirectory
         );
+
 
         return new LocalGemImageReader(
             uploadDirectory
@@ -477,19 +550,14 @@ builder.Services.AddScoped<
 // ============================================================
 // GEM VERIFICATION HYBRID FILE STORAGE
 //
-// IMPORTANT:
-//
-// This IFileStorageService belongs to:
-//
-// Gemora.Domain.Interfaces
-//
 // New gemstone images:
-//   Supabase public gem-images bucket
+//     Supabase public storage
 //
 // New certificates:
-//   Supabase private gem-certificates bucket
+//     Supabase private storage
 //
-// Legacy /uploads/... references remain supported.
+// Legacy /uploads/... paths:
+//     Local storage
 // ============================================================
 
 builder.Services.AddScoped<
@@ -502,9 +570,8 @@ builder.Services.AddScoped<
 // HYBRID GEM IMAGE READER
 //
 // Supports:
-//
-// 1. Legacy local gemstone images.
-// 2. New Supabase gemstone images.
+// - Legacy local files
+// - Supabase gemstone images
 // ============================================================
 
 builder.Services.AddScoped<
@@ -562,6 +629,7 @@ var jwtKey =
         "Jwt:Key"
     ];
 
+
 if (
     string.IsNullOrWhiteSpace(
         jwtKey
@@ -573,15 +641,18 @@ if (
     );
 }
 
+
 var jwtIssuer =
     builder.Configuration[
         "Jwt:Issuer"
     ];
 
+
 var jwtAudience =
     builder.Configuration[
         "Jwt:Audience"
     ];
+
 
 builder.Services
     .AddAuthentication(
@@ -674,6 +745,7 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddEndpointsApiExplorer();
 
+
 builder.Services.AddSwaggerGen(
     options =>
     {
@@ -692,9 +764,6 @@ builder.Services.AddSwaggerGen(
             }
         );
 
-        // ----------------------------------------------------
-        // JWT SECURITY DEFINITION
-        // ----------------------------------------------------
 
         options.AddSecurityDefinition(
             "Bearer",
@@ -720,9 +789,6 @@ builder.Services.AddSwaggerGen(
             }
         );
 
-        // ----------------------------------------------------
-        // APPLY JWT AUTHENTICATION TO SWAGGER
-        // ----------------------------------------------------
 
         options.AddSecurityRequirement(
             new OpenApiSecurityRequirement
@@ -734,8 +800,7 @@ builder.Services.AddSwaggerGen(
                             new OpenApiReference
                             {
                                 Type =
-                                    ReferenceType
-                                        .SecurityScheme,
+                                    ReferenceType.SecurityScheme,
 
                                 Id =
                                     "Bearer"
@@ -750,10 +815,86 @@ builder.Services.AddSwaggerGen(
 
 // ============================================================
 // BUILD APPLICATION
+//
+// IMPORTANT:
+//
+// Do NOT add builder.Services registrations below this line.
+// The IServiceCollection becomes read-only after Build().
 // ============================================================
+
+builder.Services.AddHostedService<Gemora.API.Services.OrderExpiryWorker>();
 
 var app =
     builder.Build();
+
+
+// ============================================================
+// DATABASE COMPATIBILITY + SEEDING
+//
+// Existing migration history and the current Component 2
+// transaction schema are not fully aligned.
+//
+// Do not automatically call Database.Migrate() here.
+//
+// DatabaseCompatibilityInitializer adds required Component 2
+// runtime columns/tables without deleting existing data.
+// ============================================================
+
+using (
+    var scope =
+        app.Services.CreateScope()
+)
+{
+    var services =
+        scope.ServiceProvider;
+
+
+    try
+    {
+        var dbContext =
+            services
+                .GetRequiredService<
+                    ApplicationDbContext
+                >();
+
+
+        // ----------------------------------------------------
+        // COMPONENT 2 DATABASE COMPATIBILITY
+        // ----------------------------------------------------
+
+        await DatabaseCompatibilityInitializer
+            .EnsureComponent2SchemaAsync(
+                dbContext
+            );
+
+
+        // ----------------------------------------------------
+        // EXISTING PROJECT SEEDING
+        // ----------------------------------------------------
+
+        await DbSeeder.SeedAsync(
+            dbContext,
+            builder.Configuration
+        );
+    }
+    catch (Exception ex)
+    {
+        var logger =
+            services
+                .GetRequiredService<
+                    ILogger<Program>
+                >();
+
+
+        logger.LogError(
+            ex,
+            "An error occurred while preparing the Gemora database."
+        );
+
+
+        throw;
+    }
+}
 
 
 // ============================================================
@@ -766,6 +907,24 @@ app.UseMiddleware<
 
 
 // ============================================================
+// HTTPS
+//
+// Local development:
+// Frontend -> http://localhost:5173
+// API      -> http://localhost:5198
+//
+// Do not force HTTPS redirect during local development.
+// ============================================================
+
+if (
+    !app.Environment.IsDevelopment()
+)
+{
+    app.UseHttpsRedirection();
+}
+
+
+// ============================================================
 // SWAGGER
 // ============================================================
 
@@ -775,17 +934,21 @@ app.UseSwaggerUI();
 
 
 // ============================================================
-// BLOCK DIRECT PUBLIC ACCESS TO LEGACY CERTIFICATES
+// CORS
+// ============================================================
+
+app.UseCors(
+    "GemoraCorsPolicy"
+);
+
+
+// ============================================================
+// BLOCK DIRECT ACCESS TO LEGACY CERTIFICATES
 //
-// Legacy certificates under:
+// Certificates must be accessed through the protected API,
+// not directly through /uploads/certificates/...
 //
-// /uploads/certificates/...
-//
-// must only be accessed through:
-//
-// /api/GemCertificates/listings/{id}/access
-//
-// This middleware MUST remain before UseStaticFiles().
+// This middleware must remain BEFORE UseStaticFiles().
 // ============================================================
 
 app.Use(
@@ -816,6 +979,7 @@ app.Use(
             return;
         }
 
+
         await next();
     }
 );
@@ -824,9 +988,11 @@ app.Use(
 // ============================================================
 // STATIC FILES
 //
-// Public legacy assets remain accessible.
+// Keeps public legacy:
+// - /uploads/profiles/...
+// - /uploads/gem-images/...
 //
-// Direct legacy certificate access is blocked above.
+// Legacy certificates are blocked by middleware above.
 // ============================================================
 
 app.UseStaticFiles(
@@ -836,15 +1002,6 @@ app.UseStaticFiles(
             builder.Environment
                 .WebRootFileProvider
     }
-);
-
-
-// ============================================================
-// CORS
-// ============================================================
-
-app.UseCors(
-    "GemoraCorsPolicy"
 );
 
 
@@ -870,205 +1027,7 @@ app.MapControllers();
 
 
 // ============================================================
-// DATABASE SEEDING
+// START GEMORA API
 // ============================================================
-
-using (
-    var scope =
-        app.Services.CreateScope()
-)
-{
-    var services =
-        scope.ServiceProvider;
-
-    try
-    {
-        var dbContext =
-            services
-                .GetRequiredService<
-                    ApplicationDbContext
-                >();
-
-        await DbSeeder.SeedAsync(
-            dbContext,
-            builder.Configuration
-        );
-    }
-    catch (Exception ex)
-    {
-        var logger =
-            services
-                .GetRequiredService<
-                    ILogger<Program>
-                >();
-
-        logger.LogError(
-            ex,
-            "An error occurred while seeding the Gemora database."
-        );
-
-        throw;
-    }
-
-    // ======================================================
-    // COMPONENT 3 TABLES NOW MANAGED BY EF CORE MIGRATIONS (Phase 2)
-    // Manual SQL below is DISABLED - see migration CompleteShippingWorkflowSchema
-    // ======================================================
-
-    /* DISABLED: EF migrations now manage Component 3 schema
-    try
-    {
-        Console.WriteLine("Ensuring Component 3 tables exist...");
-
-        // Create Shipments table (Phase 3: Added booking fields)
-        await dbContext.Database.ExecuteSqlRawAsync(
-            @"DROP TABLE IF EXISTS ""Shipments"" CASCADE;"
-        );
-        await dbContext.Database.ExecuteSqlRawAsync(
-            @"CREATE TABLE ""Shipments"" (
-                ""Id"" uuid NOT NULL PRIMARY KEY,
-                ""OrderId"" uuid NOT NULL,
-                ""SellerId"" uuid NOT NULL,
-                ""BuyerId"" uuid NOT NULL,
-                ""OriginAddress"" character varying(500) NOT NULL,
-                ""OriginRegion"" character varying(100) NOT NULL,
-                ""OriginCountryCode"" character varying(2) NOT NULL,
-                ""DestinationAddress"" character varying(500) NOT NULL,
-                ""DestinationRegion"" character varying(100) NOT NULL,
-                ""DestinationCountryCode"" character varying(2) NOT NULL,
-                ""DeclaredValue"" numeric(18,2) NOT NULL,
-                ""Currency"" character varying(20) NOT NULL DEFAULT 'USD',
-                ""PackageDescription"" character varying(1000) NOT NULL,
-                ""PackageWeight"" numeric(10,2) NULL,
-                ""PackageDimensions"" character varying(200) NULL,
-                ""SpecialHandlingNotes"" character varying(2000) NOT NULL DEFAULT '',
-                ""PreferredService"" character varying(200) NOT NULL,
-                ""ExportRequired"" boolean NOT NULL DEFAULT false,
-                ""Status"" character varying(50) NOT NULL DEFAULT 'Pending',
-                ""RiskLevel"" character varying(20) NULL,
-                ""TrackingNumber"" character varying(100) NULL,
-                ""CourierName"" character varying(200) NULL,
-                ""ExternalShipmentReference"" character varying(200) NULL,
-                ""SelectedService"" character varying(200) NULL,
-                ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT NOW(),
-                ""UpdatedAt"" timestamp with time zone NULL,
-                ""BookedAt"" timestamp with time zone NULL,
-                ""ShippedAt"" timestamp with time zone NULL,
-                ""DeliveredAt"" timestamp with time zone NULL,
-                CONSTRAINT ""FK_Shipments_Orders_OrderId"" FOREIGN KEY (""OrderId"") REFERENCES ""Orders""(""Id""),
-                CONSTRAINT ""FK_Shipments_Users_SellerId"" FOREIGN KEY (""SellerId"") REFERENCES ""Users""(""Id""),
-                CONSTRAINT ""FK_Shipments_Users_BuyerId"" FOREIGN KEY (""BuyerId"") REFERENCES ""Users""(""Id"")
-            );"
-        );
-
-        // Create ShippingPlans table (Phase 7: Added GenerationSource and ExecutionSummary)
-        await dbContext.Database.ExecuteSqlRawAsync(
-            @"DROP TABLE IF EXISTS ""ShippingPlans"" CASCADE;"
-        );
-        await dbContext.Database.ExecuteSqlRawAsync(
-            @"CREATE TABLE ""ShippingPlans"" (
-                ""Id"" uuid NOT NULL PRIMARY KEY,
-                ""ShipmentId"" uuid NOT NULL,
-                ""RiskLevel"" character varying(20) NOT NULL DEFAULT 'Medium',
-                ""RiskReasons"" text NULL,
-                ""RecommendedServiceType"" character varying(200) NOT NULL,
-                ""InsuranceRecommended"" boolean NOT NULL DEFAULT false,
-                ""RecommendedCoverageAmount"" numeric(18,2) NULL,
-                ""HandlingRequirements"" text NULL,
-                ""RequiredDocuments"" text NULL,
-                ""Warnings"" text NULL,
-                ""GenerationSource"" character varying(50) NOT NULL DEFAULT 'FallbackRules',
-                ""ExecutionSummary"" text NULL,
-                ""IsApproved"" boolean NOT NULL DEFAULT false,
-                ""ApprovedBy"" uuid NULL,
-                ""ApprovedAt"" timestamp with time zone NULL,
-                ""AdminNotes"" text NULL,
-                ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT NOW(),
-                ""UpdatedAt"" timestamp with time zone NULL,
-                CONSTRAINT ""FK_ShippingPlans_Shipments_ShipmentId"" FOREIGN KEY (""ShipmentId"") REFERENCES ""Shipments""(""Id""),
-                CONSTRAINT ""FK_ShippingPlans_Users_ApprovedBy"" FOREIGN KEY (""ApprovedBy"") REFERENCES ""Users""(""Id"")
-            );"
-        );
-
-        // Create InsuranceRecords table (Phase 4: Added DeclaredValue, PolicyReference, PremiumAmount)
-        await dbContext.Database.ExecuteSqlRawAsync(
-            @"DROP TABLE IF EXISTS ""InsuranceRecords"" CASCADE;"
-        );
-        await dbContext.Database.ExecuteSqlRawAsync(
-            @"CREATE TABLE ""InsuranceRecords"" (
-                ""Id"" uuid NOT NULL PRIMARY KEY,
-                ""ShipmentId"" uuid NOT NULL,
-                ""DeclaredValue"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""CoverageAmount"" numeric(18,2) NOT NULL,
-                ""Currency"" character varying(20) NOT NULL DEFAULT 'USD',
-                ""CoverageType"" character varying(50) NOT NULL DEFAULT 'Standard',
-                ""PolicyNumber"" character varying(100) NULL,
-                ""PolicyReference"" character varying(200) NULL,
-                ""ProviderName"" character varying(200) NULL,
-                ""PremiumAmount"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""PolicyStartDate"" timestamp with time zone NULL,
-                ""PolicyEndDate"" timestamp with time zone NULL,
-                ""Status"" character varying(50) NOT NULL DEFAULT 'Pending',
-                ""CreatedAt"" timestamp with time zone NOT NULL DEFAULT NOW(),
-                ""UpdatedAt"" timestamp with time zone NULL,
-                CONSTRAINT ""FK_InsuranceRecords_Shipments_ShipmentId"" FOREIGN KEY (""ShipmentId"") REFERENCES ""Shipments""(""Id"")
-            );"
-        );
-
-        // Create ShipmentTrackingEvents table WITH OccurredAt, RecordedAt, ExternalEventCode (Phase 4)
-        await dbContext.Database.ExecuteSqlRawAsync(
-            @"DROP TABLE IF EXISTS ""ShipmentTrackingEvents"" CASCADE;"
-        );
-        await dbContext.Database.ExecuteSqlRawAsync(
-            @"CREATE TABLE ""ShipmentTrackingEvents"" (
-                ""Id"" uuid NOT NULL PRIMARY KEY,
-                ""ShipmentId"" uuid NOT NULL,
-                ""EventType"" character varying(50) NOT NULL,
-                ""Location"" character varying(200) NOT NULL,
-                ""Description"" character varying(1000) NOT NULL,
-                ""ExternalEventCode"" character varying(100) NULL,
-                ""OccurredAt"" timestamp with time zone NOT NULL,
-                ""RecordedAt"" timestamp with time zone NOT NULL,
-                CONSTRAINT ""FK_ShipmentTrackingEvents_Shipments_ShipmentId"" FOREIGN KEY (""ShipmentId"") REFERENCES ""Shipments""(""Id"")
-            );"
-        );
-
-        Console.WriteLine("Component 3 tables ready.");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error creating Component 3 tables: {ex.Message}");
-        throw;
-    }
-
-    // Mark AddShippingAndInsuranceEntities migration as applied if not already
-    try
-    {
-        Console.WriteLine("Checking migration history...");
-        await dbContext.Database.ExecuteSqlRawAsync(
-            @"INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
-              VALUES ('20260928211333_AddShippingAndInsuranceEntities', '8.0.8')
-              ON CONFLICT DO NOTHING;"
-        );
-        Console.WriteLine("Migration history updated.");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error updating migration history: {ex.Message}");
-    }
-    */
-}
-
-
-// ======================================================
-// 16. MAP CONTROLLERS
-// ======================================================
-
-app.MapControllers();
-
-
-// ======================================================
-// 17. START APPLICATION
-// ======================================================
 
 app.Run();

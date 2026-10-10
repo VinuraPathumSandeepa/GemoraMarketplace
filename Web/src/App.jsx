@@ -5,6 +5,20 @@ import {
 } from "react-router-dom";
 
 // ============================================================
+// BUYER AREA
+// ============================================================
+
+import BuyerDashboard from "./pages/buyer/BuyerDashboard";
+import BuyerLayout from "./layouts/BuyerLayout";
+import MarketplacePage from "./pages/buyer/MarketplacePage";
+import MyOrdersPage from "./pages/buyer/MyOrdersPage";
+import BuyerProfilePage from "./pages/buyer/BuyerProfilePage";
+import WishlistPage from "./pages/buyer/WishlistPage";
+import GemDetailsPage from "./pages/buyer/GemDetailsPage";
+import CheckoutPage from "./pages/buyer/CheckoutPage";
+import PaymentPage from "./pages/buyer/PaymentPage";
+
+// ============================================================
 // PUBLIC PAGES
 // ============================================================
 
@@ -55,6 +69,12 @@ import VerificationQueue from "./pages/gemologist/VerificationQueue";
 import VerificationDetails from "./pages/gemologist/VerificationDetails";
 
 // ============================================================
+// ADMIN TRANSACTION PAGE
+// ============================================================
+
+import TransactionDashboard from "./pages/admin/TransactionDashboard";
+
+// ============================================================
 // ROUTE PROTECTION
 // ============================================================
 
@@ -75,6 +95,7 @@ function App() {
         element={<Home />}
       />
 
+
       {/* ======================================================
           PUBLIC AUTH ROUTES
           ====================================================== */}
@@ -94,6 +115,7 @@ function App() {
         element={<VerifyEmail />}
       />
 
+
       {/* ======================================================
           GENERAL DASHBOARD
 
@@ -110,6 +132,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+
 
       {/* ======================================================
           SHARED USER PROFILE
@@ -131,8 +154,20 @@ function App() {
         }
       />
 
+
       {/* ======================================================
-          BUYER DASHBOARD
+          BUYER AREA
+
+          All buyer routes are nested under BuyerLayout.
+
+          URLs:
+          /buyer/dashboard
+          /buyer/marketplace
+          /buyer/marketplace/:id
+          /buyer/checkout/:gemId
+          /buyer/orders
+          /buyer/orders/:orderId/payment
+          /buyer/profile
           ====================================================== */}
 
       <Route
@@ -141,10 +176,89 @@ function App() {
           <RoleProtectedRoute
             allowedRoles={["Buyer"]}
           >
-            <BuyerDashboard />
+            <BuyerLayout />
           </RoleProtectedRoute>
         }
-      />
+      >
+        {/* ----------------------------------------------------
+            DEFAULT BUYER ROUTE
+            ---------------------------------------------------- */}
+
+        <Route
+          index
+          element={
+            <Navigate
+              to="dashboard"
+              replace
+            />
+          }
+        />
+
+        {/* ----------------------------------------------------
+            BUYER DASHBOARD
+            ---------------------------------------------------- */}
+
+        <Route
+          path="dashboard"
+          element={<BuyerDashboard />}
+        />
+
+        {/* ----------------------------------------------------
+            MARKETPLACE
+            ---------------------------------------------------- */}
+
+        <Route
+          path="marketplace"
+          element={<MarketplacePage />}
+        />
+
+        {/* ----------------------------------------------------
+            GEM DETAILS
+            ---------------------------------------------------- */}
+
+        <Route
+          path="marketplace/:id"
+          element={<GemDetailsPage />}
+        />
+
+        {/* ----------------------------------------------------
+            CHECKOUT
+            ---------------------------------------------------- */}
+
+        <Route
+          path="checkout/:gemId"
+          element={<CheckoutPage />}
+        />
+
+        {/* ----------------------------------------------------
+            MY ORDERS
+            ---------------------------------------------------- */}
+
+        <Route
+          path="orders"
+          element={<MyOrdersPage />}
+        />
+
+        {/* ----------------------------------------------------
+            PAYMENT
+            ---------------------------------------------------- */}
+
+        <Route
+          path="orders/:orderId/payment"
+          element={<PaymentPage />}
+        />
+
+        {/* ----------------------------------------------------
+            BUYER PROFILE
+            ---------------------------------------------------- */}
+
+        <Route
+          path="profile"
+          element={<BuyerProfilePage />}
+        />
+        <Route path="wishlist" element={<WishlistPage />} />
+      </Route>
+
 
       {/* ======================================================
           SELLER DASHBOARD
@@ -182,6 +296,7 @@ function App() {
         </RoleProtectedRoute>
       } />
 
+
       {/* ======================================================
           COMPONENT 1 — SELLER: MY GEM LISTINGS
 
@@ -199,6 +314,7 @@ function App() {
           </RoleProtectedRoute>
         }
       />
+
 
       {/* ======================================================
           COMPONENT 1 — SELLER: CREATE GEM LISTING
@@ -218,17 +334,12 @@ function App() {
         }
       />
 
+
       {/* ======================================================
           COMPONENT 1 — SELLER: EDIT GEM LISTING
 
           Example:
           /seller/listings/10/edit
-
-          Editing is intended for:
-          - Draft
-          - ChangesRequested
-
-          Backend rules remain the final enforcement.
           ====================================================== */}
 
       <Route
@@ -241,6 +352,7 @@ function App() {
           </RoleProtectedRoute>
         }
       />
+
 
       {/* ======================================================
           COMPONENT 1 — SELLER: GEM LISTING DETAILS
@@ -272,6 +384,7 @@ function App() {
         }
       />
 
+
       {/* ======================================================
           GEMOLOGIST DASHBOARD
           ====================================================== */}
@@ -287,19 +400,12 @@ function App() {
         }
       />
 
+
       {/* ======================================================
           COMPONENT 1 — GEMOLOGIST VERIFICATION QUEUE
 
           URL:
           /gemologist/verifications
-
-          Supports:
-          - Pending verification queue
-          - Search
-          - Sort
-          - Evidence indicators
-          - AI status indicators
-          - Open verification
           ====================================================== */}
 
       <Route
@@ -313,32 +419,12 @@ function App() {
         }
       />
 
+
       {/* ======================================================
           COMPONENT 1 — GEMOLOGIST VERIFICATION DETAILS
 
           Example:
           /gemologist/verifications/5
-
-          Supports:
-          - Seller information
-          - Gemstone details
-          - Gemstone image evidence
-          - Certificate evidence
-          - AI-assisted analysis
-          - AI suggested gem type
-          - Confidence score
-          - AI findings
-          - Visual observations
-          - Risk flags
-          - Validation issues
-          - Agent execution steps
-          - Review notes
-          - Approve
-          - Request Changes
-          - Reject
-
-          AI remains advisory.
-          Final decision belongs to the Gemologist.
           ====================================================== */}
 
       <Route
@@ -351,6 +437,7 @@ function App() {
           </RoleProtectedRoute>
         }
       />
+
 
       {/* ======================================================
           ADMIN DASHBOARD
@@ -366,6 +453,23 @@ function App() {
           </RoleProtectedRoute>
         }
       />
+
+
+      {/* ======================================================
+          ADMIN TRANSACTIONS
+          ====================================================== */}
+
+      <Route
+        path="/admin/transactions"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Admin"]}
+          >
+            <TransactionDashboard />
+          </RoleProtectedRoute>
+        }
+      />
+
 
       {/* ======================================================
           ADMIN SHIPMENT MANAGEMENT
@@ -418,6 +522,7 @@ function App() {
           </RoleProtectedRoute>
         }
       />
+
 
       {/* ======================================================
           UNKNOWN ROUTES

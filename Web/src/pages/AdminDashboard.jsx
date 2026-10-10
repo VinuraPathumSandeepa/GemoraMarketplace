@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { shipmentApi } from "../services/api";
 import "../styles/ShippingDashboard.css";
 
 function AdminDashboard() {
+  const navigate = useNavigate();
   const navigate = useNavigate();
   const [shipments, setShipments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -89,6 +91,18 @@ function AdminDashboard() {
   }
 
   return (
+    <DashboardLayout title="Admin Dashboard">
+      <div style={{ padding: 24 }}>
+        <h2>Gemora Administration</h2>
+        <p>Review marketplace transactions and operational activity.</p>
+        <button
+          type="button"
+          onClick={() => navigate("/admin/transactions")}
+          style={{ padding: "12px 18px", borderRadius: 10, border: 0, cursor: "pointer" }}
+        >
+          Open Transaction Dashboard
+        </button>
+      </div>
     <DashboardLayout title="Admin Shipping Dashboard">
       <div className="shipping-dashboard">
         {/* Quick Navigation */}
