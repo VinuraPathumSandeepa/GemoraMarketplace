@@ -1,7 +1,7 @@
 # Real shipping agent
 
 The API now registers `GeminiShippingAgentProvider`, not `MockLlmProvider`.
-The existing `Gemini:ApiKey` and `Gemini:Model` settings are reused. No key is shipped in source.
+The existing `Gemini:ApiKey` is reused. `Gemini:ShippingModel` selects a model for shipping only; if omitted, shipping uses `Gemini:Model`. No key is shipped in source.
 
 ## Configure locally
 
@@ -10,13 +10,17 @@ In Visual Studio, right-click Gemora.API -> Manage User Secrets. Add these setti
 ```json
 {
   "Gemini:ApiKey": "YOUR_LOCAL_API_KEY",
-  "Gemini:Model": "gemini-3.8-flash"
+  "Gemini:Model": "gemini-3.8-flash",
+  "Gemini:ShippingModel": "gemini-3.5-flash-lite",
+  "Gemini:ShippingTimeoutSeconds": 120
 }
 ```
 
 Use a supported function-calling and structured-output model available to your Gemini account.
-Deployment uses `Gemini__ApiKey` and `Gemini__Model` environment variables.
+Deployment uses `Gemini__ApiKey`, `Gemini__Model`, `Gemini__ShippingModel` and `Gemini__ShippingTimeoutSeconds` environment variables.
 Restart the API after configuring it. Do not share or commit the key.
+
+Gemini 3.5 Flash-Lite supports function calling and structured outputs and is optimized for low latency. The shipping override keeps the model configured for other Gemini features unchanged. See [Google's model documentation](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite).
 
 ## Execution
 
@@ -29,7 +33,7 @@ Restart the API after configuring it. Do not share or commit the key.
 
 The agent has no booking, insurance purchase, approval, filesystem or arbitrary network tool.
 Notes and listing titles are untrusted data; tool scope cannot be changed by model arguments.
-There are at most four tool rounds plus one synthesis round, bounded retries, and a 45-second deadline.
+There are at most four tool rounds plus one synthesis round, bounded retries, and a configurable deadline (120 seconds by default, clamped to 10–300 seconds). The HTTP client does not impose a second shorter timeout. Gemini 3 requests use low thinking effort and default sampling parameters, and tool responses preserve provider call identifiers.
 
 ## Evidence in the UI
 
@@ -44,7 +48,7 @@ Old seeded plans remain old data until Analyze Risk runs successfully.
 dotnet run --project Backend/Gemora.ShippingAgent.Checks/Gemora.ShippingAgent.Checks.csproj
 ```
 
-These offline transport checks verify orchestration, tool isolation, schema/business validation and cancellation. They do not establish a live model call.
+The 12 offline transport checks verify orchestration, shipping model selection, request parameters, tool identifiers and isolation, schema/business validation and cancellation. They do not establish a live model call.
 For live validation configure credentials, restart the API, open an unbooked shipment and click Analyze Risk. Confirm the UI reports `AI`, `Gemini`, tool execution and a new run ID. No courier booking or insurance purchase is performed by analysis.
 
 Provider contracts: https://ai.google.dev/gemini-api/docs/function-calling and https://ai.google.dev/gemini-api/docs/structured-output.

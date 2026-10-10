@@ -24,10 +24,11 @@ const string toolReply = """
 """;
 if (args.Contains("--live"))
 {
-    var live = new GeminiShippingAgentProvider(new HttpClient(), Options.Create(new GeminiOptions
+    var live = new GeminiShippingAgentProvider(new HttpClient(new LiveTransport()) { Timeout = Timeout.InfiniteTimeSpan }, Options.Create(new GeminiOptions
     {
         ApiKey = Environment.GetEnvironmentVariable("Gemini__ApiKey") ?? "",
-        Model = Environment.GetEnvironmentVariable("Gemini__Model") ?? "gemini-3.8-flash"
+        Model = Environment.GetEnvironmentVariable("Gemini__Model") ?? "gemini-3.8-flash",
+        ShippingModel = Environment.GetEnvironmentVariable("Gemini__ShippingModel")
     }));
     try
     {
@@ -65,6 +66,42 @@ Assert(success.Bodies[1].Contains("LKR") && success.Bodies[1].Contains("300000")
 Assert(!success.Urls.Any(u => u.Contains("test-key")), "Key must never appear in URL");
 Console.WriteLine("PASS: model tool selection, scoped evidence, synthesis and execution metadata");
 
+var fast = new FakeTransport([toolReply, Final(planJson)]);
+await new GeminiShippingAgentProvider(new HttpClient(fast), Options.Create(new GeminiOptions
+    { ApiKey = "test-key", Model = "gemini-3.8-flash", ShippingTimeoutSeconds = 120 }))
+    .GenerateShippingPlanAsync(input);
+foreach (var body in fast.Bodies)
+{
+    using var payload = JsonDocument.Parse(body);
+    Assert(payload.RootElement.GetProperty("generationConfig").GetProperty("thinkingConfig")
+        .GetProperty("thinkingLevel").GetString() == "low", "Every model round must request low-latency thinking");
+    Assert(!payload.RootElement.GetProperty("generationConfig").TryGetProperty("temperature", out _),
+        "Gemini 3 must use its default sampling parameters");
+}
+Console.WriteLine("PASS: low-latency thinking applies to tool selection and final synthesis");
+
+var shippingOverride = new FakeTransport([toolReply, Final(planJson)]);
+var overrideOptions = new GeminiOptions
+{
+    ApiKey = "test-key", Model = "gemini-3.8-flash", ShippingModel = "gemini-3.5-flash-lite"
+};
+var overrideResult = await new GeminiShippingAgentProvider(new HttpClient(shippingOverride), Options.Create(overrideOptions))
+    .GenerateShippingPlanAsync(input);
+Assert(shippingOverride.Urls.All(u => u.Contains("/gemini-3.5-flash-lite:")), "Shipping override must select the shipping model");
+Assert(overrideOptions.Model == "gemini-3.8-flash", "Shipping must not change the model for other features");
+Assert(overrideResult!.ExecutionSummary!.Contains("gemini-3.5-flash-lite"), "Execution evidence must identify the actual model");
+Console.WriteLine("PASS: shipping model override preserves other features and records the actual model");
+
+var identifiedTools = new FakeTransport([toolReply.Replace("\"args\":{}", "\"id\":\"provider-call-id\",\"args\":{}"), Final(planJson)]);
+await Provider(identifiedTools).GenerateShippingPlanAsync(input);
+using (var payload = JsonDocument.Parse(identifiedTools.Bodies[1]))
+{
+    var responses = payload.RootElement.GetProperty("contents")[2].GetProperty("parts");
+    Assert(responses.EnumerateArray().All(p => p.GetProperty("functionResponse").GetProperty("id").GetString() == "provider-call-id"),
+        "Tool responses must preserve provider call identifiers");
+}
+Console.WriteLine("PASS: tool responses preserve provider call identifiers");
+
 await Reject("unknown tool", () => Provider(new FakeTransport([toolReply.Replace("readShipmentContext", "bookShipment")])).GenerateShippingPlanAsync(input));
 await Reject("tool arguments cannot choose another shipment", () => Provider(new FakeTransport([toolReply.Replace("\"args\":{}", "\"args\":{\"shipmentId\":\"other\"}")])).GenerateShippingPlanAsync(input));
 await Reject("unsupported service", () => Provider(new FakeTransport([toolReply, Final(planJson.Replace("Express Insured", "Unapproved"))])).GenerateShippingPlanAsync(input));
@@ -74,7 +111,7 @@ await Reject("missing credentials", () => Provider(new FakeTransport([]), "").Ge
 await Reject("blocked or empty model response", () => Provider(new FakeTransport(["{}"])).GenerateShippingPlanAsync(input));
 var canceled = new CancellationToken(true);
 await Reject("cancellation", () => Provider(new FakeTransport([toolReply])).GenerateShippingPlanAsync(input, canceled));
-Console.WriteLine("All 9 shipping agent checks passed (offline HTTP transport).");
+Console.WriteLine("All 12 shipping agent checks passed (offline HTTP transport).");
 
 sealed class FakeTransport(IEnumerable<string> responses) : HttpMessageHandler
 {
@@ -87,5 +124,20 @@ sealed class FakeTransport(IEnumerable<string> responses) : HttpMessageHandler
         Bodies.Add(await request.Content!.ReadAsStringAsync(ct));
         Urls.Add(request.RequestUri!.ToString());
         return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(replies.Dequeue(), Encoding.UTF8, "application/json") };
+    }
+}
+
+sealed class LiveTransport : DelegatingHandler
+{
+    private int requests;
+    public LiveTransport() : base(new HttpClientHandler()) { }
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+    {
+        var number = ++requests;
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        Console.WriteLine($"Live model request {number} started.");
+        var response = await base.SendAsync(request, ct);
+        Console.WriteLine($"Live model request {number}: HTTP {(int)response.StatusCode} after {clock.ElapsedMilliseconds}ms.");
+        return response;
     }
 }

@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
   NavLink,
   useNavigate,
+  useLocation,
 } from "react-router-dom";
 
 import {
@@ -14,6 +15,8 @@ import UserAvatar
 
 function DashboardLayout({ children }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const shipmentDashboard = pathname === "/admin" || pathname === "/admin/shipments";
 
   const {
     user,
@@ -201,35 +204,19 @@ function DashboardLayout({ children }) {
         return (
           <>
             <NavLink
-              to="/admin"
-              end
-              className={({ isActive }) =>
-                isActive
-                  ? "gemora-nav-link active"
-                  : "gemora-nav-link"
-              }
-            >
-              Dashboard
-            </NavLink>
-            <NavLink
               to="/admin/shipments"
-              className={({ isActive }) => isActive ? "gemora-nav-link active" : "gemora-nav-link"}
+              className={({ isActive }) => isActive || pathname === "/admin" ? "gemora-nav-link active" : "gemora-nav-link"}
             >
-              Shipments
+              Shipment Dashboard
             </NavLink>
             <NavLink
-              to="/admin/ai-dashboard"
+              to="/admin/transactions"
               className={({ isActive }) => isActive ? "gemora-nav-link active" : "gemora-nav-link"}
             >
-              AI Agent Dashboard
+              Transactions
             </NavLink>
           </>
         );
-
-
-      // ========================================================
-      // EXPORT OFFICER
-      // ========================================================
 
       case "ExportOfficer":
         return (
@@ -260,7 +247,7 @@ function DashboardLayout({ children }) {
   // ============================================================
 
   return (
-    <div className="gemora-app-shell">
+    <div className={`gemora-app-shell${shipmentDashboard ? " shipment-dashboard-shell" : ""}`}>
 
       {/* ======================================================
           TOP NAVIGATION
@@ -514,3 +501,4 @@ function DashboardLayout({ children }) {
 }
 
 export default DashboardLayout;
+

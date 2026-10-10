@@ -1,3 +1,5 @@
+import { getAuthToken } from "./authSession";
+
 const RAW_API_URL =
   import.meta.env.VITE_API_URL ||
   "http://localhost:5198";
@@ -13,33 +15,7 @@ const API_ORIGIN =
 // TOKEN
 // ============================================================
 
-function getToken() {
-  const token =
-    localStorage.getItem(
-      "gemora_token"
-    ) ||
-    sessionStorage.getItem(
-      "gemora_token"
-    );
-
-
-  if (!token) {
-    return "";
-  }
-
-
-  return token
-    .replace(
-      /^Bearer\s+/i,
-      ""
-    )
-    .replace(
-      /^"(.*)"$/,
-      "$1"
-    )
-    .trim();
-}
-
+const getToken = getAuthToken;
 
 // ============================================================
 // REQUEST
@@ -504,3 +480,4 @@ export {
 };
 // Shares authentication and error handling with checkout, including session-only sign-in.
 export const orderInboxRequest = request;
+

@@ -81,6 +81,8 @@ public class ShipmentResponseDto
     public string? ExternalShipmentReference { get; set; }
     public string? SelectedService { get; set; }
     public string? GenerationSource { get; set; } // AI or FallbackRules
+    public string? TrackingUrl { get; set; }
+    public bool IsSimulatedBooking { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public DateTime? BookedAt { get; set; }
@@ -101,8 +103,39 @@ public class UpdateShipmentStatusDto
     public string? Notes { get; set; }
 }
 
+public class RecordCourierBookingRequest
+{
+    [Required, StringLength(150)]
+    public string CourierName { get; set; } = string.Empty;
+
+    [Required, StringLength(150)]
+    public string TrackingNumber { get; set; } = string.Empty;
+
+    [StringLength(150)]
+    public string? ExternalShipmentReference { get; set; }
+
+    [Required, StringLength(50)]
+    public string SelectedService { get; set; } = string.Empty;
+
+    [StringLength(1000)]
+    public string? TrackingUrl { get; set; }
+
+    [Required]
+    public DateTime? BookedAt { get; set; }
+
+    public bool ConfirmedWithCourier { get; set; }
+}
+
 public class CreateInsuranceRecordRequest
 {
+    [Required, StringLength(100)]
+    public string PolicyNumber { get; set; } = string.Empty;
+    [Required]
+    public decimal? PremiumAmount { get; set; }
+    [Required]
+    public DateTime? PolicyStartDate { get; set; }
+    [Required]
+    public DateTime? PolicyEndDate { get; set; }
     [Required]
     public Guid ShipmentId { get; set; }
 

@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { shipmentApi } from "../services/api";
 import "../styles/AdminShipping.css";
+import "../styles/ShipmentDashboard.css";
+import AdminAIDashboard from "./AdminAIDashboard";
 
 function AdminShipments() {
   const [shipments, setShipments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState("All");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     loadShipments();
@@ -28,9 +31,11 @@ function AdminShipments() {
   };
 
   // Filter shipments by status
-  const filteredShipments = statusFilter === "All" 
-    ? shipments 
-    : shipments.filter(s => s.status === statusFilter);
+  const filteredShipments = shipments.filter(shipment =>
+    (statusFilter === "All" || shipment.status === statusFilter) &&
+    [shipment.id, shipment.orderId, shipment.trackingNumber, shipment.packageDescription,
+      shipment.destinationRegion, shipment.destinationCountryCode]
+      .filter(Boolean).join(" ").toLowerCase().includes(search.trim().toLowerCase()));
 
   // Get unique statuses for filter dropdown
   const statuses = ["All", ...new Set(shipments.map(s => s.status))];
@@ -75,8 +80,12 @@ function AdminShipments() {
       <div className="admin-shipping-header">
         <div>
         <p className="admin-shipping-eyebrow">Shipping operations</p>
-        <h1>All Shipments</h1>
-        <p>Manage fulfilment, insurance, and delivery from one place.</p>
+        <h1>Shipment Dashboard</h1>
+        <p>Manage fulfilment, insurance, and delivery from one place. Select Analyze risk on a shipment to review AI shipping recommendations.</p>
+        <div className="shipment-dashboard-shortcuts">
+          <Link to="/admin/transactions" className="shipment-manage">Transaction Dashboard</Link>
+          <a href="#shipping-ai-analyzer" className="shipment-analyze">AI Shipping Plan Analyzer</a>
+        </div>
         </div>
       </div>
 
@@ -89,9 +98,15 @@ function AdminShipments() {
           </article>
         ))}
       </section>
-      <div className="mb-6 flex items-center gap-4">
-        <label className="text-sm font-medium text-gray-700">Filter by Status:</label>
+      <div className="shipment-filters">
+        <div className="shipment-search">
+          <label htmlFor="shipment-search">Search shipments</label>
+          <input id="shipment-search" type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Shipment ID, tracking, order, package or destination" />
+        </div>
+        <div className="shipment-status-filter">
+        <label htmlFor="shipment-status">Status</label>
         <select
+          id="shipment-status"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -100,6 +115,7 @@ function AdminShipments() {
             <option key={status} value={status}>{status}</option>
           ))}
         </select>
+        </div>
         <span className="text-sm text-gray-500">
           {filteredShipments.length} shipment{filteredShipments.length !== 1 ? 's' : ''} found
         </span>
@@ -172,10 +188,11 @@ function AdminShipments() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <Link
                       to={`/admin/shipments/${shipment.id}`}
-                      className="text-blue-600 hover:text-blue-900"
+                      className="shipment-manage"
                     >
-                      Manage →
+                      Manage
                     </Link>
+                    <Link to={`/admin/shipments/${shipment.id}?tab=plan`} className="shipment-analyze">Analyze risk</Link>
                   </td>
                 </tr>
               ))}
@@ -183,6 +200,9 @@ function AdminShipments() {
           </table>
         </div>
       )}
+      <section id="shipping-ai-analyzer" className="shipment-dashboard-analyzer" aria-label="AI Shipping Plan Analyzer">
+        <AdminAIDashboard embedded />
+      </section>
     </div>
   );
 }

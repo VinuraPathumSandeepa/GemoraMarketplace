@@ -254,7 +254,7 @@ public class MockShippingProviderAdapter : IShippingProviderAdapter
                     return new CourierBookingResult
                     {
                         Success = true,
-                        CourierName = "DEMO Gemora Courier Sandbox",
+                        CourierName = "Gemora Courier Sandbox",
                         ExternalShipmentReference = externalRef,
                         TrackingNumber = trackingNumber,
                         SelectedService = request.ServiceType

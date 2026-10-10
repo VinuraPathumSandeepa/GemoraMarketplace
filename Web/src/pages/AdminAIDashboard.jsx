@@ -1,13 +1,12 @@
-import { useState, useEffect } from "react";
+import { Fragment, useState, useEffect } from "react";
 
 import DashboardLayout from "../layouts/DashboardLayout";
-import api from "../services/api";
+import { shipmentApi } from "../services/api";
 import "../styles/AdminShipping.css";
 import "../styles/AdminAIDashboard.css";
 
-const API_BASE = "";
-
-function AdminAIDashboard() {
+function AdminAIDashboard({ embedded = false }) {
+  const Wrapper = embedded ? Fragment : DashboardLayout;
 
   const [shipments, setShipments] = useState([]);
   const [selectedShipment, setSelectedShipment] = useState(null);
@@ -22,14 +21,9 @@ function AdminAIDashboard() {
     loadStats();
   }, []);
 
-  const getToken = () => localStorage.getItem("gemora_token");
-
   const loadShipments = async () => {
     try {
-      const token = getToken();
-      const response = await api.get(`${API_BASE}/Shipments/my`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await shipmentApi.getMyShipments();
       setShipments(response.data.slice(0, 10)); // Show first 10
     } catch (err) {
       console.error("Failed to load shipments:", err);
@@ -39,10 +33,7 @@ function AdminAIDashboard() {
 
   const loadStats = async () => {
     try {
-      const token = getToken();
-      const response = await api.get(`${API_BASE}/Shipments/my`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await shipmentApi.getMyShipments();
       const allShipments = response.data;
 
       // Calculate stats from all shipments
@@ -70,19 +61,13 @@ function AdminAIDashboard() {
     try {
       setLoading(true);
       setError(null);
-      const token = getToken();
-      const response = await api.get(
-        `${API_BASE}/Shipments/${shipmentId}/plan`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await shipmentApi.getShippingPlan(shipmentId);
       setPlan(response.data);
     } catch (err) {
       console.error("Failed to load plan:", err);
       if (err.response?.status === 404) {
         setPlan(null);
-        setError("No plan generated yet for this shipment");
+        setError(null);
       } else {
         setError("Failed to load plan");
       }
@@ -99,21 +84,18 @@ function AdminAIDashboard() {
   };
 
   const generatePlan = async () => {
-    if (!selectedShipment) return;
+    if (!selectedShipment || generating || loading) return;
+    const previewOnly = !!selectedShipment.trackingNumber ||
+      ["Booked", "PickedUp", "InTransit", "OutForDelivery", "Delivered", "Cancelled"].includes(selectedShipment.status);
+    if (!previewOnly && plan?.isApproved &&
+      !window.confirm("Regenerating replaces the approved shipping plan and clears its approval. Continue?")) return;
 
     try {
       setGenerating(true);
       setError(null);
-      const token = getToken();
-      const response = await api.post(
-        `${API_BASE}/Shipments/${selectedShipment.id}/plan/generate`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await shipmentApi.generateShippingPlan(selectedShipment.id);
       setPlan(response.data);
-      await loadStats(); // Refresh stats
+      await Promise.all([loadShipments(), loadStats()]);
     } catch (err) {
       console.error("Failed to generate plan:", err);
       setError(err.response?.data?.message || "Failed to generate plan");
@@ -137,25 +119,8 @@ function AdminAIDashboard() {
     }
   };
 
-  const getSourceBadge = (source) => {
-    if (source === "AI") {
-      return (
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
-          🤖 AI Generated
-        </span>
-      );
-    } else if (source === "FallbackRules") {
-      return (
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-          📋 Deterministic Fallback
-        </span>
-      );
-    }
-    return null;
-  };
-
   return (
-    <DashboardLayout title="AI Shipping Plan Analyzer">
+    <Wrapper {...(embedded ? {} : { title: "AI Shipping Plan Analyzer" })}>
       <div className="admin-shipping admin-ai-dashboard">
         <header className="admin-shipping-header">
           <div>
@@ -328,6 +293,13 @@ function AdminAIDashboard() {
             </div>
 
             <div className="p-6">
+              {error && <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <p className="text-red-800">{error}</p>
+                {selectedShipment && <button type="button" onClick={generatePlan} disabled={generating || loading}
+                  className="mt-2 text-sm text-red-600">
+                  {generating ? "Generating..." : "Retry generation"}
+                </button>}
+              </div>}
               {!selectedShipment ? (
                 <div className="text-center py-12 text-gray-500">
                   <div className="text-6xl mb-4">📦</div>
@@ -338,26 +310,9 @@ function AdminAIDashboard() {
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
                   <p className="mt-4 text-gray-500">Loading plan...</p>
                 </div>
-              ) : error ? (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <p className="text-red-800">{error}</p>
-                  <button
-                    onClick={generatePlan}
-                    className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
-                  >
-                    Generate plan now →
-                  </button>
-                </div>
               ) : plan ? (
                 <div className="space-y-6">
-                  {/* Generation Source Badge */}
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-gray-700">
-                      Generated by:
-                    </span>
-                    {getSourceBadge(plan.generationSource)}
-                  </div>
-
+                  {plan.isPreview && <p className="text-sm text-gray-500">Analysis preview — saved shipping plan unchanged.</p>}
                   {/* Risk Level */}
                   <div>
                     <h4 className="text-sm font-medium text-gray-700 mb-2">
@@ -477,18 +432,6 @@ function AdminAIDashboard() {
                     </div>
                   )}
 
-                  {/* Execution Summary */}
-                  {plan.executionSummary && (
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">
-                        Execution Summary
-                      </h4>
-                      <p className="text-sm text-gray-600 italic">
-                        {plan.executionSummary}
-                      </p>
-                    </div>
-                  )}
-
                   {/* Approval Status */}
                   <div className="border-t pt-4">
                     <div className="flex items-center justify-between">
@@ -520,12 +463,13 @@ function AdminAIDashboard() {
                     </div>
                   </div>
                 </div>
-              ) : (
+              ) : error ? null : (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">🤖</div>
                   <p className="text-gray-500 mb-4">No plan generated yet</p>
                   <button
                     onClick={generatePlan}
+                    disabled={generating || loading}
                     className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                   >
                     Generate AI Plan
@@ -536,63 +480,8 @@ function AdminAIDashboard() {
           </div>
         </div>
 
-        {/* AI vs Fallback Comparison */}
-        {plan && (
-          <div className="admin-shipping-panel admin-ai-sources">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              📊 Understanding Generation Sources
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div
-                className={`rounded-lg p-4 border-2 ${
-                  plan.generationSource === "AI"
-                    ? "border-purple-500 bg-purple-50"
-                    : "border-gray-200 bg-gray-50 opacity-60"
-                }`}
-              >
-                <h4 className="font-semibold text-purple-900 mb-2">
-                  🤖 AI Generator
-                </h4>
-                <ul className="text-sm text-gray-700 space-y-1">
-                  <li>• Uses LLM provider (Gemini/OpenAI)</li>
-                  <li>• Analyzes complex risk patterns</li>
-                  <li>• Provides nuanced recommendations</li>
-                  <li>• May timeout or fail (network issues)</li>
-                  <li>• Requires API configuration</li>
-                </ul>
-              </div>
-              <div
-                className={`rounded-lg p-4 border-2 ${
-                  plan.generationSource === "FallbackRules"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 bg-gray-50 opacity-60"
-                }`}
-              >
-                <h4 className="font-semibold text-blue-900 mb-2">
-                  📋 Deterministic Fallback
-                </h4>
-                <ul className="text-sm text-gray-700 space-y-1">
-                  <li>• Rule-based risk scoring</li>
-                  <li>• Always available (no network needed)</li>
-                  <li>• Predictable, consistent results</li>
-                  <li>• Fast execution (no API calls)</li>
-                  <li>• Activated when AI fails validation</li>
-                </ul>
-              </div>
-            </div>
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-800">
-                <strong>Safety Guarantee:</strong> The AI agent can only{" "}
-                <em>recommend</em> shipping plans. It cannot approve plans, book
-                couriers, purchase insurance, or mark shipments as delivered. All
-                AI recommendations require Admin review and approval before any
-                irreversible actions.
-              </p>
-            </div>
-          </div>
-        )}
       </div>
-    </DashboardLayout>
+    </Wrapper>
   );
 }
 

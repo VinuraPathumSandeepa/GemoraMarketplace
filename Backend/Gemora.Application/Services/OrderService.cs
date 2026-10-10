@@ -430,6 +430,8 @@ public partial class OrderService : IOrderService
 
             newStatus;
 
+        order.BuyerMessageAt = DateTime.UtcNow;
+
         order.UpdatedAt =
 
             DateTime.UtcNow;

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getAuthToken } from "./authSession";
 
 const RAW_API_URL =
   import.meta.env.VITE_API_URL ||
@@ -58,10 +59,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const token =
-      localStorage.getItem(
-        "gemora_token"
-      );
+    const token = getAuthToken();
 
     if (token) {
       config.headers.Authorization =
@@ -135,4 +133,5 @@ export const shipmentApi = {
 
     // Book shipment with courier (Admin only)
     bookShipment: (id) => api.post(`/Shipments/${id}/book`),
+    recordCourierBooking: (id, bookingData) => api.post(`/Shipments/${id}/booking`, bookingData),
 };

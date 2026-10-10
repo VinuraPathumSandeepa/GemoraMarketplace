@@ -242,26 +242,21 @@ builder.Services.AddScoped<
     Gemora.Application.Services.IShippingAgentService,
     ShippingAgentService>();
 
-// Courier provider adapter (MOCK/SIMULATION)
+// Academic courier sandbox: generates simulated references without calling a courier API.
 builder.Services.AddScoped<
     Gemora.Domain.Interfaces.IShippingProviderAdapter,
     Gemora.Infrastructure.Adapters.MockShippingProviderAdapter>(sp =>
-{
-    var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Gemora.Infrastructure.Adapters.MockShippingProviderAdapter>>();
-    return new Gemora.Infrastructure.Adapters.MockShippingProviderAdapter(
-        logger,
-        maxRetryAttempts: 3,
-        timeoutSeconds: 30,
-        simulateFailures: false // Set to true for testing failure scenarios
-    );
-});
+        new Gemora.Infrastructure.Adapters.MockShippingProviderAdapter(
+            sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Gemora.Infrastructure.Adapters.MockShippingProviderAdapter>>(),
+            maxRetryAttempts: 3, timeoutSeconds: 30, simulateFailures: false));
 
 // Real shipping agent: model-selected read-only tools followed by validated JSON output.
 builder.Services.AddHttpClient<
     Gemora.Domain.Interfaces.ILlmProvider,
     Gemora.Infrastructure.Providers.GeminiShippingAgentProvider>(client =>
 {
-    client.Timeout = TimeSpan.FromSeconds(50);
+    // The provider enforces one bounded timeout for the entire multi-call run.
+    client.Timeout = Timeout.InfiniteTimeSpan;
 });
 
 // ============================================================
@@ -876,6 +871,8 @@ using (
             dbContext,
             builder.Configuration
         );
+
+        await ShipmentOrderProgress.ReconcileExistingAsync(dbContext);
     }
     catch (Exception ex)
     {

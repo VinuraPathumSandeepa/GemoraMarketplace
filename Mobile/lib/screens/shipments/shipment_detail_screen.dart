@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/shipment_service.dart';
+
+import '../../services/shipment_service.dart';
 
 class ShipmentDetailScreen extends StatefulWidget {
   final String shipmentId;
@@ -34,16 +35,24 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
     });
 
     try {
-      final shipment = await _shipmentService.getShipmentById(widget.shipmentId);
-      final trackingEvents = await _shipmentService.getTrackingEvents(widget.shipmentId).catchError((_) => []);
-      final insuranceRecord = await _shipmentService.getInsuranceRecord(widget.shipmentId);
-      final shippingPlan = await _shipmentService.getShippingPlan(widget.shipmentId);
+      final shipment = await _shipmentService.getShipmentById(
+        widget.shipmentId,
+      );
+      final trackingEvents = await _shipmentService
+          .getTrackingEvents(widget.shipmentId)
+          .catchError((_) => []);
+      final insuranceRecord = await _shipmentService.getInsuranceRecord(
+        widget.shipmentId,
+      );
+      final shippingPlan = await _shipmentService.getShippingPlan(
+        widget.shipmentId,
+      );
 
       if (!mounted) return;
 
       setState(() {
         _shipment = shipment;
-        _trackingEvents = trackingEvents as List<dynamic>;
+        _trackingEvents = trackingEvents;
         _insuranceRecord = insuranceRecord;
         _shippingPlan = shippingPlan;
         _loading = false;
@@ -117,50 +126,50 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
       appBar: AppBar(
         title: Text(_shipment?['shipmentNumber'] ?? 'Shipment Details'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadDetails,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadDetails),
         ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(_error!, style: const TextStyle(color: Colors.red)),
-                      const SizedBox(height: 16),
-                      ElevatedButton(onPressed: _loadDetails, child: const Text('Retry')),
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(_error!, style: const TextStyle(color: Colors.red)),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadDetails,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            )
+          : DefaultTabController(
+              length: 3,
+              child: Column(
+                children: [
+                  TabBar(
+                    tabs: const [
+                      Tab(text: 'Details', icon: Icon(Icons.info_outline)),
+                      Tab(text: 'Tracking', icon: Icon(Icons.timeline)),
+                      Tab(text: 'Insurance', icon: Icon(Icons.security)),
                     ],
                   ),
-                )
-              : DefaultTabController(
-                  length: 3,
-                  child: Column(
-                    children: [
-                      TabBar(
-                        tabs: const [
-                          Tab(text: 'Details', icon: Icon(Icons.info_outline)),
-                          Tab(text: 'Tracking', icon: Icon(Icons.timeline)),
-                          Tab(text: 'Insurance', icon: Icon(Icons.security)),
-                        ],
-                      ),
-                      Expanded(
-                        child: TabBarView(
-                          children: [
-                            _buildDetailsTab(),
-                            _buildTrackingTab(),
-                            _buildInsuranceTab(),
-                          ],
-                        ),
-                      ),
-                    ],
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _buildDetailsTab(),
+                        _buildTrackingTab(),
+                        _buildInsuranceTab(),
+                      ],
+                    ),
                   ),
-                ),
+                ],
+              ),
+            ),
     );
   }
 
@@ -174,18 +183,25 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
         children: [
           // Status Card
           Card(
-            color: _getStatusColor(_shipment!['status']).withOpacity(0.1),
+            color: _getStatusColor(_shipment!['status']).withValues(alpha: 0.1),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Icon(Icons.local_shipping, color: _getStatusColor(_shipment!['status']), size: 32),
+                  Icon(
+                    Icons.local_shipping,
+                    color: _getStatusColor(_shipment!['status']),
+                    size: 32,
+                  ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Status', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        const Text(
+                          'Status',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
                         Text(
                           _getStatusText(_shipment!['status']),
                           style: TextStyle(
@@ -205,31 +221,63 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
 
           // Information
           _buildInfoCard('Shipment Information', [
-            _buildInfoRow('Shipment #', 'Shipment ${(widget.shipmentId.length > 8 ? widget.shipmentId.substring(0, 8) : widget.shipmentId)}'),
-            _buildInfoRow('Order ID', '${_shipment!['orderId'].toString().substring(0, 8)}...'),
-            _buildInfoRow('Origin', '${_shipment!['originAddress'] ?? ''}, ${_shipment!['originRegion'] ?? ''}'),
-            _buildInfoRow('Destination', '${_shipment!['destinationAddress'] ?? ''}, ${_shipment!['destinationRegion'] ?? ''}'),
-            _buildInfoRow('Declared Value', '${_shipment!['currency']} ${_shipment!['declaredValue']}'),
-            _buildInfoRow('Service', _shipment!['selectedService'] ?? 'Not selected'),
-            _buildInfoRow('Courier', _shipment!['courierName'] ?? 'Not assigned'),
-            _buildInfoRow('Tracking #', _shipment!['trackingNumber'] ?? 'Not assigned'),
+            _buildInfoRow(
+              'Shipment #',
+              'Shipment ${(widget.shipmentId.length > 8 ? widget.shipmentId.substring(0, 8) : widget.shipmentId)}',
+            ),
+            _buildInfoRow(
+              'Order ID',
+              '${_shipment!['orderId'].toString().substring(0, 8)}...',
+            ),
+            _buildInfoRow(
+              'Origin',
+              '${_shipment!['originAddress'] ?? ''}, ${_shipment!['originRegion'] ?? ''}',
+            ),
+            _buildInfoRow(
+              'Destination',
+              '${_shipment!['destinationAddress'] ?? ''}, ${_shipment!['destinationRegion'] ?? ''}',
+            ),
+            _buildInfoRow(
+              'Declared Value',
+              '${_shipment!['currency']} ${_shipment!['declaredValue']}',
+            ),
+            _buildInfoRow(
+              'Service',
+              _shipment!['selectedService'] ?? 'Not selected',
+            ),
+            _buildInfoRow(
+              'Courier',
+              _shipment!['courierName'] ?? 'Not assigned',
+            ),
+            _buildInfoRow(
+              'Tracking #',
+              _shipment!['trackingNumber'] ?? 'Not assigned',
+            ),
           ]),
 
           if (_shippingPlan != null) ...[
             const SizedBox(height: 16),
             _buildInfoCard('Shipping Plan', [
               _buildInfoRow('Risk Level', _shippingPlan!['riskLevel']),
-              _buildInfoRow('Service Type', _shippingPlan!['recommendedServiceType']),
+              _buildInfoRow(
+                'Service Type',
+                _shippingPlan!['recommendedServiceType'],
+              ),
               _buildInfoRow(
                 'Insurance',
-                _shippingPlan!['insuranceRecommended'] ? 'Recommended' : 'Not Required',
+                _shippingPlan!['insuranceRecommended']
+                    ? 'Recommended'
+                    : 'Not Required',
               ),
               if (_shippingPlan!['insuranceRecommended'])
                 _buildInfoRow(
                   'Coverage',
                   '${_shipment!['currency']} ${_shippingPlan!['recommendedCoverageAmount'] ?? 'N/A'}',
                 ),
-              _buildInfoRow('Approved', _shippingPlan!['isApproved'] ? 'Yes' : 'No'),
+              _buildInfoRow(
+                'Approved',
+                _shippingPlan!['isApproved'] ? 'Yes' : 'No',
+              ),
             ]),
           ],
         ],
@@ -245,7 +293,10 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
           children: [
             const Icon(Icons.timeline_outlined, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
-            const Text('No tracking events yet', style: TextStyle(fontSize: 18, color: Colors.grey)),
+            const Text(
+              'No tracking events yet',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
           ],
         ),
       );
@@ -265,7 +316,10 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
               backgroundColor: Colors.blue.shade100,
               child: Icon(Icons.event, color: Colors.blue.shade700),
             ),
-            title: Text(event['eventType'] ?? 'Unknown Event', style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+              event['eventType'] ?? 'Unknown Event',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -275,27 +329,6 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'Occurred: ${occurredAt.toString()}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 4),
-                Text(event['description']),
-                if (event['locationText'] != null && event['locationText'].isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                      const SizedBox(width: 4),
-                      Text(event['locationText'], style: const TextStyle(color: Colors.grey)),
-                    ],
-                  ),
-                ],
-                const SizedBox(height: 4),
-                Text(
-                  '${occurredAt.day}/${occurredAt.month}/${occurredAt.year} ${occurredAt.hour}:${occurredAt.minute.toString().padLeft(2, '0')}',
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
@@ -314,9 +347,15 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
           children: [
             const Icon(Icons.security_outlined, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
-            const Text('No insurance records', style: TextStyle(fontSize: 18, color: Colors.grey)),
+            const Text(
+              'No insurance records',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
             const SizedBox(height: 8),
-            const Text('Contact admin to add insurance', style: TextStyle(color: Colors.grey)),
+            const Text(
+              'Contact admin to add insurance',
+              style: TextStyle(color: Colors.grey),
+            ),
           ],
         ),
       );
@@ -339,8 +378,12 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _insuranceRecord!['providerName'] ?? 'DEMO Gemora Insurance Sandbox',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          _insuranceRecord!['providerName'] ??
+                              'DEMO Gemora Insurance Sandbox',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(
                           'Policy: ${_insuranceRecord!['policyReference'] ?? 'N/A'}',
@@ -350,7 +393,10 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.green.shade50,
                       borderRadius: BorderRadius.circular(12),
@@ -358,16 +404,28 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
                     ),
                     child: Text(
                       _insuranceRecord!['status'],
-                      style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.green.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
               ),
               const Divider(height: 24),
-              _buildInfoRow('Declared Value', '${_insuranceRecord!['currency']} ${_insuranceRecord!['declaredValue']}'),
-              _buildInfoRow('Coverage Amount', '${_insuranceRecord!['currency']} ${_insuranceRecord!['coverageAmount']}'),
+              _buildInfoRow(
+                'Declared Value',
+                '${_insuranceRecord!['currency']} ${_insuranceRecord!['declaredValue']}',
+              ),
+              _buildInfoRow(
+                'Coverage Amount',
+                '${_insuranceRecord!['currency']} ${_insuranceRecord!['coverageAmount']}',
+              ),
               _buildInfoRow('Coverage Type', _insuranceRecord!['coverageType']),
-              _buildInfoRow('Premium', '${_insuranceRecord!['currency']} ${_insuranceRecord!['premiumAmount']}'),
+              _buildInfoRow(
+                'Premium',
+                '${_insuranceRecord!['currency']} ${_insuranceRecord!['premiumAmount']}',
+              ),
             ],
           ),
         ),
@@ -402,10 +460,16 @@ class _ShipmentDetailScreenState extends State<ShipmentDetailScreen> {
         children: [
           SizedBox(
             width: 120,
-            child: Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+            ),
           ),
           Expanded(
-            child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
           ),
         ],
       ),

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { shipmentApi } from "../services/api";
 import "../styles/AdminShipping.css";
+import IssuedInsuranceForm from "../components/IssuedInsuranceForm";
 
 function AdminShipmentDetail() {
   const { id } = useParams();
@@ -10,18 +11,20 @@ function AdminShipmentDetail() {
   const [shipment, setShipment] = useState(null);
   const [plan, setPlan] = useState(null);
   const [insurance, setInsurance] = useState(null);
+  const simulatedInsurance = insurance && [insurance.policyReference, insurance.policyNumber].some(value => value?.startsWith("SIM-"));
   const [trackingEvents, setTrackingEvents] = useState([]);
   const [auditEvents, setAuditEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "plan" ? "plan" : "overview");
   
   // Action states
   const [approving, setApproving] = useState(false);
+  const [booking, setBooking] = useState(false);
+  const [bookingError, setBookingError] = useState(null);
   const [rejecting, setRejecting] = useState(false);
   const [requestingRevision, setRequestingRevision] = useState(false);
-  const [booking, setBooking] = useState(false);
-  const [creatingInsurance, setCreatingInsurance] = useState(false);
   const [addingEvent, setAddingEvent] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState(null);
@@ -36,12 +39,6 @@ function AdminShipmentDetail() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [operationLocation, setOperationLocation] = useState("");
   const [operationDescription, setOperationDescription] = useState("");
-  
-  let agentEvidence = null;
-  try {
-    agentEvidence = plan?.generationSource === "AI" && plan.executionSummary
-      ? JSON.parse(plan.executionSummary) : null;
-  } catch { /* Older execution summaries are plain text. */ }
   
   // Form states
   const [eventType, setEventType] = useState("");
@@ -70,6 +67,7 @@ function AdminShipmentDetail() {
       
       setShipment(shipmentRes?.data || null);
       setPlan(planRes?.data || null);
+      setAnalysisCompletedAt(planRes?.data?.updatedAt || planRes?.data?.createdAt || null);
       setInsurance(insuranceRes?.data || null);
       setTrackingEvents(trackingRes?.data || []);
       setAuditEvents(auditRes?.data || []);
@@ -87,7 +85,6 @@ function AdminShipmentDetail() {
     if (!previewOnly && plan?.isApproved && !window.confirm("Analyzing again replaces this plan and clears its approval. Continue?")) return;
     setAnalyzing(true);
     setAnalysisError(null);
-    setAnalysisCompletedAt(null);
     try {
       const response = await shipmentApi.generateShippingPlan(id);
       if (!response.data || response.data.shipmentId !== id || !response.data.riskLevel) {
@@ -160,6 +157,21 @@ function AdminShipmentDetail() {
     }
   };
 
+  const handleBookShipment = async () => {
+    if (booking) return;
+    setBooking(true);
+    setBookingError(null);
+    try {
+      await shipmentApi.bookShipment(id);
+      await loadDetails();
+      window.dispatchEvent(new Event("gemora-orders-changed"));
+    } catch (err) {
+      setBookingError(err.response?.data?.message || "Could not record the sandbox booking. Please try again.");
+    } finally {
+      setBooking(false);
+    }
+  };
+
   const handleUpdateOperationalStatus = async (newStatus) => {
     if (!operationLocation && !operationDescription) {
       alert("Please provide location and/or description for this operational update.");
@@ -182,47 +194,6 @@ function AdminShipmentDetail() {
       alert(err.response?.data?.message || "Failed to update shipment status");
     } finally {
       setUpdatingStatus(false);
-    }
-  };
-
-  const handleBookShipment = async () => {
-    if (!confirm("Are you sure you want to book this shipment with the courier?")) return;
-    
-    try {
-      setBooking(true);
-      const response = await shipmentApi.bookShipment(id);
-      await loadDetails(); // Reload to show updated booking info
-      alert(`Shipment booked successfully! Tracking: ${response.data.trackingNumber}`);
-    } catch (err) {
-      console.error("Failed to book shipment:", err);
-      alert(err.response?.data?.message || "Failed to book shipment");
-    } finally {
-      setBooking(false);
-    }
-  };
-
-  const handleCreateInsurance = async () => {
-    if (!shipment) return;
-    
-    try {
-      setCreatingInsurance(true);
-      const insuranceData = {
-        shipmentId: id,
-        declaredValue: shipment.declaredValue,
-        coverageAmount: shipment.declaredValue,
-        currency: shipment.currency,
-        coverageType: "Standard",
-        providerName: "DEMO Gemora Insurance Sandbox"
-      };
-      
-      await shipmentApi.createInsurance(id, insuranceData);
-      await loadDetails();
-      alert("Insurance record created successfully!");
-    } catch (err) {
-      console.error("Failed to create insurance:", err);
-      alert(err.response?.data?.message || "Failed to create insurance");
-    } finally {
-      setCreatingInsurance(false);
     }
   };
 
@@ -287,8 +258,11 @@ function AdminShipmentDetail() {
     );
   }
 
-  const canBook = plan?.isApproved && shipment.status === "ReadyForBooking" && !shipment.trackingNumber;
-  const isBooked = !!shipment.trackingNumber;
+  const simulatedBooking = shipment.isSimulatedBooking ||
+    [shipment.courierName, shipment.trackingNumber, shipment.externalShipmentReference]
+      .some(value => /^(SIM-|MOCK-|DEMO)|sandbox/i.test(value || ""));
+  const isBooked = !!shipment.courierName && !!shipment.trackingNumber;
+  const canBook = plan?.isApproved && !isBooked && shipment.status === "ReadyForBooking";
 
   return (
     <div className="admin-shipping">
@@ -408,29 +382,22 @@ function AdminShipmentDetail() {
             <div className="admin-analysis-heading">
               <div>
                 <h2>Shipping Plan</h2>
-                <p>Run the backend risk planner and review its latest recommendations.</p>
+                <p>Analyze shipment risk and review shipping recommendations.</p>
               </div>
               <button onClick={handleAnalyzeRisk} disabled={analyzing || approving} className="bg-blue-600">
                 {analyzing ? "Analyzing risk..." : "Analyze Risk"}
               </button>
             </div>
-            {analyzing && <p className="admin-analysis-notice" role="status">Waiting for the backend analysis. The previous plan remains visible until a new result arrives.</p>}
+            {analyzing && <p className="admin-analysis-notice" role="status">Analyzing shipment risk...</p>}
             {analysisError && <p className="admin-analysis-notice bg-red-50" role="alert">{analysisError}</p>}
             {analysisCompletedAt && (
               <div className="admin-analysis-notice" role="status">
-                <strong>{plan?.generationSource === "FallbackRules" ? "AI analysis failed — rules fallback result received" : "Fresh backend result received"}</strong>
-                {plan?.isPreview && <p>Analysis preview only. The saved shipping plan, approval, and shipment status have not changed.</p>}
-                <p>Received: {new Date(analysisCompletedAt).toLocaleString()}</p>
-                <p>Source: {plan?.generationSource === "MockProvider" ? "Mock provider (simulation; no real LLM call)" : plan?.generationSource === "FallbackRules" ? "Deterministic rules fallback" : plan?.generationSource || "Not reported by backend; model execution unverified"}</p>
-                <p>Generated: {plan?.updatedAt || plan?.createdAt ? new Date(plan.updatedAt || plan.createdAt).toLocaleString() : "Not reported"}</p>
-                {agentEvidence?.provider === "Gemini" ? (
-                  <>
-                    <p>Provider: {agentEvidence.provider} · Model: {agentEvidence.model}</p>
-                    <p>Model requests: {agentEvidence.modelCalls} · Validation: {agentEvidence.validation}</p>
-                    <p>Tools executed: {agentEvidence.tools?.join(" → ")}</p>
-                    <p>Run ID: {agentEvidence.runId}</p>
-                  </>
-                ) : plan?.executionSummary && <p>{plan.executionSummary}</p>}
+                <strong>{plan?.generationSource === "AI" ? "AI analysis completed"
+                  : plan?.generationSource === "FallbackRules" ? "AI unavailable — rules-based plan used"
+                  : plan?.generationSource === "MockProvider" ? "Demo analysis completed"
+                  : "Analysis completed"}</strong>
+                <p>{new Date(plan?.updatedAt || plan?.createdAt || analysisCompletedAt).toLocaleString()}</p>
+                {plan?.isPreview && <p>Preview only. Saved plan unchanged.</p>}
               </div>
             )}
             
@@ -443,7 +410,7 @@ function AdminShipmentDetail() {
                 <div className="grid grid-cols-2 gap-6 mb-6">
                   <div>
                     <label className="text-sm font-medium text-gray-500">Risk Level</label>
-                    {analysisCompletedAt ? <p className={`text-lg font-semibold ${
+                    {plan.riskLevel ? <p className={`text-lg font-semibold ${
                       plan.riskLevel === 'Critical' ? 'text-red-600' :
                       plan.riskLevel === 'High' ? 'text-orange-600' :
                       plan.riskLevel === 'Medium' ? 'text-yellow-600' :
@@ -471,7 +438,7 @@ function AdminShipmentDetail() {
                 {(
                   <div className="mb-4">
                     <label className="text-sm font-medium text-gray-500">Risk Reasons</label>
-                    <p className="text-gray-900 mt-1">{analysisCompletedAt ? plan.riskReasons || "No risk reasons returned." : "Click Analyze Risk to see the risk reasons."}</p>
+                    <p className="text-gray-900 mt-1">{plan.riskReasons || "No risk reasons returned."}</p>
                   </div>
                 )}
 
@@ -610,19 +577,20 @@ function AdminShipmentDetail() {
             <h2 className="text-xl font-semibold mb-4">Courier Booking</h2>
             
             {isBooked ? (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                <h3 className="text-green-800 font-semibold text-lg mb-4">✓ Shipment Booked</h3>
+              <div className={`${simulatedBooking ? "bg-yellow-50 border-yellow-200" : "bg-green-50 border-green-200"} border rounded-lg p-6`}>
+                <h3 className="font-semibold text-lg mb-2">{simulatedBooking ? "Sandbox booking recorded" : "Courier booking recorded"}</h3>
+                {simulatedBooking && <p className="text-sm mb-4">Academic simulation — no real courier booking or live tracking.</p>}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-500">Courier</label>
-                    <p className="text-gray-900 font-semibold">{shipment.courierName}</p>
+                    <p className="text-gray-900 font-semibold">{simulatedBooking ? shipment.courierName.replace(/^DEMO\s+/i, "") : shipment.courierName}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Tracking Number</label>
+                    <label className="text-sm font-medium text-gray-500">{simulatedBooking ? "Simulated tracking number" : "Tracking number"}</label>
                     <p className="text-gray-900 font-mono">{shipment.trackingNumber}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">External Reference</label>
+                    <label className="text-sm font-medium text-gray-500">Booking Reference</label>
                     <p className="text-gray-900 font-mono">{shipment.externalShipmentReference || "N/A"}</p>
                   </div>
                   <div>
@@ -635,6 +603,10 @@ function AdminShipmentDetail() {
                       {shipment.bookedAt ? new Date(shipment.bookedAt).toLocaleString() : "N/A"}
                     </p>
                   </div>
+                  {shipment.trackingUrl && !simulatedBooking && <div>
+                    <label className="text-sm font-medium text-gray-500">Tracking</label>
+                    <p><a href={shipment.trackingUrl} target="_blank" rel="noopener noreferrer">Track shipment</a></p>
+                  </div>}
                 </div>
               </div>
             ) : (
@@ -644,26 +616,19 @@ function AdminShipmentDetail() {
                     <h3 className="text-yellow-800 font-semibold mb-2">Booking Not Available</h3>
                     <ul className="text-sm text-yellow-700 space-y-1">
                       {!plan?.isApproved && <li>• Shipping plan must be approved first</li>}
-                      {shipment.status !== "ReadyForBooking" && <li>• Shipment status must be "ReadyForBooking" (current: {shipment.status})</li>}
+                      {shipment.status !== "ReadyForBooking" && <li>• Shipment must be ready for courier booking</li>}
                       {isBooked && <li>• Shipment is already booked</li>}
                     </ul>
                   </div>
                 ) : (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                    <h3 className="text-blue-800 font-semibold mb-4">Ready to Book</h3>
-                    <p className="text-blue-700 mb-4">
-                      The shipping plan has been approved and the shipment is ready for courier booking.
-                    </p>
-                    <button
-                      onClick={handleBookShipment}
-                      disabled={booking}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-semibold"
-                    >
-                      {booking ? "Booking..." : "Book with Courier (SIMULATION)"}
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                    <h3 className="font-semibold mb-2">Gemora Courier Sandbox</h3>
+                    <p className="text-sm mb-4">Academic simulation — generates booking and tracking references without contacting a real courier.</p>
+                    <p className="text-sm mb-4">Service: {plan.recommendedServiceType}</p>
+                    {bookingError && <p role="alert" className="text-red-700 mb-4">{bookingError}</p>}
+                    <button type="button" onClick={handleBookShipment} disabled={booking} className="bg-blue-600">
+                      {booking ? "Recording..." : "Record sandbox booking"}
                     </button>
-                    <p className="text-xs text-blue-600 mt-3">
-                      Note: This is a simulated booking using DEMO Gemora Courier Sandbox
-                    </p>
                   </div>
                 )}
               </div>
@@ -683,6 +648,10 @@ function AdminShipmentDetail() {
                 <p className="text-sm text-blue-700 mt-2">Tracking: {shipment.trackingNumber}</p>
               )}
             </div>
+
+            {simulatedBooking && <div className="admin-analysis-notice">
+              <p>Academic simulation — these updates simulate delivery progress and notify the buyer. They do not confirm real courier delivery.</p>
+            </div>}
 
             {/* Operational Actions based on current status */}
             <div className="space-y-4">
@@ -912,8 +881,8 @@ function AdminShipmentDetail() {
               <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="text-green-800 font-semibold text-lg">SIMULATED INSURANCE</h3>
-                    <p className="text-sm text-green-600">This is a demo/simulation - not a real insurance policy</p>
+                    <h3 className="text-green-800 font-semibold text-lg">{simulatedInsurance ? "SIMULATED INSURANCE" : "Issued policy record"}</h3>
+                    <p className="text-sm text-green-600">{simulatedInsurance ? "This is a demo/simulation - not a real insurance policy" : "Recorded by an administrator from the insurer-issued policy. Coverage has not been verified with the insurer."}</p>
                   </div>
                   <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
                     {insurance.status}
@@ -955,23 +924,14 @@ function AdminShipmentDetail() {
                     <label className="text-sm font-medium text-gray-500">Created At</label>
                     <p className="text-gray-900">{new Date(insurance.createdAt).toLocaleString()}</p>
                   </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Policy End Date</label>
+                    <p>{insurance.policyEndDate ? new Date(insurance.policyEndDate).toLocaleDateString() : "N/A"}</p>
+                  </div>
                 </div>
               </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">No insurance record exists for this shipment.</p>
-                <button
-                  onClick={handleCreateInsurance}
-                  disabled={creatingInsurance}
-                  className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {creatingInsurance ? "Creating..." : "Create Simulated Insurance"}
-                </button>
-                <p className="text-xs text-gray-500 mt-3">
-                  Creates a DEMO insurance record with simulated values
-                </p>
-              </div>
-            )}
+            ) : null}
+            {(!insurance || simulatedInsurance) && <IssuedInsuranceForm shipment={shipment} onSaved={loadDetails} replacingDemo={!!simulatedInsurance} />}
           </div>
         )}
 
@@ -1207,3 +1167,4 @@ function AdminShipmentDetail() {
 }
 
 export default AdminShipmentDetail;
+

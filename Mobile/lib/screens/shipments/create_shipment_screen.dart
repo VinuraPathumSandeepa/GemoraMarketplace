@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/shipment_service.dart';
+
+import '../../services/shipment_service.dart';
 
 class CreateShipmentScreen extends StatefulWidget {
   const CreateShipmentScreen({super.key});
@@ -17,9 +18,11 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
   List<dynamic> _eligibleOrders = [];
   bool _loadingOrders = true;
   String? _ordersError;
-  
+
   final _originAddressController = TextEditingController(text: 'Colombo');
-  final _originRegionController = TextEditingController(text: 'Western Province');
+  final _originRegionController = TextEditingController(
+    text: 'Western Province',
+  );
   final _originCountryCodeController = TextEditingController(text: 'LK');
   final _destinationAddressController = TextEditingController();
   final _destinationRegionController = TextEditingController();
@@ -46,20 +49,22 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
 
     try {
       final orders = await _shipmentService.getShipmentEligibleOrders();
-      
+
       if (!mounted) return;
-      
+
       setState(() {
         _eligibleOrders = orders;
         _loadingOrders = false;
-        
+
         // Auto-select first order if available
         if (orders.isNotEmpty) {
           _selectedOrderId = orders[0]['id'].toString();
           // Auto-populate destination from first order
-          _destinationAddressController.text = orders[0]['shippingAddress'] ?? '';
+          _destinationAddressController.text =
+              orders[0]['shippingAddress'] ?? '';
           _destinationRegionController.text = orders[0]['shippingRegion'] ?? '';
-          _destinationCountryCodeController.text = orders[0]['shippingCountryCode'] ?? 'LK';
+          _destinationCountryCodeController.text =
+              orders[0]['shippingCountryCode'] ?? 'LK';
         }
       });
     } catch (e) {
@@ -91,35 +96,36 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
     final amount = order['totalAmount'];
     final currency = order['currency'];
     final region = order['shippingRegion'] ?? 'Unknown';
-    
+
     return '$shortId - $currency$amount ($region)';
   }
 
   Future<void> _onOrderSelected(String? orderId) async {
     if (orderId == null) return;
-    
+
     setState(() {
       _selectedOrderId = orderId;
     });
-    
+
     // Find selected order and auto-populate fields
     final order = _eligibleOrders.firstWhere(
       (o) => o['id'].toString() == orderId,
       orElse: () => null,
     );
-    
+
     if (order != null && mounted) {
       setState(() {
         _destinationAddressController.text = order['shippingAddress'] ?? '';
         _destinationRegionController.text = order['shippingRegion'] ?? '';
-        _destinationCountryCodeController.text = order['shippingCountryCode'] ?? 'LK';
+        _destinationCountryCodeController.text =
+            order['shippingCountryCode'] ?? 'LK';
       });
     }
   }
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     if (_selectedOrderId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -140,13 +146,17 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
         orderId: _selectedOrderId!,
         originAddress: _originAddressController.text.trim(),
         originRegion: _originRegionController.text.trim(),
-        originCountryCode: _originCountryCodeController.text.trim().toUpperCase(),
+        originCountryCode: _originCountryCodeController.text
+            .trim()
+            .toUpperCase(),
         destinationAddress: _destinationAddressController.text.trim(),
         destinationRegion: _destinationRegionController.text.trim(),
-        destinationCountryCode: _destinationCountryCodeController.text.trim().toUpperCase(),
+        destinationCountryCode: _destinationCountryCodeController.text
+            .trim()
+            .toUpperCase(),
         packageDescription: _packageDescriptionController.text.trim(),
-        preferredService: _preferredServiceController.text.trim().isEmpty 
-            ? 'Standard' 
+        preferredService: _preferredServiceController.text.trim().isEmpty
+            ? 'Standard'
             : _preferredServiceController.text.trim(),
         specialHandlingNotes: _specialHandlingNotesController.text.trim(),
         exportRequired: _exportRequired,
@@ -173,9 +183,7 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Shipment'),
-      ),
+      appBar: AppBar(title: const Text('Create Shipment')),
       body: _submitting || _loadingOrders
           ? Center(
               child: Column(
@@ -183,7 +191,11 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                 children: [
                   const CircularProgressIndicator(),
                   const SizedBox(height: 16),
-                  Text(_loadingOrders ? 'Loading eligible orders...' : 'Creating shipment...'),
+                  Text(
+                    _loadingOrders
+                        ? 'Loading eligible orders...'
+                        : 'Creating shipment...',
+                  ),
                 ],
               ),
             )
@@ -229,7 +241,10 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.warning_amber, color: Colors.orange.shade700),
+                            Icon(
+                              Icons.warning_amber,
+                              color: Colors.orange.shade700,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -258,7 +273,11 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                         ),
                         child: Column(
                           children: [
-                            Icon(Icons.info_outline, size: 48, color: Colors.grey.shade600),
+                            Icon(
+                              Icons.info_outline,
+                              size: 48,
+                              color: Colors.grey.shade600,
+                            ),
                             const SizedBox(height: 12),
                             Text(
                               'No eligible paid orders are available for shipment.',
@@ -280,7 +299,7 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                       )
                     else if (!_loadingOrders)
                       DropdownButtonFormField<String>(
-                        value: _selectedOrderId,
+                        initialValue: _selectedOrderId,
                         decoration: const InputDecoration(
                           labelText: 'Select Order',
                           hintText: 'Choose an order to ship',
@@ -418,7 +437,8 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                       controller: _packageDescriptionController,
                       decoration: const InputDecoration(
                         labelText: 'Package Description',
-                        hintText: 'e.g., 2.5 carat blue sapphire with certificate',
+                        hintText:
+                            'e.g., 2.5 carat blue sapphire with certificate',
                         prefixIcon: Icon(Icons.description),
                       ),
                       maxLines: 3,
@@ -433,18 +453,30 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
 
                     // Preferred Service
                     DropdownButtonFormField<String>(
-                      value: _preferredServiceController.text.isEmpty 
-                          ? 'Standard' 
+                      initialValue: _preferredServiceController.text.isEmpty
+                          ? 'Standard'
                           : _preferredServiceController.text,
                       decoration: const InputDecoration(
                         labelText: 'Shipping Service',
                         prefixIcon: Icon(Icons.local_shipping),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'Standard', child: Text('Standard')),
-                        DropdownMenuItem(value: 'Express Insured', child: Text('Express Insured')),
-                        DropdownMenuItem(value: 'Priority Insured', child: Text('Priority Insured')),
-                        DropdownMenuItem(value: 'International Priority', child: Text('International Priority')),
+                        DropdownMenuItem(
+                          value: 'Standard',
+                          child: Text('Standard'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Express Insured',
+                          child: Text('Express Insured'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Priority Insured',
+                          child: Text('Priority Insured'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'International Priority',
+                          child: Text('International Priority'),
+                        ),
                       ],
                       onChanged: (value) {
                         if (value != null) {
@@ -471,7 +503,9 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                     // Export Required Checkbox
                     CheckboxListTile(
                       title: const Text('Export Required'),
-                      subtitle: const Text('Check if international export documentation is needed'),
+                      subtitle: const Text(
+                        'Check if international export documentation is needed',
+                      ),
                       value: _exportRequired,
                       onChanged: (value) {
                         setState(() {
@@ -504,7 +538,10 @@ class _CreateShipmentScreenState extends State<CreateShipmentScreen> {
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.info_outline, color: Colors.blue.shade700),
+                                Icon(
+                                  Icons.info_outline,
+                                  color: Colors.blue.shade700,
+                                ),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Important Notes',

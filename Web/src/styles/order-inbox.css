@@ -1,4 +1,7 @@
 .oi-trigger{display:inline-flex;align-items:center;gap:7px;border:1px solid #b9955266;border-radius:9px;background:transparent;color:inherit;padding:9px 10px;cursor:pointer;font:inherit;font-size:12px;white-space:nowrap}
+.gemora-topbar .oi-trigger{color:#f1cf86;background:#ffffff08;border-color:#c6a55d;min-height:40px;font-weight:600}
+.gemora-topbar .oi-trigger :is(svg,span){color:inherit}
+.gemora-topbar .oi-trigger:hover{background:#ffffff14;border-color:#f1cf86;color:#fff0c9}
 .oi-badge{border-radius:20px;background:#e8bc70;color:#172e27;padding:2px 6px;font-size:11px}
 .oi-dialog{width:min(650px,calc(100vw - 24px));max-height:85dvh;padding:0;border:1px solid #d9cbae;border-radius:18px;background:#faf7ef;color:#16352d;box-shadow:0 24px 90px #001f2455;font-family:inherit;overflow:auto}
 .oi-dialog::backdrop{background:#081f24a6;backdrop-filter:blur(4px)}

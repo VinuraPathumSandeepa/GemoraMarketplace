@@ -573,6 +573,11 @@ public class ShipmentServiceTests : IDisposable
         var shipment = await CreateTestShipmentAsync();
         var request = new CreateInsuranceRecordRequest
         {
+            PolicyNumber = "JM-ISSUED-123",
+            ProviderName = "Jewelers Mutual Group",
+            PremiumAmount = 42.75m,
+            PolicyStartDate = DateTime.UtcNow,
+            PolicyEndDate = DateTime.UtcNow.AddDays(30),
             ShipmentId = shipment.Id,
             DeclaredValue = 5000m,
             CoverageAmount = 5000m
@@ -592,6 +597,11 @@ public class ShipmentServiceTests : IDisposable
         var shipment = await CreateTestShipmentAsync();
         var request = new CreateInsuranceRecordRequest
         {
+            PolicyNumber = "JM-ISSUED-123",
+            ProviderName = "Jewelers Mutual Group",
+            PremiumAmount = 42.75m,
+            PolicyStartDate = DateTime.UtcNow,
+            PolicyEndDate = DateTime.UtcNow.AddDays(30),
             ShipmentId = shipment.Id,
             DeclaredValue = 5000m,
             CoverageAmount = 5000m
@@ -611,6 +621,11 @@ public class ShipmentServiceTests : IDisposable
         var shipment = await CreateTestShipmentAsync();
         var request = new CreateInsuranceRecordRequest
         {
+            PolicyNumber = "JM-ISSUED-123",
+            ProviderName = "Jewelers Mutual Group",
+            PremiumAmount = 42.75m,
+            PolicyStartDate = DateTime.UtcNow,
+            PolicyEndDate = DateTime.UtcNow.AddDays(30),
             ShipmentId = shipment.Id,
             DeclaredValue = 5000m,
             CoverageAmount = 5000m,
@@ -625,8 +640,9 @@ public class ShipmentServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal(5000m, result.CoverageAmount);
         Assert.Equal("USD", result.Currency);
-        Assert.Equal("Active", result.Status);
-        Assert.StartsWith("SIM-POL-", result.PolicyReference);
+        Assert.Equal("Recorded", result.Status);
+        Assert.Equal("JM-ISSUED-123", result.PolicyReference);
+        Assert.Equal(42.75m, result.PremiumAmount);
     }
 
     [Fact]
@@ -636,6 +652,11 @@ public class ShipmentServiceTests : IDisposable
         var shipment = await CreateTestShipmentAsync();
         var request = new CreateInsuranceRecordRequest
         {
+            PolicyNumber = "JM-ISSUED-123",
+            ProviderName = "Jewelers Mutual Group",
+            PremiumAmount = 42.75m,
+            PolicyStartDate = DateTime.UtcNow,
+            PolicyEndDate = DateTime.UtcNow.AddDays(30),
             ShipmentId = shipment.Id,
             DeclaredValue = 5000m,
             CoverageAmount = 0m,
@@ -649,6 +670,50 @@ public class ShipmentServiceTests : IDisposable
         Assert.Contains("Coverage amount must be greater than zero", ex.Message);
     }
 
+    [Theory]
+    [InlineData("", 10, false)]
+    [InlineData("SIM-POL-123", 10, false)]
+    [InlineData("JM-123", -1, false)]
+    [InlineData("JM-123", 10, true)]
+    public async Task IssuedInsurance_InvalidPolicyDetailsAreRejected(string number, int premium, bool invalidDates)
+    {
+        var shipment = await CreateTestShipmentAsync();
+        var request = new CreateInsuranceRecordRequest
+        {
+            ShipmentId = shipment.Id, DeclaredValue = 5000m, CoverageAmount = 5000m,
+            PolicyNumber = number, ProviderName = "Jewelers Mutual Group", PremiumAmount = premium,
+            PolicyStartDate = DateTime.UtcNow,
+            PolicyEndDate = invalidDates ? DateTime.UtcNow.AddDays(-1) : DateTime.UtcNow.AddDays(30)
+        };
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _shipmentService.CreateInsuranceRecordAsync(shipment.Id, _adminId, "Admin", request));
+        Assert.Empty(await _context.InsuranceRecords.ToListAsync());
+    }
+
+    [Fact]
+    public async Task IssuedInsurance_ReplacesSimulationAndPreservesAuditReference()
+    {
+        var shipment = await CreateTestShipmentAsync();
+        var demo = new InsuranceRecord { Id = Guid.NewGuid(), ShipmentId = shipment.Id,
+            PolicyNumber = "SIM-POL-OLD", PolicyReference = "SIM-POL-OLD" };
+        _context.InsuranceRecords.Add(demo);
+        await _context.SaveChangesAsync();
+        var request = new CreateInsuranceRecordRequest
+        {
+            ShipmentId = shipment.Id, DeclaredValue = 5000m, CoverageAmount = 5000m,
+            PolicyNumber = "JM-ISSUED-456", ProviderName = "Jewelers Mutual Group",
+            PremiumAmount = 75m, PolicyStartDate = DateTime.UtcNow,
+            PolicyEndDate = DateTime.UtcNow.AddDays(30)
+        };
+        var result = await _shipmentService.CreateInsuranceRecordAsync(shipment.Id, _adminId, "Admin", request);
+        Assert.Equal(demo.Id, result.Id);
+        Assert.Equal("Recorded", result.Status);
+        Assert.Equal(75m, result.PremiumAmount);
+        Assert.Single(await _context.InsuranceRecords.ToListAsync());
+        Assert.Contains("SIM-POL-OLD", (await _context.ShipmentTrackingEvents.SingleAsync(
+            entry => entry.EventType == "InsuranceCreated")).Description);
+    }
+
     [Fact]
     public async Task CreateInsuranceRecordAsync_WithNegativeCoverageAmount_ShouldThrow()
     {
@@ -656,6 +721,11 @@ public class ShipmentServiceTests : IDisposable
         var shipment = await CreateTestShipmentAsync();
         var request = new CreateInsuranceRecordRequest
         {
+            PolicyNumber = "JM-ISSUED-123",
+            ProviderName = "Jewelers Mutual Group",
+            PremiumAmount = 42.75m,
+            PolicyStartDate = DateTime.UtcNow,
+            PolicyEndDate = DateTime.UtcNow.AddDays(30),
             ShipmentId = shipment.Id,
             DeclaredValue = 5000m,
             CoverageAmount = -100m,
@@ -676,6 +746,11 @@ public class ShipmentServiceTests : IDisposable
         var shipment = await CreateTestShipmentAsync();
         var request = new CreateInsuranceRecordRequest
         {
+            PolicyNumber = "JM-ISSUED-123",
+            ProviderName = "Jewelers Mutual Group",
+            PremiumAmount = 42.75m,
+            PolicyStartDate = DateTime.UtcNow,
+            PolicyEndDate = DateTime.UtcNow.AddDays(30),
             ShipmentId = shipment.Id,
             DeclaredValue = 0m,
             CoverageAmount = 5000m,
@@ -697,6 +772,11 @@ public class ShipmentServiceTests : IDisposable
         
         var request = new CreateInsuranceRecordRequest
         {
+            PolicyNumber = "JM-ISSUED-123",
+            ProviderName = "Jewelers Mutual Group",
+            PremiumAmount = 42.75m,
+            PolicyStartDate = DateTime.UtcNow,
+            PolicyEndDate = DateTime.UtcNow.AddDays(30),
             ShipmentId = shipment.Id,
             DeclaredValue = 5000m,
             CoverageAmount = 5000m,
@@ -717,6 +797,11 @@ public class ShipmentServiceTests : IDisposable
         var shipment = await CreateTestShipmentAsync();
         var request = new CreateInsuranceRecordRequest
         {
+            PolicyNumber = "JM-ISSUED-123",
+            ProviderName = "Jewelers Mutual Group",
+            PremiumAmount = 42.75m,
+            PolicyStartDate = DateTime.UtcNow,
+            PolicyEndDate = DateTime.UtcNow.AddDays(30),
             ShipmentId = shipment.Id,
             DeclaredValue = 5000m,
             CoverageAmount = 5000m,
@@ -728,6 +813,11 @@ public class ShipmentServiceTests : IDisposable
         // Try to create second insurance for same shipment
         var request2 = new CreateInsuranceRecordRequest
         {
+            PolicyNumber = "JM-ISSUED-123",
+            ProviderName = "Jewelers Mutual Group",
+            PremiumAmount = 42.75m,
+            PolicyStartDate = DateTime.UtcNow,
+            PolicyEndDate = DateTime.UtcNow.AddDays(30),
             ShipmentId = shipment.Id,
             DeclaredValue = 6000m,
             CoverageAmount = 6000m,
@@ -895,3 +985,4 @@ public class ShipmentServiceTests : IDisposable
         return await _context.Shipments.FindAsync(result.Id) ?? throw new InvalidOperationException("Shipment creation failed");
     }
 }
+

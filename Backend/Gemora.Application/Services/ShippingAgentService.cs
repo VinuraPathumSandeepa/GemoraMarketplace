@@ -263,6 +263,9 @@ public class ShippingAgentService : IShippingAgentService
             throw new InvalidOperationException("Shipment not found.");
         }
 
+        if (shipment.Status is not ("Pending" or "Planning" or "PlanGenerated" or "ReadyForBooking"))
+            throw new InvalidOperationException("Cannot approve a plan after courier dispatch has started.");
+
         // APPROVAL TRANSACTION: Update plan AND shipment status together
         plan.IsApproved = true;
         plan.ApprovedBy = adminId;
@@ -270,6 +273,7 @@ public class ShippingAgentService : IShippingAgentService
         plan.AdminNotes = adminNotes;
         plan.UpdatedAt = DateTime.UtcNow;
 
+        var previousStatus = shipment.Status;
         // Set shipment to ReadyForBooking (required by booking service precondition)
         shipment.Status = "ReadyForBooking";
         shipment.UpdatedAt = DateTime.UtcNow;
@@ -284,7 +288,7 @@ public class ShippingAgentService : IShippingAgentService
             Description = $"Shipping plan approved by Admin (ID: {adminId})",
             PerformedByUserId = adminId,
             PerformedByRole = "Admin",
-            PreviousState = shipment.Status,
+            PreviousState = previousStatus,
             NewState = "ReadyForBooking",
             Reason = adminNotes,
             OccurredAt = DateTime.UtcNow,
@@ -292,6 +296,8 @@ public class ShippingAgentService : IShippingAgentService
         };
 
         _context.ShipmentTrackingEvents.Add(approvalEvent);
+
+        await ShipmentOrderProgress.RecordApprovalAsync(_context, shipment, adminId);
 
         // Single SaveChanges ensures atomic transaction
         await _context.SaveChangesAsync();

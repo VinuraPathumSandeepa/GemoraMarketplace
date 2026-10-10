@@ -169,6 +169,10 @@ public static class DbSeeder
         // TEST BUYER
         // ==========================================
 
+        // Demo marketplace data is opt-in. Normal startup seeds staff only.
+        if (!bool.TryParse(configuration["SeedUsers:EnableDemoData"], out var enableDemoData) || !enableDemoData)
+            return;
+
         var buyerEmail = "buyer@gemora.com";
 
         var buyer =

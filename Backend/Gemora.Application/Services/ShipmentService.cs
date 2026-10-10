@@ -1,4 +1,5 @@
 using Gemora.Application.DTOs;
+using Gemora.Domain.Constants;
 using Gemora.Domain.Entities;
 using Gemora.Domain.Interfaces;
 using Gemora.Infrastructure.Data;
@@ -18,6 +19,7 @@ public interface IShipmentService
     Task<List<TrackingEventResponseDto>> GetTrackingEventsAsync(Guid shipmentId, Guid userId, string userRole);
     Task<TrackingEventResponseDto> AddTrackingEventAsync(Guid shipmentId, Guid userId, string userRole, AddTrackingEventDto request);
     Task<CourierBookingResult> BookShipmentAsync(Guid shipmentId, Guid userId, string userRole);
+    Task<ShipmentResponseDto> RecordCourierBookingAsync(Guid shipmentId, Guid userId, string userRole, RecordCourierBookingRequest request);
 }
 
 public class ShipmentService : IShipmentService
@@ -229,7 +231,8 @@ public class ShipmentService : IShipmentService
         // Update timestamps based on status
         if (request.Status == "InTransit" || request.Status == "PickedUp")
         {
-            shipment.ShippedAt = DateTime.UtcNow;
+            shipment.ShippedAt ??= DateTime.UtcNow;
+            shipment.HandedOverAt ??= shipment.ShippedAt;
         }
         else if (request.Status == "Delivered")
         {
@@ -256,6 +259,7 @@ public class ShipmentService : IShipmentService
         _context.ShipmentTrackingEvents.Add(trackingEvent);
 
         // SINGLE SaveChanges ensures atomic transaction - both shipment and tracking event saved together
+        await ShipmentOrderProgress.RecordShipmentStatusAsync(_context, shipment, userId);
         await _context.SaveChangesAsync();
 
         return MapToResponseDto(shipment);
@@ -279,9 +283,11 @@ public class ShipmentService : IShipmentService
 
         // Check if insurance already exists
         var existingInsurance = await _context.InsuranceRecords
-            .AnyAsync(i => i.ShipmentId == shipmentId);
+            .SingleOrDefaultAsync(i => i.ShipmentId == shipmentId);
 
-        if (existingInsurance)
+        if (existingInsurance != null &&
+            !(existingInsurance.PolicyNumber?.StartsWith("SIM-", StringComparison.OrdinalIgnoreCase) == true ||
+              existingInsurance.PolicyReference?.StartsWith("SIM-", StringComparison.OrdinalIgnoreCase) == true))
         {
             throw new InvalidOperationException("Insurance record already exists for this shipment.");
         }
@@ -298,11 +304,11 @@ public class ShipmentService : IShipmentService
             throw new InvalidOperationException("Declared value must be greater than zero.");
         }
 
-        // VALIDATION: PremiumAmount >= 0 (calculated from coverage)
-        var premiumAmount = CalculatePremium(request.CoverageAmount, request.CoverageType ?? "Standard");
-        if (premiumAmount < 0)
+        // Preserve the premium supplied by the issuing insurer.
+        var premiumAmount = request.PremiumAmount;
+        if (premiumAmount == null || premiumAmount < 0)
         {
-            throw new InvalidOperationException("Premium calculation failed.");
+            throw new InvalidOperationException("Enter the insurer-issued premium amount, zero or greater.");
         }
 
         // VALIDATION: Currency matches Shipment
@@ -312,9 +318,16 @@ public class ShipmentService : IShipmentService
             throw new InvalidOperationException($"Currency must match shipment currency ({shipment.Currency}).");
         }
 
-        // Generate SIM-prefixed policy reference for clear demo labeling
-        var policyReference = $"SIM-POL-{Guid.NewGuid():N}".Substring(0, 16).ToUpper();
-        var providerName = request.ProviderName ?? "DEMO Gemora Insurance Sandbox";
+        var policyReference = request.PolicyNumber?.Trim() ?? "";
+        if (string.IsNullOrWhiteSpace(policyReference) || policyReference.Length > 100 ||
+            policyReference.StartsWith("SIM-", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Enter a valid insurer-issued policy number.");
+        if (string.IsNullOrWhiteSpace(request.ProviderName) || request.ProviderName.Length > 200)
+            throw new InvalidOperationException("Enter the issuing insurer's name.");
+        if (request.PolicyStartDate == null || request.PolicyEndDate == null ||
+            request.PolicyEndDate <= request.PolicyStartDate)
+            throw new InvalidOperationException("Enter valid policy dates; the end must be after the start.");
+        var providerName = request.ProviderName.Trim();
 
         var insuranceRecord = new InsuranceRecord
         {
@@ -327,13 +340,23 @@ public class ShipmentService : IShipmentService
             PolicyNumber = policyReference,
             PolicyReference = policyReference,
             ProviderName = providerName,
-            PremiumAmount = premiumAmount,
-            Status = "Active",
-            PolicyStartDate = DateTime.UtcNow,
+            PremiumAmount = premiumAmount.Value,
+            Status = "Recorded",
+            PolicyStartDate = request.PolicyStartDate.Value.ToUniversalTime(),
+            PolicyEndDate = request.PolicyEndDate.Value.ToUniversalTime(),
             CreatedAt = DateTime.UtcNow
         };
 
-        _context.InsuranceRecords.Add(insuranceRecord);
+        var previousPolicyReference = existingInsurance?.PolicyReference;
+        if (existingInsurance == null)
+            _context.InsuranceRecords.Add(insuranceRecord);
+        else
+        {
+            insuranceRecord.Id = existingInsurance.Id;
+            insuranceRecord.CreatedAt = existingInsurance.CreatedAt;
+            insuranceRecord.UpdatedAt = DateTime.UtcNow;
+            _context.Entry(existingInsurance).CurrentValues.SetValues(insuranceRecord);
+        }
         
         // Create audit tracking event for insurance creation
         var insuranceEvent = new ShipmentTrackingEvent
@@ -342,11 +365,12 @@ public class ShipmentService : IShipmentService
             ShipmentId = shipmentId,
             EventType = "InsuranceCreated",
             Location = "Admin Insurance Management",
-            Description = $"Insurance created: Policy {policyReference}, Coverage {currency} {request.CoverageAmount}",
+            Description = $"Externally issued policy recorded: {providerName}, Policy {policyReference}, Coverage {currency} {request.CoverageAmount}" +
+                (existingInsurance == null ? "" : $"; replaced simulation {previousPolicyReference}"),
             PerformedByUserId = userId,
             PerformedByRole = userRole,
-            PreviousState = "No Insurance",
-            NewState = "Insured",
+            PreviousState = existingInsurance == null ? "No Insurance" : "Simulated Insurance",
+            NewState = "Policy Recorded",
             Reason = $"Coverage: {currency} {request.CoverageAmount}, Type: {insuranceRecord.CoverageType}",
             OccurredAt = DateTime.UtcNow,
             RecordedAt = DateTime.UtcNow
@@ -357,20 +381,6 @@ public class ShipmentService : IShipmentService
         await _context.SaveChangesAsync();
 
         return MapToInsuranceResponseDto(insuranceRecord);
-    }
-
-    private static decimal CalculatePremium(decimal coverageAmount, string coverageType)
-    {
-        // Simple mock premium calculation - not real actuarial logic
-        var baseRate = coverageType switch
-        {
-            "Premium" => 0.05m,      // 5% of coverage
-            "Comprehensive" => 0.08m, // 8% of coverage
-            _ => 0.03m                // 3% for Standard
-        };
-
-        var premium = coverageAmount * baseRate;
-        return Math.Round(premium, 2);
     }
 
     public async Task<InsuranceRecordResponseDto?> GetInsuranceRecordAsync(Guid shipmentId, Guid userId, string userRole)
@@ -468,6 +478,86 @@ public class ShipmentService : IShipmentService
         await _context.SaveChangesAsync();
 
         return MapToTrackingResponseDto(trackingEvent);
+    }
+
+    public async Task<ShipmentResponseDto> RecordCourierBookingAsync(
+        Guid shipmentId, Guid userId, string userRole, RecordCourierBookingRequest request)
+    {
+        if (userRole != "Admin")
+            throw new UnauthorizedAccessException("Only administrators can record courier bookings.");
+
+        var shipment = await _context.Shipments.Include(s => s.ShippingPlan)
+            .Include(s => s.Order).FirstOrDefaultAsync(s => s.Id == shipmentId)
+            ?? throw new InvalidOperationException("Shipment not found.");
+
+        string RequiredDetail(string? value, int maxLength, string label)
+        {
+            var text = value?.Trim() ?? "";
+            if (text.Length == 0 || text.Length > maxLength || CourierBookingRules.IsSimulationValue(text))
+                throw new InvalidOperationException($"Enter a valid courier-issued {label}.");
+            return text;
+        }
+
+        var courier = RequiredDetail(request.CourierName, 150, "courier name");
+        var tracking = RequiredDetail(request.TrackingNumber, 150, "tracking number");
+        var service = RequiredDetail(request.SelectedService, 50, "service name");
+        var reference = string.IsNullOrWhiteSpace(request.ExternalShipmentReference)
+            ? null : RequiredDetail(request.ExternalShipmentReference, 150, "booking reference");
+        var url = string.IsNullOrWhiteSpace(request.TrackingUrl) ? null : request.TrackingUrl.Trim();
+        if (url != null && (url.Length > 1000 || !Uri.TryCreate(url, UriKind.Absolute, out var trackingUri) ||
+            trackingUri.Scheme != Uri.UriSchemeHttps || !string.IsNullOrEmpty(trackingUri.UserInfo)))
+            throw new InvalidOperationException("Enter a valid HTTPS courier tracking link.");
+        if (!request.ConfirmedWithCourier)
+            throw new InvalidOperationException("Confirm that this booking was issued by the courier for this shipment.");
+        if (request.BookedAt == null || request.BookedAt > DateTime.UtcNow.AddMinutes(5))
+            throw new InvalidOperationException("Enter the actual courier booking date and time.");
+        var bookedAt = request.BookedAt.Value.ToUniversalTime();
+
+        if (CourierBookingRules.HasRealBooking(shipment))
+        {
+            if (shipment.CourierName == courier && shipment.TrackingNumber == tracking &&
+                shipment.ExternalShipmentReference == reference && shipment.SelectedService == service &&
+                shipment.TrackingUrl == url && shipment.BookedAt == bookedAt)
+                return MapToResponseDto(shipment);
+            throw new InvalidOperationException("A courier booking is already recorded for this shipment.");
+        }
+        if (shipment.Order.Status != OrderStatuses.Paid)
+            throw new InvalidOperationException("Only paid orders can have a courier booking recorded.");
+        if (shipment.ShippingPlan?.IsApproved != true)
+            throw new InvalidOperationException("Approve the shipping plan before recording a courier booking.");
+
+        var replacingSimulation = CourierBookingRules.IsSimulated(shipment);
+        if (shipment.Status != "ReadyForBooking" && !(replacingSimulation && shipment.Status == "Booked"))
+            throw new InvalidOperationException("The shipment must be ready for booking and not yet dispatched.");
+        if (await _context.Shipments.AnyAsync(s => s.Id != shipmentId && s.TrackingNumber == tracking))
+            throw new InvalidOperationException("This tracking number is already assigned to another shipment.");
+        if (reference != null && await _context.Shipments.AnyAsync(s =>
+            s.Id != shipmentId && s.ExternalShipmentReference == reference))
+            throw new InvalidOperationException("This booking reference is already assigned to another shipment.");
+
+        var previousStatus = shipment.Status;
+        var previousBooking = replacingSimulation
+            ? $" Previous simulation: {shipment.CourierName}; tracking {shipment.TrackingNumber}; reference {shipment.ExternalShipmentReference}."
+            : "";
+        shipment.CourierName = courier;
+        shipment.TrackingNumber = tracking;
+        shipment.ExternalShipmentReference = reference;
+        shipment.SelectedService = service;
+        shipment.TrackingUrl = url;
+        shipment.BookedAt = bookedAt;
+        shipment.Status = "Booked";
+        shipment.UpdatedAt = DateTime.UtcNow;
+        _context.ShipmentTrackingEvents.Add(new ShipmentTrackingEvent
+        {
+            Id = Guid.NewGuid(), ShipmentId = shipmentId, EventType = "CourierBookingRecorded",
+            Location = "Courier Booking", Description = $"Courier-issued booking recorded: {courier}; tracking {tracking}.{previousBooking}",
+            PerformedByUserId = userId, PerformedByRole = userRole,
+            PreviousState = previousStatus, NewState = "Booked",
+            Reason = $"Service: {service}", OccurredAt = bookedAt, RecordedAt = DateTime.UtcNow
+        });
+        await ShipmentOrderProgress.RecordShipmentStatusAsync(_context, shipment, userId);
+        await _context.SaveChangesAsync();
+        return MapToResponseDto(shipment);
     }
 
     public async Task<CourierBookingResult> BookShipmentAsync(Guid shipmentId, Guid userId, string userRole)
@@ -572,6 +662,7 @@ public class ShipmentService : IShipmentService
 
         _context.ShipmentTrackingEvents.Add(bookingEvent);
 
+        await ShipmentOrderProgress.RecordShipmentStatusAsync(_context, shipment, userId);
         await _context.SaveChangesAsync();
 
         return bookingResult;
@@ -644,6 +735,8 @@ public class ShipmentService : IShipmentService
             CourierName = shipment.CourierName,
             ExternalShipmentReference = shipment.ExternalShipmentReference,
             SelectedService = shipment.SelectedService,
+            TrackingUrl = shipment.TrackingUrl,
+            IsSimulatedBooking = CourierBookingRules.IsSimulated(shipment),
             GenerationSource = shipment.ShippingPlan?.GenerationSource,
             CreatedAt = shipment.CreatedAt,
             UpdatedAt = shipment.UpdatedAt,

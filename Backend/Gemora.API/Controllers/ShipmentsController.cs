@@ -1,5 +1,6 @@
 using Gemora.Application.DTOs;
 using Gemora.Application.Services;
+using Gemora.Domain.Constants;
 using Gemora.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -341,7 +342,7 @@ public class ShipmentsController : ControllerBase
 
     /// <summary>
     /// Book shipment with courier (Admin only)
-    /// Uses simulated courier provider adapter - DEMO/SIM prefixed values
+    /// Uses the configured academic sandbox provider; does not book with a real courier.
     /// </summary>
     [HttpPost("{id}/book")]
     [Authorize(Roles = "Admin")]
@@ -366,7 +367,11 @@ public class ShipmentsController : ControllerBase
                 externalReference = result.ExternalShipmentReference,
                 trackingNumber = result.TrackingNumber,
                 selectedService = result.SelectedService,
-                message = "Shipment successfully booked with courier (SIMULATION)"
+                isSimulatedBooking = CourierBookingRules.IsSimulationValue(result.CourierName) ||
+                    CourierBookingRules.IsSimulationValue(result.TrackingNumber),
+                message = CourierBookingRules.IsSimulationValue(result.TrackingNumber)
+                    ? "Academic sandbox booking recorded. No real courier booking was made."
+                    : "Shipment successfully booked with courier"
             });
         }
         catch (UnauthorizedAccessException)
@@ -377,6 +382,21 @@ public class ShipmentsController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Record a booking already issued by the courier (Admin only).
+    /// </summary>
+    [HttpPost("{id}/booking")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> RecordCourierBooking(Guid id, [FromBody] RecordCourierBookingRequest request)
+    {
+        try
+        {
+            return Ok(await _shipmentService.RecordCourierBookingAsync(id, GetCurrentUserId(), GetCurrentUserRole(), request));
+        }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     /// <summary>

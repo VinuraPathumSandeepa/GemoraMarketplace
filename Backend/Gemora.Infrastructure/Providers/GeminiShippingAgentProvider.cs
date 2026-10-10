@@ -17,7 +17,14 @@ public sealed class GeminiShippingAgentProvider(HttpClient client, IOptions<Gemi
     public async Task<LlmShippingPlanRecommendation?> GenerateShippingPlanAsync(
         LlmShippingPlanInput input, CancellationToken cancellationToken = default)
     {
-        var settings = options.Value;
+        var configured = options.Value;
+        var settings = new GeminiOptions
+        {
+            ApiKey = configured.ApiKey,
+            Model = string.IsNullOrWhiteSpace(configured.ShippingModel)
+                ? configured.Model : configured.ShippingModel.Trim(),
+            ShippingTimeoutSeconds = configured.ShippingTimeoutSeconds
+        };
         if (string.IsNullOrWhiteSpace(settings.ApiKey) || string.IsNullOrWhiteSpace(settings.Model))
             throw new InvalidOperationException("Gemini shipping agent is not configured. Set Gemini:ApiKey and Gemini:Model.");
         if (input.DeclaredValue <= 0 || string.IsNullOrWhiteSpace(input.Currency) ||
@@ -26,13 +33,13 @@ public sealed class GeminiShippingAgentProvider(HttpClient client, IOptions<Gemi
             throw new InvalidOperationException("Shipment context has no valid value, route or eligible shipping service.");
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(45));
+        timeout.CancelAfter(TimeSpan.FromSeconds(Math.Clamp(settings.ShippingTimeoutSeconds, 10, 300)));
         var clock = Stopwatch.StartNew();
         var runId = Guid.NewGuid();
         var toolsUsed = new HashSet<string>();
         var contents = new List<object>
         {
-            new { role = "user", parts = new[] { new { text = "Assess shipping risk. Retrieve shipment context, approved services, and shipping rules with the available tools before recommending a plan." } } }
+            new { role = "user", parts = new[] { new { text = "Assess shipping risk. Call all three read-only tools in the same response to retrieve shipment context, approved services, and shipping rules before recommending a plan." } } }
         };
         var modelCalls = 0;
         const string instructions = "You are Gemora's shipping planning agent. Use only the provided read-only tools. " +
@@ -60,7 +67,7 @@ public sealed class GeminiShippingAgentProvider(HttpClient client, IOptions<Gemi
                     parameters = new { type = "OBJECT", properties = new Dictionary<string, object>() }
                 }).ToArray() } },
                 toolConfig = new { functionCallingConfig = new { mode = "ANY", allowedFunctionNames = remaining } },
-                generationConfig = new { temperature = 0.1 }
+                generationConfig = GenerationConfig(settings)
             }, settings, timeout.Token);
             modelCalls++;
             var content = GetContent(response.RootElement);
@@ -75,7 +82,16 @@ public sealed class GeminiShippingAgentProvider(HttpClient client, IOptions<Gemi
                     (args.ValueKind != JsonValueKind.Object || args.EnumerateObject().Any()))
                     throw new InvalidOperationException("Shipping agent supplied unexpected tool arguments.");
                 toolsUsed.Add(name);
-                results.Add(new { functionResponse = new { name, response = new { result = ExecuteTool(name, input) } } });
+                var toolResponse = new Dictionary<string, object>
+                {
+                    ["name"] = name,
+                    ["response"] = new { result = ExecuteTool(name, input) }
+                };
+                // Match the provider's call identifier when present, including parallel calls.
+                foreach (var idField in new[] { "id", "call_id" })
+                    if (call.TryGetProperty(idField, out var callId))
+                        toolResponse[idField] = callId.Clone();
+                results.Add(new { functionResponse = toolResponse });
             }
             if (results.Count == 0) throw new InvalidOperationException("Shipping agent did not retrieve required evidence.");
             contents.Add(new { role = "user", parts = results });
@@ -88,7 +104,7 @@ public sealed class GeminiShippingAgentProvider(HttpClient client, IOptions<Gemi
         {
             systemInstruction = new { parts = new[] { new { text = instructions } } },
             contents,
-            generationConfig = new { temperature = 0.1, responseMimeType = "application/json", responseSchema = OutputSchema(input) }
+            generationConfig = GenerationConfig(settings, input)
         }, settings, timeout.Token);
         modelCalls++;
         var finalContent = GetContent(finalResponse.RootElement);
@@ -148,6 +164,25 @@ public sealed class GeminiShippingAgentProvider(HttpClient client, IOptions<Gemi
             return JsonDocument.Parse(bytes);
         }
         throw new InvalidOperationException("Gemini shipping request exhausted retries.");
+    }
+
+    private static Dictionary<string, object> GenerationConfig(GeminiOptions settings, LlmShippingPlanInput? input = null)
+    {
+        var config = new Dictionary<string, object>();
+        // Gemini 3 uses its default sampling settings; a low temperature can cause loops.
+        if (!settings.Model.StartsWith("gemini-3", StringComparison.OrdinalIgnoreCase))
+            config["temperature"] = 0.1;
+        // Gemini 3 supports low-latency thinking levels; 2.5 uses a token budget.
+        if (settings.Model.StartsWith("gemini-3", StringComparison.OrdinalIgnoreCase))
+            config["thinkingConfig"] = new { thinkingLevel = "low" };
+        else if (settings.Model.StartsWith("gemini-2.5", StringComparison.OrdinalIgnoreCase))
+            config["thinkingConfig"] = new { thinkingBudget = 1024 };
+        if (input != null)
+        {
+            config["responseMimeType"] = "application/json";
+            config["responseSchema"] = OutputSchema(input);
+        }
+        return config;
     }
 
     private static JsonElement GetContent(JsonElement root)

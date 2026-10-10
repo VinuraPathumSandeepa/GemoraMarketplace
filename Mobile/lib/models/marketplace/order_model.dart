@@ -5,21 +5,28 @@ class OrderHistoryItem {
   final String? reason;
   final DateTime createdAt;
 
-  OrderHistoryItem({required this.previousStatus, required this.newStatus, required this.changedByName, required this.reason, required this.createdAt});
+  OrderHistoryItem({
+    required this.previousStatus,
+    required this.newStatus,
+    required this.changedByName,
+    required this.reason,
+    required this.createdAt,
+  });
 
-  factory OrderHistoryItem.fromJson(Map<String, dynamic> json) => OrderHistoryItem(
-    previousStatus: json['previousStatus'],
-    newStatus: json['newStatus'] ?? '',
-    changedByName: json['changedByName'] ?? '',
-    reason: json['reason'],
-    createdAt: DateTime.parse(json['createdAt']),
-  );
+  factory OrderHistoryItem.fromJson(Map<String, dynamic> json) =>
+      OrderHistoryItem(
+        previousStatus: json['previousStatus'],
+        newStatus: json['newStatus'] ?? '',
+        changedByName: json['changedByName'] ?? '',
+        reason: json['reason'],
+        createdAt: DateTime.parse(json['createdAt']),
+      );
 }
 
 class OrderModel {
-  final int id;
+  final String id;
   final String orderNumber;
-  final int gemListingId;
+  final int? gemListingId;
   final String gemTitle;
   final String? gemImageUrl;
   final String buyerName;
@@ -30,10 +37,23 @@ class OrderModel {
   final DateTime createdAt;
   final List<OrderHistoryItem> statusHistory;
 
-  OrderModel({required this.id, required this.orderNumber, required this.gemListingId, required this.gemTitle, required this.gemImageUrl, required this.buyerName, required this.sellerName, required this.agreedPrice, required this.currency, required this.status, required this.createdAt, required this.statusHistory});
+  OrderModel({
+    required this.id,
+    required this.orderNumber,
+    required this.gemListingId,
+    required this.gemTitle,
+    required this.gemImageUrl,
+    required this.buyerName,
+    required this.sellerName,
+    required this.agreedPrice,
+    required this.currency,
+    required this.status,
+    required this.createdAt,
+    required this.statusHistory,
+  });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) => OrderModel(
-    id: json['id'],
+    id: json['id'].toString(),
     orderNumber: json['orderNumber'] ?? '',
     gemListingId: json['gemListingId'],
     gemTitle: json['gemTitle'] ?? '',
@@ -45,6 +65,7 @@ class OrderModel {
     status: json['status'] ?? '',
     createdAt: DateTime.parse(json['createdAt']),
     statusHistory: ((json['statusHistory'] ?? []) as List)
-      .map((e) => OrderHistoryItem.fromJson(e as Map<String, dynamic>)).toList(),
+        .map((e) => OrderHistoryItem.fromJson(e as Map<String, dynamic>))
+        .toList(),
   );
 }
