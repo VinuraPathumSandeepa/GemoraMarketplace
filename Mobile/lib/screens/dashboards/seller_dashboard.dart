@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../shipments/seller_shipment_list.dart';
+import '../export_compliance/my_export_requests_screen.dart';
 
 class SellerDashboard extends StatelessWidget {
   const SellerDashboard({super.key});
@@ -56,6 +57,24 @@ class SellerDashboard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const MyExportRequestsScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.flight_takeoff),
+                label: const Text('My Export Requests'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
