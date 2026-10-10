@@ -21,4 +21,8 @@ public class ExportRequestResponseDto
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
+
+    public Guid? OrderId { get; set; }
+
+    public string? OrderNumber { get; set; }
 }

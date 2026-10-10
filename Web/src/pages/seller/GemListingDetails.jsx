@@ -2,10 +2,18 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
-import gemListingService from "../../services/gemVerification/gemListingService";
-import api from "../../services/api";
 
-const API_ORIGIN = "http://localhost:5198";
+import gemListingService from "../../services/gemVerification/gemListingService";
+
+import api, {
+  resolveApiAssetUrl,
+} from "../../services/api";
+
+import { openProtectedCertificate } from "../../services/certificateAccess";
+
+// ============================================================
+// STATUS CONFIGURATION
+// ============================================================
 
 const STATUS_CONFIG = {
   Draft: {
@@ -44,20 +52,17 @@ const STATUS_CONFIG = {
   },
 };
 
+// ============================================================
+// FILE URL - WORKS LOCALLY AND ON RENDER
+// ============================================================
+
 function buildFileUrl(url) {
-  if (!url) {
-    return null;
-  }
-
-  if (
-    url.startsWith("http://") ||
-    url.startsWith("https://")
-  ) {
-    return url;
-  }
-
-  return `${API_ORIGIN}${url.startsWith("/") ? "" : "/"}${url}`;
+  return resolveApiAssetUrl(url);
 }
+
+// ============================================================
+// EVIDENCE STATE
+// ============================================================
 
 function EvidenceState({ available, children }) {
   return (
@@ -72,41 +77,71 @@ function EvidenceState({ available, children }) {
   );
 }
 
+// ============================================================
+// GEM LISTING DETAILS
+// ============================================================
+
 function GemListingDetails() {
   const { id } = useParams();
+
   const navigate = useNavigate();
 
   const [listing, setListing] = useState(null);
 
   const [loading, setLoading] = useState(true);
+
   const [pageError, setPageError] = useState("");
 
-  const [imageFile, setImageFile] = useState(null);
-  const [certificateFile, setCertificateFile] = useState(null);
+  // Image fallback
 
-  const [imageUploading, setImageUploading] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  // Upload states
+
+  const [imageFile, setImageFile] = useState(null);
+
+  const [certificateFile, setCertificateFile] =
+    useState(null);
+
+  const [imageUploading, setImageUploading] =
+    useState(false);
+
   const [certificateUploading, setCertificateUploading] =
     useState(false);
 
   const [submitting, setSubmitting] = useState(false);
+
   const [deleting, setDeleting] = useState(false);
 
   const [actionMessage, setActionMessage] = useState("");
+
   const [actionError, setActionError] = useState("");
 
-  const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [submitModalError, setSubmitModalError] = useState("");
+  // Protected certificate access
 
-  /* =========================================================
-     LOAD LISTING
-     ========================================================= */
+  const [certificateOpening, setCertificateOpening] =
+    useState(false);
+
+  // Modal
+
+  const [showSubmitModal, setShowSubmitModal] =
+    useState(false);
+
+  const [submitModalError, setSubmitModalError] =
+    useState("");
+
+  // ==========================================================
+  // LOAD LISTING
+  // ==========================================================
 
   const loadListing = async () => {
     try {
       setLoading(true);
+
       setPageError("");
 
-      const data = await gemListingService.getListingById(id);
+      const data =
+        await gemListingService.getListingById(id);
 
       setListing(data);
     } catch (error) {
@@ -126,12 +161,21 @@ function GemListingDetails() {
     loadListing();
   }, [id]);
 
-  /* =========================================================
-     HELPERS
-     ========================================================= */
+  // ==========================================================
+  // RESET IMAGE FALLBACK WHEN IMAGE URL CHANGES
+  // ==========================================================
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [listing?.primaryImageUrl]);
+
+  // ==========================================================
+  // HELPERS
+  // ==========================================================
 
   const clearMessages = () => {
     setActionMessage("");
+
     setActionError("");
   };
 
@@ -144,9 +188,9 @@ function GemListingDetails() {
     );
   };
 
-  /* =========================================================
-     FILE VALIDATION
-     ========================================================= */
+  // ==========================================================
+  // IMAGE VALIDATION
+  // ==========================================================
 
   const handleImageSelection = (event) => {
     const file = event.target.files?.[0];
@@ -167,6 +211,7 @@ function GemListingDetails() {
       );
 
       event.target.value = "";
+
       return;
     }
 
@@ -176,12 +221,18 @@ function GemListingDetails() {
       );
 
       event.target.value = "";
+
       return;
     }
 
     clearMessages();
+
     setImageFile(file);
   };
+
+  // ==========================================================
+  // CERTIFICATE VALIDATION
+  // ==========================================================
 
   const handleCertificateSelection = (event) => {
     const file = event.target.files?.[0];
@@ -202,6 +253,7 @@ function GemListingDetails() {
       );
 
       event.target.value = "";
+
       return;
     }
 
@@ -211,16 +263,18 @@ function GemListingDetails() {
       );
 
       event.target.value = "";
+
       return;
     }
 
     clearMessages();
+
     setCertificateFile(file);
   };
 
-  /* =========================================================
-     IMAGE UPLOAD
-     ========================================================= */
+  // ==========================================================
+  // IMAGE UPLOAD
+  // ==========================================================
 
   const handleImageUpload = async () => {
     if (!imageFile) {
@@ -233,9 +287,13 @@ function GemListingDetails() {
 
     try {
       clearMessages();
+
       setImageUploading(true);
 
-      await gemListingService.uploadImage(id, imageFile);
+      await gemListingService.uploadImage(
+        id,
+        imageFile
+      );
 
       setImageFile(null);
 
@@ -258,9 +316,9 @@ function GemListingDetails() {
     }
   };
 
-  /* =========================================================
-     CERTIFICATE UPLOAD
-     ========================================================= */
+  // ==========================================================
+  // CERTIFICATE UPLOAD
+  // ==========================================================
 
   const handleCertificateUpload = async () => {
     if (!certificateFile) {
@@ -273,6 +331,7 @@ function GemListingDetails() {
 
     try {
       clearMessages();
+
       setCertificateUploading(true);
 
       await gemListingService.uploadCertificate(
@@ -301,14 +360,54 @@ function GemListingDetails() {
     }
   };
 
-  /* =========================================================
-     OPEN SUBMIT MODAL
-     ========================================================= */
+  // ==========================================================
+  // OPEN PROTECTED CERTIFICATE
+  // ==========================================================
+
+  const handleOpenCertificate = async (event) => {
+    event?.preventDefault();
+
+    if (
+      certificateOpening ||
+      !listing?.certificateUrl
+    ) {
+      return;
+    }
+
+    try {
+      clearMessages();
+
+      setCertificateOpening(true);
+
+      await openProtectedCertificate(
+        listing.id
+      );
+    } catch (error) {
+      console.error(
+        "Certificate access failed:",
+        error
+      );
+
+      setActionError(
+        getErrorMessage(
+          error,
+          "The certificate could not be opened."
+        )
+      );
+    } finally {
+      setCertificateOpening(false);
+    }
+  };
+
+  // ==========================================================
+  // OPEN SUBMIT MODAL
+  // ==========================================================
 
   const handleSubmitForVerification = () => {
     clearMessages();
 
     setSubmitModalError("");
+
     setShowSubmitModal(true);
   };
 
@@ -318,20 +417,20 @@ function GemListingDetails() {
     }
 
     setShowSubmitModal(false);
+
     setSubmitModalError("");
   };
 
-  /* =========================================================
-     SUBMIT FOR VERIFICATION
-
-     IMPORTANT:
-     Correct ASP.NET route:
-     POST /api/GemListings/{id}/submit-verification
-     ========================================================= */
+  // ==========================================================
+  // SUBMIT FOR VERIFICATION
+  //
+  // POST /api/GemListings/{id}/submit-verification
+  // ==========================================================
 
   const confirmSubmitForVerification = async () => {
     try {
       setSubmitModalError("");
+
       clearMessages();
 
       setSubmitting(true);
@@ -346,6 +445,7 @@ function GemListingDetails() {
       );
 
       setShowSubmitModal(false);
+
       setSubmitModalError("");
 
       setActionMessage(
@@ -372,9 +472,9 @@ function GemListingDetails() {
     }
   };
 
-  /* =========================================================
-     DELETE DRAFT
-     ========================================================= */
+  // ==========================================================
+  // DELETE DRAFT
+  // ==========================================================
 
   const handleDelete = async () => {
     const confirmed = window.confirm(
@@ -387,6 +487,7 @@ function GemListingDetails() {
 
     try {
       clearMessages();
+
       setDeleting(true);
 
       await gemListingService.deleteListing(id);
@@ -406,9 +507,9 @@ function GemListingDetails() {
     }
   };
 
-  /* =========================================================
-     LOADING
-     ========================================================= */
+  // ==========================================================
+  // LOADING
+  // ==========================================================
 
   if (loading) {
     return (
@@ -421,12 +522,11 @@ function GemListingDetails() {
               GEMORA
             </p>
 
-            <h2>
-              Loading gemstone listing
-            </h2>
+            <h2>Loading gemstone listing</h2>
 
             <p>
-              Retrieving listing information and verification evidence.
+              Retrieving listing information and
+              verification evidence.
             </p>
           </div>
         </main>
@@ -434,9 +534,9 @@ function GemListingDetails() {
     );
   }
 
-  /* =========================================================
-     ERROR
-     ========================================================= */
+  // ==========================================================
+  // ERROR
+  // ==========================================================
 
   if (pageError || !listing) {
     return (
@@ -475,9 +575,9 @@ function GemListingDetails() {
     );
   }
 
-  /* =========================================================
-     DERIVED VALUES
-     ========================================================= */
+  // ==========================================================
+  // DERIVED VALUES
+  // ==========================================================
 
   const status = listing.status || "Draft";
 
@@ -498,16 +598,19 @@ function GemListingDetails() {
     listing.primaryImageUrl
   );
 
-  const certificateUrl = buildFileUrl(
+  const hasImage = Boolean(imageUrl);
+
+  // IMPORTANT:
+  // Certificate references can now be private Supabase references.
+  // Do not pass them to resolveApiAssetUrl().
+
+  const hasCertificate = Boolean(
     listing.certificateUrl
   );
 
-  const hasImage = Boolean(imageUrl);
-  const hasCertificate = Boolean(certificateUrl);
-
-  /* =========================================================
-     PREPARATION STAGE
-     ========================================================= */
+  // ==========================================================
+  // PREPARATION STAGE
+  // ==========================================================
 
   let preparationStage;
 
@@ -515,14 +618,18 @@ function GemListingDetails() {
     if (!hasImage) {
       preparationStage = {
         label: "Evidence Needed",
+
         className: "needs-evidence",
+
         description:
           "Your listing information is saved, but a gemstone image should be added before sending it for verification.",
       };
     } else {
       preparationStage = {
         label: "Ready to Submit",
+
         className: "ready",
+
         description:
           "The required gemstone image is available. Review the listing and submit this Draft when you are ready to begin Gemologist verification.",
       };
@@ -530,41 +637,49 @@ function GemListingDetails() {
   } else if (status === "ChangesRequested") {
     preparationStage = {
       label: "Changes Required",
+
       className: "attention",
+
       description:
         "A Gemologist requested corrections. Update the listing information or evidence and resubmit it for verification.",
     };
   } else if (status === "PendingVerification") {
     preparationStage = {
       label: "Pending Review",
+
       className: "pending",
+
       description:
         "The listing has left Draft preparation and is now waiting for Gemologist review.",
     };
   } else if (status === "Approved") {
     preparationStage = {
       label: "Verification Complete",
+
       className: "complete",
+
       description:
         "The Gemologist has completed the verification workflow and approved this listing.",
     };
   } else {
     preparationStage = {
       label: statusConfig.label,
+
       className: "attention",
+
       description: statusConfig.message,
     };
   }
 
-  /* =========================================================
-     PAGE
-     ========================================================= */
+  // ==========================================================
+  // MAIN PAGE
+  // ==========================================================
 
   return (
     <DashboardLayout>
       <main className="gem-detail-page">
 
-        {/* BACK */}
+        {/* BACK BUTTON */}
 
         <button
           type="button"
@@ -576,7 +691,9 @@ function GemListingDetails() {
           ← My Gem Listings
         </button>
 
-        {/* HEADER */}
+        {/* ====================================================
+            HEADER
+            ==================================================== */}
 
         <section className="gem-detail-header">
           <div>
@@ -584,15 +701,14 @@ function GemListingDetails() {
               GEMSTONE LISTING #{listing.id}
             </p>
 
-            <h1>
-              {listing.title}
-            </h1>
+            <h1>{listing.title}</h1>
 
             <div className="gem-detail-header-meta">
               <span
                 className={`gem-detail-status ${statusConfig.className}`}
               >
                 <span className="gem-detail-status-dot" />
+
                 {statusConfig.label}
               </span>
 
@@ -619,16 +735,20 @@ function GemListingDetails() {
               }
             >
               Edit Listing
+
               <span>↗</span>
             </button>
           )}
         </section>
 
-        {/* SUCCESS / ERROR */}
+        {/* ====================================================
+            SUCCESS / ERROR
+            ==================================================== */}
 
         {actionMessage && (
           <div className="gem-detail-message success">
             <span>✓</span>
+
             <p>{actionMessage}</p>
           </div>
         )}
@@ -636,15 +756,18 @@ function GemListingDetails() {
         {actionError && (
           <div className="gem-detail-message error">
             <span>!</span>
+
             <p>{actionError}</p>
           </div>
         )}
 
-        {/* HERO */}
+        {/* ====================================================
+            HERO SECTION
+            ==================================================== */}
 
         <section className="gem-detail-hero-grid">
 
-          {/* IMAGE */}
+          {/* IMAGE CARD */}
 
           <article className="gem-detail-image-card">
             <div className="gem-detail-image-stage">
@@ -653,14 +776,18 @@ function GemListingDetails() {
                 className={`gem-detail-floating-status ${statusConfig.className}`}
               >
                 <span className="gem-detail-status-dot" />
+
                 {statusConfig.label}
               </span>
 
-              {imageUrl ? (
+              {/* IMAGE WITH PROFESSIONAL FALLBACK */}
+
+              {imageUrl && !imageFailed ? (
                 <img
                   src={imageUrl}
                   alt={listing.title}
                   className="gem-detail-main-image"
+                  onError={() => setImageFailed(true)}
                 />
               ) : (
                 <div className="gem-detail-image-placeholder">
@@ -669,11 +796,15 @@ function GemListingDetails() {
                   </div>
 
                   <p>
-                    No gemstone photograph
+                    {imageUrl
+                      ? "Photograph unavailable"
+                      : "No gemstone photograph"}
                   </p>
 
                   <span>
-                    Add a clear image before verification.
+                    {imageUrl
+                      ? "The saved image could not be loaded. Try replacing it if the file is missing."
+                      : "Add a clear image before verification."}
                   </span>
                 </div>
               )}
@@ -684,6 +815,8 @@ function GemListingDetails() {
                 </div>
               )}
             </div>
+
+            {/* IMAGE UPLOAD FOOTER */}
 
             <div className="gem-detail-image-footer">
               <div>
@@ -742,7 +875,9 @@ function GemListingDetails() {
             </div>
           </article>
 
-          {/* GEM INFO */}
+          {/* ==================================================
+              GEM INFORMATION CARD
+              ================================================== */}
 
           <article className="gem-detail-info-card">
             <div className="gem-detail-card-heading">
@@ -751,9 +886,7 @@ function GemListingDetails() {
                   GEMSTONE PROFILE
                 </p>
 
-                <h2>
-                  Gem Information
-                </h2>
+                <h2>Gem Information</h2>
               </div>
 
               <span className="gem-detail-id">
@@ -764,6 +897,7 @@ function GemListingDetails() {
             <div className="gem-detail-profile-grid">
               <div>
                 <span>Gem Type</span>
+
                 <strong>
                   {listing.gemType || "—"}
                 </strong>
@@ -771,6 +905,7 @@ function GemListingDetails() {
 
               <div>
                 <span>Carat Weight</span>
+
                 <strong>
                   {listing.caratWeight
                     ? `${listing.caratWeight} ct`
@@ -780,6 +915,7 @@ function GemListingDetails() {
 
               <div>
                 <span>Color</span>
+
                 <strong>
                   {listing.color || "—"}
                 </strong>
@@ -787,6 +923,7 @@ function GemListingDetails() {
 
               <div>
                 <span>Clarity</span>
+
                 <strong>
                   {listing.clarity || "—"}
                 </strong>
@@ -794,6 +931,7 @@ function GemListingDetails() {
 
               <div>
                 <span>Cut</span>
+
                 <strong>
                   {listing.cut || "—"}
                 </strong>
@@ -801,6 +939,7 @@ function GemListingDetails() {
 
               <div>
                 <span>Status</span>
+
                 <strong>
                   {statusConfig.label}
                 </strong>
@@ -819,9 +958,7 @@ function GemListingDetails() {
             </div>
 
             <div className="gem-detail-price">
-              <span>
-                LISTING PRICE
-              </span>
+              <span>LISTING PRICE</span>
 
               <strong>
                 LKR{" "}
@@ -831,10 +968,11 @@ function GemListingDetails() {
               </strong>
             </div>
           </article>
-
         </section>
 
-        {/* SUPPORTING EVIDENCE */}
+        {/* ====================================================
+            SUPPORTING EVIDENCE
+            ==================================================== */}
 
         <section className="gem-detail-section">
           <div className="gem-detail-section-heading">
@@ -843,9 +981,7 @@ function GemListingDetails() {
                 VERIFICATION EVIDENCE
               </p>
 
-              <h2>
-                Supporting evidence
-              </h2>
+              <h2>Supporting evidence</h2>
 
               <p>
                 Evidence supports AI-assisted analysis
@@ -866,6 +1002,8 @@ function GemListingDetails() {
           </div>
 
           <div className="gem-detail-evidence-grid">
+
+            {/* GEM IMAGE EVIDENCE */}
 
             <article className="gem-detail-evidence-card">
               <div className="gem-detail-evidence-icon">
@@ -895,6 +1033,8 @@ function GemListingDetails() {
               </EvidenceState>
             </article>
 
+            {/* CERTIFICATE EVIDENCE */}
+
             <article className="gem-detail-evidence-card">
               <div className="gem-detail-evidence-icon">
                 ▤
@@ -915,14 +1055,16 @@ function GemListingDetails() {
                     "Certificate authority has not been provided."}
                 </p>
 
-                {certificateUrl && (
+                {hasCertificate && (
                   <a
-                    href={certificateUrl}
-                    target="_blank"
-                    rel="noreferrer"
+                    href={`/api/GemCertificates/listings/${listing.id}/access`}
                     className="gem-detail-text-link"
+                    onClick={handleOpenCertificate}
+                    aria-disabled={certificateOpening}
                   >
-                    View uploaded certificate ↗
+                    {certificateOpening
+                      ? "Opening certificate..."
+                      : "View uploaded certificate ↗"}
                   </a>
                 )}
               </div>
@@ -933,8 +1075,9 @@ function GemListingDetails() {
                   : "Missing"}
               </EvidenceState>
             </article>
-
           </div>
+
+          {/* CERTIFICATE UPLOAD */}
 
           {canModify && (
             <div className="gem-detail-certificate-upload">
@@ -974,9 +1117,7 @@ function GemListingDetails() {
                     !certificateFile ||
                     certificateUploading
                   }
-                  onClick={
-                    handleCertificateUpload
-                  }
+                  onClick={handleCertificateUpload}
                 >
                   {certificateUploading
                     ? "Uploading..."
@@ -989,7 +1130,9 @@ function GemListingDetails() {
           )}
         </section>
 
-        {/* SELLER PREPARATION */}
+        {/* ====================================================
+            SELLER PREPARATION
+            ==================================================== */}
 
         <section className="gem-detail-preparation">
           <div className="gem-detail-preparation-heading">
@@ -1017,6 +1160,8 @@ function GemListingDetails() {
 
           <div className="gem-detail-preparation-steps">
 
+            {/* STEP 1 */}
+
             <div className="gem-preparation-step completed">
               <span>✓</span>
 
@@ -1030,6 +1175,8 @@ function GemListingDetails() {
                 </small>
               </div>
             </div>
+
+            {/* STEP 2 */}
 
             <div
               className={
@@ -1055,6 +1202,8 @@ function GemListingDetails() {
               </div>
             </div>
 
+            {/* STEP 3 */}
+
             <div
               className={
                 hasCertificate
@@ -1078,6 +1227,8 @@ function GemListingDetails() {
                 </small>
               </div>
             </div>
+
+            {/* STEP 4 */}
 
             <div
               className={
@@ -1106,11 +1257,12 @@ function GemListingDetails() {
                 </small>
               </div>
             </div>
-
           </div>
         </section>
 
-        {/* VERIFICATION WORKFLOW */}
+        {/* ====================================================
+            VERIFICATION WORKFLOW
+            ==================================================== */}
 
         <section className="gem-detail-workflow">
           <div className="gem-detail-section-heading">
@@ -1133,6 +1285,8 @@ function GemListingDetails() {
 
           <div className="gem-detail-workflow-grid">
 
+            {/* LISTING */}
+
             <div
               className={`gem-detail-workflow-step ${
                 status !== "Draft"
@@ -1141,6 +1295,7 @@ function GemListingDetails() {
               }`}
             >
               <span>01</span>
+
               <div>◇</div>
 
               <h3>Listing</h3>
@@ -1150,12 +1305,15 @@ function GemListingDetails() {
               </p>
             </div>
 
+            {/* EVIDENCE */}
+
             <div
               className={`gem-detail-workflow-step ${
                 hasImage ? "completed" : ""
               }`}
             >
               <span>02</span>
+
               <div>▤</div>
 
               <h3>Evidence</h3>
@@ -1165,6 +1323,8 @@ function GemListingDetails() {
                 are prepared.
               </p>
             </div>
+
+            {/* AI */}
 
             <div
               className={`gem-detail-workflow-step ${
@@ -1177,16 +1337,17 @@ function GemListingDetails() {
               }`}
             >
               <span>03</span>
+
               <div>✦</div>
 
-              <h3>
-                AI Assistance
-              </h3>
+              <h3>AI Assistance</h3>
 
               <p>
                 Evidence may be analyzed to assist the review.
               </p>
             </div>
+
+            {/* GEMOLOGIST */}
 
             <div
               className={`gem-detail-workflow-step ${
@@ -1199,21 +1360,21 @@ function GemListingDetails() {
               }`}
             >
               <span>04</span>
+
               <div>✓</div>
 
-              <h3>
-                Gemologist
-              </h3>
+              <h3>Gemologist</h3>
 
               <p>
                 A human Gemologist makes the final decision.
               </p>
             </div>
-
           </div>
         </section>
 
-        {/* CURRENT STATUS */}
+        {/* ====================================================
+            CURRENT STATUS
+            ==================================================== */}
 
         <section
           className={`gem-detail-verification-panel ${statusConfig.className}`}
@@ -1226,14 +1387,10 @@ function GemListingDetails() {
             <div className="gem-detail-panel-title">
               <span className="gem-detail-status-dot" />
 
-              <h2>
-                {statusConfig.label}
-              </h2>
+              <h2>{statusConfig.label}</h2>
             </div>
 
-            <p>
-              {statusConfig.message}
-            </p>
+            <p>{statusConfig.message}</p>
           </div>
 
           <div className="gem-detail-panel-actions">
@@ -1256,9 +1413,7 @@ function GemListingDetails() {
                 type="button"
                 className="gem-detail-gold-button"
                 disabled={submitting}
-                onClick={
-                  handleSubmitForVerification
-                }
+                onClick={handleSubmitForVerification}
               >
                 {submitting
                   ? "Submitting..."
@@ -1270,7 +1425,9 @@ function GemListingDetails() {
           </div>
         </section>
 
-        {/* AI NOTICE */}
+        {/* ====================================================
+            AI NOTICE
+            ==================================================== */}
 
         <section className="gem-detail-ai-notice">
           <div className="gem-detail-ai-icon">
@@ -1295,7 +1452,9 @@ function GemListingDetails() {
           </div>
         </section>
 
-        {/* DELETE */}
+        {/* ====================================================
+            DELETE DRAFT
+            ==================================================== */}
 
         {canDelete && (
           <section className="gem-detail-danger-zone">
@@ -1327,7 +1486,9 @@ function GemListingDetails() {
           </section>
         )}
 
-        {/* SUBMIT MODAL */}
+        {/* ====================================================
+            SUBMIT CONFIRMATION MODAL
+            ==================================================== */}
 
         {showSubmitModal && (
           <div
@@ -1362,11 +1523,11 @@ function GemListingDetails() {
                 pending review.
               </p>
 
+              {/* CURRENT TO NEXT STATUS */}
+
               <div className="gem-submit-transition">
                 <div>
-                  <span>
-                    CURRENT STAGE
-                  </span>
+                  <span>CURRENT STAGE</span>
 
                   <strong>
                     {status === "ChangesRequested"
@@ -1380,9 +1541,7 @@ function GemListingDetails() {
                 </span>
 
                 <div>
-                  <span>
-                    NEXT STAGE
-                  </span>
+                  <span>NEXT STAGE</span>
 
                   <strong>
                     Pending Review
@@ -1390,8 +1549,9 @@ function GemListingDetails() {
                 </div>
               </div>
 
-              <div className="gem-submit-modal-checklist">
+              {/* CHECKLIST */}
 
+              <div className="gem-submit-modal-checklist">
                 <div>
                   <span
                     className={
@@ -1441,8 +1601,9 @@ function GemListingDetails() {
                     </small>
                   </p>
                 </div>
-
               </div>
+
+              {/* AI INFORMATION */}
 
               <div className="gem-submit-modal-note">
                 <span>✦</span>
@@ -1454,6 +1615,8 @@ function GemListingDetails() {
                   Gemologist.
                 </p>
               </div>
+
+              {/* SUBMISSION ERROR */}
 
               {submitModalError && (
                 <div className="gem-submit-modal-error">
@@ -1470,6 +1633,8 @@ function GemListingDetails() {
                   </div>
                 </div>
               )}
+
+              {/* MODAL ACTIONS */}
 
               <div className="gem-submit-modal-actions">
                 <button
@@ -1499,11 +1664,9 @@ function GemListingDetails() {
                     : "Submit Listing →"}
                 </button>
               </div>
-
             </div>
           </div>
         )}
-
       </main>
     </DashboardLayout>
   );

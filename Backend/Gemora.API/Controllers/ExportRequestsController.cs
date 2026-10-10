@@ -75,6 +75,58 @@ public class ExportRequestsController : ControllerBase
     }
 
     // ==========================================
+    // 1B. CREATE EXPORT REQUEST FROM ORDER
+    // POST: /api/ExportRequests/from-order/{orderId}
+    // ==========================================
+    [HttpPost("from-order/{orderId:guid}")]
+    public async Task<IActionResult> CreateExportRequestFromOrder(Guid orderId)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Authenticated user is invalid."
+            });
+        }
+
+        var result = await _exportComplianceService.CreateExportRequestFromOrderAsync(userId, orderId);
+
+        if (!result.Success)
+        {
+            if (result.ErrorCode == "ORDER_NOT_FOUND")
+            {
+                return NotFound(new { message = result.Message });
+            }
+
+            if (result.ErrorCode == "FORBIDDEN")
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = result.Message });
+            }
+
+            if (result.ErrorCode == "EXPORT_REQUEST_ALREADY_EXISTS")
+            {
+                return Conflict(new { message = result.Message });
+            }
+
+            if (result.ErrorCode == "ORDER_NOT_ELIGIBLE_FOR_EXPORT")
+            {
+                return BadRequest(new { message = result.Message });
+            }
+
+            return BadRequest(new { message = result.Message });
+        }
+
+        return StatusCode(
+            StatusCodes.Status201Created,
+            new
+            {
+                message = result.Message,
+                request = result.Request
+            }
+        );
+    }
+
+    // ==========================================
     // 2. GET MY EXPORT REQUESTS
     // GET: /api/ExportRequests/my
     // ==========================================
