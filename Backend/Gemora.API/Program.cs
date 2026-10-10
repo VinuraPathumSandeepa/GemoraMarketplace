@@ -1057,11 +1057,6 @@ using (
         Console.WriteLine($"Error updating migration history: {ex.Message}");
     }
     */
-
-    await DbSeeder.SeedAsync(
-        dbContext,
-        builder.Configuration
-    );
 }
 
 
