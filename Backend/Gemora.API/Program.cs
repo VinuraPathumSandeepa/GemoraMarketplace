@@ -81,6 +81,34 @@ if (args.Contains("--reset-gemologist-password", StringComparer.Ordinal))
 }
 
 
+// Explicit maintenance command: reset only the existing Export Officer and
+// exit. Normal database seeding intentionally preserves existing credentials.
+if (args.Contains("--reset-export-officer-password", StringComparer.Ordinal))
+{
+    var resetConnection = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Database connection string 'DefaultConnection' is not configured.");
+    var resetPassword = builder.Configuration["SeedUsers:ExportOfficerPassword"];
+    if (string.IsNullOrWhiteSpace(resetPassword))
+        throw new InvalidOperationException("SeedUsers:ExportOfficerPassword is not configured.");
+
+    var resetOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+        .UseNpgsql(resetConnection).Options;
+    await using var resetContext = new ApplicationDbContext(resetOptions);
+    var exportOfficer = await resetContext.Users.SingleOrDefaultAsync(
+        user => user.Email.ToLower() == "export@gemora.com" && user.Role == "ExportOfficer")
+        ?? throw new InvalidOperationException("The existing export@gemora.com Export Officer account was not found.");
+
+    exportOfficer.PasswordHash = BCrypt.Net.BCrypt.HashPassword(resetPassword);
+    await resetContext.SaveChangesAsync();
+    await resetContext.Entry(exportOfficer).ReloadAsync();
+    if (!BCrypt.Net.BCrypt.Verify(resetPassword, exportOfficer.PasswordHash))
+        throw new InvalidOperationException("Export Officer password verification failed.");
+
+    Console.WriteLine("Export Officer password reset and verified. Sign in with export@gemora.com and the configured SeedUsers:ExportOfficerPassword.");
+    return;
+}
+
+
 // ============================================================
 // SUPABASE STORAGE CONFIGURATION
 // ============================================================
