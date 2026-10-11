@@ -408,6 +408,22 @@ public class AuthController : ControllerBase
             );
         }
 
+        // A profile-image URL can outlive its physical file (for example
+        // after a local folder cleanup or when uploads are excluded from a
+        // repository/ZIP). Do not send a known-broken local URL to the
+        // frontend; it will use the initials fallback instead.
+        if (!string.IsNullOrWhiteSpace(profile.ProfileImageUrl))
+        {
+            var imageExists =
+                await _profileImageStorageService.ExistsAsync(
+                    profile.ProfileImageUrl,
+                    HttpContext.RequestAborted);
+
+            if (!imageExists)
+            {
+                profile.ProfileImageUrl = null;
+            }
+        }
 
         return Ok(profile);
     }

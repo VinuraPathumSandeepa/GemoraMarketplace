@@ -12,4 +12,8 @@ public interface IProfileImageStorageService
     Task DeleteAsync(
         string? profileImageUrl,
         CancellationToken cancellationToken = default);
+
+    Task<bool> ExistsAsync(
+        string? profileImageUrl,
+        CancellationToken cancellationToken = default);
 }
