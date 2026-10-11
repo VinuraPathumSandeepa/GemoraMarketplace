@@ -26,7 +26,7 @@ class OrderHistoryItem {
 }
 
 class OrderModel {
-  final dynamic id;
+  final String id;
   final String orderNumber;
   final int? gemListingId;
   final String gemTitle;
@@ -61,24 +61,24 @@ class OrderModel {
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) => OrderModel(
-        id: json['id'],
-        orderNumber: json['orderNumber'] ?? '',
-        gemListingId: json['gemListingId'] as int?,
-        gemTitle: json['gemTitle'] ?? '',
-        gemImageUrl: json['gemImageUrl'],
-        buyerName: json['buyerName'] ?? '',
-        sellerName: json['sellerName'] ?? '',
-        agreedPrice: (json['agreedPrice'] as num?)?.toDouble() ?? 0,
-        currency: json['currency'] ?? '',
-        status: json['status'] ?? '',
-        shippingCountryCode: json['shippingCountryCode']?.toString(),
-        exportStatus: json['exportStatus']?.toString(),
-        exportRequestId: json['exportRequestId']?.toString(),
-        createdAt: json['createdAt'] != null
-            ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
-            : DateTime.now(),
-        statusHistory: ((json['statusHistory'] ?? []) as List)
-            .map((e) => OrderHistoryItem.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
+    id: json['id']?.toString() ?? '',
+    orderNumber: json['orderNumber'] ?? '',
+    gemListingId: json['gemListingId'] as int?,
+    gemTitle: json['gemTitle'] ?? '',
+    gemImageUrl: json['gemImageUrl'],
+    buyerName: json['buyerName'] ?? '',
+    sellerName: json['sellerName'] ?? '',
+    agreedPrice: (json['agreedPrice'] as num?)?.toDouble() ?? 0,
+    currency: json['currency'] ?? '',
+    status: json['status'] ?? '',
+    shippingCountryCode: json['shippingCountryCode']?.toString(),
+    exportStatus: json['exportStatus']?.toString(),
+    exportRequestId: json['exportRequestId']?.toString(),
+    createdAt: json['createdAt'] != null
+        ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
+        : DateTime.now(),
+    statusHistory: ((json['statusHistory'] ?? []) as List)
+        .map((e) => OrderHistoryItem.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
 }

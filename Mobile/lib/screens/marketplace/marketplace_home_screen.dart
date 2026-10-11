@@ -37,7 +37,7 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
       _error = null;
     });
     try {
-      final gems = await _service.getGems(search: _search.text.trim());
+      final gems = await _service.getBuyerGems(search: _search.text.trim());
       if (mounted) setState(() => _gems = gems);
     } catch (e) {
       if (mounted) {

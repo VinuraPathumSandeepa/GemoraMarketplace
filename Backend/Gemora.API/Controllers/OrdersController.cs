@@ -1,3 +1,5 @@
+using Gemora.Domain.Entities;
+using Gemora.Infrastructure.Data;
 using System.Security.Claims;
 using Gemora.Application.DTOs.ExportCompliance;
 using Gemora.Application.DTOs.Orders;
@@ -5,6 +7,7 @@ using Gemora.Application.Interfaces;
 using Gemora.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Gemora.API.Controllers;
 
@@ -15,56 +18,93 @@ public class OrdersController : ControllerBase
 {
     private readonly IOrderService _service;
     private readonly IExportComplianceService _exportComplianceService;
+    private readonly ApplicationDbContext? _context;
 
     public OrdersController(
         IOrderService service,
-        IExportComplianceService exportComplianceService)
+        IExportComplianceService exportComplianceService,
+        ApplicationDbContext? context = null)
     {
         _service = service;
         _exportComplianceService = exportComplianceService;
+        _context = context;
     }
 
+    private Guid GetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim))
+        {
+            throw new InvalidOperationException("User ID not found in token.");
+        }
+        return Guid.Parse(userIdClaim);
+    }
 
     // =========================================================
     // BUYER - CREATE ORDER
     // =========================================================
+    private string GetCurrentUserRole()
+    {
+        return User.FindFirst(ClaimTypes.Role)?.Value ?? "Buyer";
+    }
 
     [HttpPost]
     [Authorize(Roles = UserRoles.Buyer)]
-    public async Task<ActionResult<OrderResponseDto>>
-        Create(CreateOrderRequestDto dto)
+    public async Task<ActionResult<OrderResponseDto>> Create(CreateOrderRequestDto dto)
     {
-        var order =
-            await _service.CreateAsync(
-                CurrentUserId(),
-                dto);
-
-        return CreatedAtAction(
-            nameof(GetById),
-            new
-            {
-                id = order.Id
-            },
-            order);
+        var order = await _service.CreateAsync(CurrentUserId(), dto);
+        return CreatedAtAction(nameof(GetById), new { id = order.Id }, order);
     }
 
+    [HttpGet("my-shipment-eligible")]
+    [Authorize(Roles = UserRoles.Seller)]
+    public async Task<IActionResult> GetShipmentEligibleOrders()
+    {
+        if (_context == null)
+        {
+            return Problem(
+                title: "Shipping data is unavailable.",
+                detail: "The order database context was not configured.",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
 
-    // =========================================================
-    // BUYER - MY ORDERS
-    // =========================================================
+        var userId = CurrentUserId();
+        var eligibleOrders = await _context.Orders
+            .Where(o => o.SellerId == userId && o.Status == "Paid")
+            .Where(o => !_context.Shipments.Any(s => s.OrderId == o.Id))
+            .OrderByDescending(o => o.CreatedAt)
+            .Select(o => new
+            {
+                o.Id,
+                o.GemListingId,
+                GemTitle = o.GemListing != null
+                    ? o.GemListing.Title
+                    : "Unknown Gemstone",
+                BuyerName = _context.Users
+                    .Where(u => u.Id == o.BuyerId)
+                    .Select(u => u.FullName)
+                    .FirstOrDefault(),
+                o.TotalAmount,
+                o.Currency,
+                o.Status,
+                o.ShippingAddress,
+                o.ShippingRegion,
+                o.ShippingCountryCode,
+                o.CreatedAt,
+                o.PaidAt
+            })
+            .ToListAsync();
+
+        return Ok(eligibleOrders);
+    }
 
     [HttpGet("my")]
     [Authorize(Roles = UserRoles.Buyer)]
-    public async Task<ActionResult<List<OrderResponseDto>>>
-        GetMyOrders()
+    public async Task<ActionResult<List<OrderResponseDto>>> GetMyOrders()
     {
-        var orders =
-            await _service.GetMyOrdersAsync(
-                CurrentUserId());
-
+        var orders = await _service.GetMyOrdersAsync(CurrentUserId());
         return Ok(orders);
     }
-
 
     // =========================================================
     // BUYER - SINGLE ORDER
@@ -503,3 +543,4 @@ public class OrdersController : ControllerBase
         return role;
     }
 }
+

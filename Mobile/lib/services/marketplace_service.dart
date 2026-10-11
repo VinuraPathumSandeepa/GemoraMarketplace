@@ -97,30 +97,22 @@ class MarketplaceService {
     );
   }
 
-  Future<Map<String, dynamic>> askAgent(String message) async {
-    final headers = await _authHeaders(isJson: true);
+  Future<List<MarketplaceGem>> getBuyerGems({String? search}) {
+    return getGems(search: search);
+  }
 
-    final response = await http.post(
+  Future<Map<String, dynamic>> askAgent(String message) async {
+    final decoded = await _request(
       Uri.parse('${ApiConfig.baseUrl}/marketplace/agent/assist'),
-      headers: headers,
-      body: jsonEncode({'message': message.trim()}),
+      body: {'message': message.trim()},
+      fallback: 'Could not get response from AI assistant.',
     );
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final decoded = jsonDecode(response.body);
-
-      if (decoded is Map<String, dynamic>) {
-        return decoded;
-      }
-
-      throw Exception(
-        'The AI assistant returned an unexpected response format.',
-      );
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
     }
 
-    throw Exception(
-      _errorMessage(response, 'Could not get response from AI assistant.'),
-    );
+    throw Exception('The AI assistant returned an unexpected response format.');
   }
 
   Future<OrderModel> createOrder(
@@ -218,6 +210,46 @@ class MarketplaceService {
     }
 
     throw Exception(_errorMessage(response, 'Could not cancel order.'));
+  }
+
+  Future<dynamic> _request(
+    Uri uri, {
+    Map<String, dynamic>? body,
+    bool authenticated = true,
+    String? fallback,
+  }) async {
+    final headers = <String, String>{
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+
+    if (authenticated) {
+      final token = await _tokenStorage.getToken();
+      if (token == null || token.trim().isEmpty) {
+        throw Exception('Please sign in to continue.');
+      }
+      headers['Authorization'] = 'Bearer ${token.trim()}';
+    }
+
+    final httpClient = client;
+    final response =
+        await (body == null
+                ? (httpClient?.get(uri, headers: headers) ??
+                      http.get(uri, headers: headers))
+                : (httpClient?.post(
+                        uri,
+                        headers: headers,
+                        body: jsonEncode(body),
+                      ) ??
+                      http.post(uri, headers: headers, body: jsonEncode(body))))
+            .timeout(const Duration(seconds: 60));
+
+    _ensureSuccess(
+      response,
+      fallback ?? 'The request failed (${response.statusCode}).',
+    );
+
+    return response.body.isEmpty ? null : _decode(response.body);
   }
 
   dynamic _decode(String body) {

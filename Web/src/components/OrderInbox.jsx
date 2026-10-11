@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Bell, Check, Clock3, RefreshCw, X } from "lucide-react";
 import { orderInboxRequest } from "../services/buyerApi";
 import { utcTime } from "../utils/orderTime";
+import { latestOrderMessage } from "../utils/orderMessages";
 import "../styles/order-inbox.css";
 
 export function PaymentDeadline({ dueAt, onExpire }) {
@@ -89,14 +90,14 @@ export default function OrderInbox({ seller = false }) {
         {loading && <p role="status">Loading your inbox…</p>}
         {!loading && !error && visible.length === 0 && <p className="oi-empty">{seller ? "No pending requests. New buyer orders will appear here." : "No updates yet. Seller decisions and payment updates will appear here."}</p>}
         {visible.map(order => {
-          const history = order.statusHistory?.at(-1);
+          const message = latestOrderMessage(order);
           const payable = ["Confirmed", "AwaitingPayment"].includes(order.status);
           return <article className={`oi-card ${unread(order) ? "oi-unread" : ""}`} key={order.id}>
-            <div className="oi-card-heading"><h3>{order.gemTitle}</h3><span>{order.status === "Confirmed" ? "Approved" : order.status}</span></div>
+            <div className="oi-card-heading"><h3>{order.gemTitle}</h3><span>{seller ? order.status : message.label}</span></div>
             <small>{order.orderNumber} · {seller ? `${order.buyerName} placed an order` : `Seller: ${order.sellerName}`}</small>
             <p className="oi-date">{dateLabel(seller ? order.createdAt : order.buyerMessageAt)}</p>
             <strong>{order.currency} {Number(order.agreedPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
-            {(!seller || order.status !== "Pending") && <p>{history?.reason || `Order ${order.status.toLowerCase()}.`}</p>}
+            {(!seller || order.status !== "Pending") && <p>{message.text}</p>}
             {payable && <PaymentDeadline dueAt={order.paymentDueAt} onExpire={load} />}
             <div className="oi-actions">
               {seller && order.status === "Pending" && <>

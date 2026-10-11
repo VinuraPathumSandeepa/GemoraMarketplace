@@ -12,35 +12,33 @@ public class User
 
     public string Role { get; set; } = "Buyer";
 
+    // Example: +94771234567
     public string PhoneNumber { get; set; } = string.Empty;
 
+    // ISO 3166-1 alpha-2 country code.
+    // Examples: LK, US, GB, AU
     public string CountryCode { get; set; } = string.Empty;
 
+    // Province / State / Region.
+    // Examples: Western Province, Sabaragamuwa Province
     public string Region { get; set; } = string.Empty;
 
-
-    // =========================================================
-    // PROFILE PHOTO
-    // =========================================================
-
-    public string? ProfileImageUrl { get; set; }
-
-
-    // =========================================================
-    // EMAIL VERIFICATION
-    // =========================================================
-
+    /*
+     * Keep this true by default so that existing Gemora users,
+     * seeded staff users and test accounts are not suddenly
+     * blocked after the database migration.
+     *
+     * Later, new Buyer/Seller registrations will explicitly set
+     * this to false until the email OTP is verified.
+     */
     public bool IsEmailVerified { get; set; } = true;
 
     public DateTime? EmailVerifiedAt { get; set; }
 
-
-    // =========================================================
-    // AUDIT
-    // =========================================================
+    // Profile image URL (nullable - displays initials if not set)
+    public string? ProfileImageUrl { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
 
     // =========================================================
     // COMPONENT 1 RELATIONSHIPS
@@ -62,7 +60,6 @@ public class User
     // =========================================================
     // COMPONENT 2 RELATIONSHIPS
     // =========================================================
-
     // Orders created by this user as a Buyer.
     public ICollection<Order> BuyerOrders { get; set; }
         = new List<Order>();
@@ -71,6 +68,11 @@ public class User
     public ICollection<Order> SellerOrders { get; set; }
         = new List<Order>();
 
+    public ICollection<Shipment> SellerShipments { get; set; }
+        = new List<Shipment>();
+
+    public ICollection<Shipment> BuyerShipments { get; set; }
+        = new List<Shipment>();
     // Order status changes performed by this user.
     public ICollection<OrderStatusHistory> OrderStatusChanges { get; set; }
         = new List<OrderStatusHistory>();

@@ -6,6 +6,7 @@ import {
 } from "react";
 
 import api from "../services/api";
+import { clearAuthToken, getAuthToken, setAuthToken } from "../services/authSession";
 
 const AuthContext = createContext(null);
 
@@ -18,8 +19,7 @@ export function AuthProvider({ children }) {
   // ==========================================
 
   const loadCurrentUser = async () => {
-    const token =
-      localStorage.getItem("gemora_token");
+    const token = getAuthToken();
 
     if (!token) {
       setUser(null);
@@ -40,9 +40,7 @@ export function AuthProvider({ children }) {
         error
       );
 
-      localStorage.removeItem(
-        "gemora_token"
-      );
+      clearAuthToken();
 
       setUser(null);
 
@@ -99,11 +97,9 @@ export function AuthProvider({ children }) {
     const token =
       response.data.token;
 
-    localStorage.setItem(
-      "gemora_token",
-      token
-    );
+    setAuthToken(token);
 
+    // Get logged-in user's information
     const userResponse =
       await api.get("/Auth/me");
 
@@ -119,9 +115,7 @@ export function AuthProvider({ children }) {
   // ==========================================
 
   const logout = () => {
-    localStorage.removeItem(
-      "gemora_token"
-    );
+    clearAuthToken();
 
     setUser(null);
   };

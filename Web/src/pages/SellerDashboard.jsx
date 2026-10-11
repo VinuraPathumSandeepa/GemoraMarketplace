@@ -581,6 +581,18 @@ function SellerDashboard() {
 
 
           <div className="seller-action-grid">
+            <button
+              type="button"
+              className="seller-action-card"
+              onClick={() => navigate("/seller/shipments")}
+            >
+              <div className="seller-action-icon">↗</div>
+              <div>
+                <h3>My Shipments</h3>
+                <p>Create shipments and review shipping plans, tracking, and insurance.</p>
+              </div>
+              <span className="seller-action-arrow">→</span>
+            </button>
 
             {/* MY LISTINGS */}
 

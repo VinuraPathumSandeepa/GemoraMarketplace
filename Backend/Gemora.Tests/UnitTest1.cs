@@ -1,4 +1,4 @@
-﻿namespace Gemora.Tests;
+namespace Gemora.Tests;
 
 public class UnitTest1
 {

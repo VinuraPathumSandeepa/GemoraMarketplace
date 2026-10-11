@@ -16,8 +16,10 @@ public class Order
 
     public int? GemListingId { get; set; }
 
+    // Order Details
     public decimal TotalAmount { get; set; }
 
+    // Shipping Address
     public string Currency { get; set; } = "LKR";
 
     public string Status { get; set; } = OrderStatuses.Pending;
@@ -28,6 +30,7 @@ public class Order
 
     public string ShippingCountryCode { get; set; } = string.Empty;
 
+    // Timestamps
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedAt { get; set; }
@@ -45,7 +48,6 @@ public class Order
     public User Seller { get; set; } = null!;
 
     public GemListing? GemListing { get; set; }
-
     public ICollection<OrderStatusHistory> StatusHistory { get; set; }
         = new List<OrderStatusHistory>();
 

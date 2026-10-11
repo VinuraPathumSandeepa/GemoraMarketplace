@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -265,14 +265,14 @@ class _CreateGemListingScreenState extends State<CreateGemListingScreen> {
       if (_selectedGemImage != null) {
         listing = await _listingService.uploadGemImage(
           id: listing.id,
-          filePath: _selectedGemImage!.path,
+          file: _selectedGemImage!,
         );
       }
 
       if (_selectedCertificate != null) {
         listing = await _listingService.uploadCertificate(
           id: listing.id,
-          filePath: _selectedCertificate!.path,
+          file: _selectedCertificate!,
         );
       }
 
@@ -653,15 +653,14 @@ class _CreateGemListingScreenState extends State<CreateGemListingScreen> {
             borderRadius: BorderRadius.circular(16),
           ),
           clipBehavior: Clip.antiAlias,
-          child: Image.file(
-            File(image.path),
-            fit: BoxFit.contain,
-            errorBuilder:
-                (BuildContext context, Object error, StackTrace? stackTrace) {
-                  return const Center(
-                    child: Icon(Icons.diamond_outlined, size: 60, color: _gold),
-                  );
-                },
+          child: FutureBuilder<Uint8List>(
+            future: image.readAsBytes(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              return Image.memory(snapshot.data!, fit: BoxFit.contain);
+            },
           ),
         ),
 

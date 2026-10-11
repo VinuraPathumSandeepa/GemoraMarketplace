@@ -4,6 +4,7 @@ import '../../config/api_config.dart';
 import '../../models/marketplace/marketplace_gem.dart';
 import '../../services/marketplace_service.dart';
 import 'my_orders_screen.dart';
+import '../shipments/seller_shipment_list.dart';
 
 class MarketplaceScreen extends StatefulWidget {
   final bool isAuthenticated;
@@ -245,6 +246,11 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 
   void _handleBottomNavigation(int index) {
+    if (_showShipments && index == 4) {
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const SellerShipmentList()));
+      return;
+    }
     switch (index) {
       case 0:
         _goHome();
@@ -850,6 +856,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     );
   }
 
+  bool get _showShipments =>
+      widget.isAuthenticated && widget.role?.trim().toLowerCase() == 'seller';
+
   Widget _buildBottomNavigation() {
     return NavigationBar(
       selectedIndex: _bottomIndex,
@@ -883,6 +892,12 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           selectedIcon: Icon(Icons.person),
           label: 'Profile',
         ),
+        if (_showShipments)
+          const NavigationDestination(
+            icon: Icon(Icons.local_shipping_outlined),
+            selectedIcon: Icon(Icons.local_shipping),
+            label: 'My Shipments',
+          ),
       ],
     );
   }
@@ -1010,10 +1025,10 @@ class _MarketplaceGemDetailsScreenState
 
   void _showPurchaseConfirmation(MarketplaceGem gem) {
     String selectedCountry = 'LK';
-    final addressController =
-        TextEditingController(text: '120 Galle Road, Colombo 03');
-    final regionController =
-        TextEditingController(text: 'Western Province');
+    final addressController = TextEditingController(
+      text: '120 Galle Road, Colombo 03',
+    );
+    final regionController = TextEditingController(text: 'Western Province');
     final formKey = GlobalKey<FormState>();
 
     const countries = [
@@ -1083,8 +1098,7 @@ class _MarketplaceGemDetailsScreenState
               child: Container(
                 decoration: const BoxDecoration(
                   color: _cream,
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(24)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                 child: Form(
@@ -1238,8 +1252,8 @@ class _MarketplaceGemDetailsScreenState
                           ),
                           validator: (val) =>
                               (val == null || val.trim().isEmpty)
-                                  ? 'Shipping address is required'
-                                  : null,
+                              ? 'Shipping address is required'
+                              : null,
                         ),
                         const SizedBox(height: 14),
                         const Text(
@@ -1272,8 +1286,8 @@ class _MarketplaceGemDetailsScreenState
                           ),
                           validator: (val) =>
                               (val == null || val.trim().isEmpty)
-                                  ? 'Region is required'
-                                  : null,
+                              ? 'Region is required'
+                              : null,
                         ),
                         const SizedBox(height: 14),
                         Container(
@@ -1331,8 +1345,9 @@ class _MarketplaceGemDetailsScreenState
                                     : () => Navigator.pop(sheetContext),
                                 style: OutlinedButton.styleFrom(
                                   side: const BorderSide(color: _border),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -1355,18 +1370,20 @@ class _MarketplaceGemDetailsScreenState
                                         Navigator.pop(sheetContext);
                                         await _submitOrder(
                                           gemId: gem.id,
-                                          shippingAddress:
-                                              addressController.text.trim(),
-                                          shippingRegion:
-                                              regionController.text.trim(),
+                                          shippingAddress: addressController
+                                              .text
+                                              .trim(),
+                                          shippingRegion: regionController.text
+                                              .trim(),
                                           shippingCountryCode: selectedCountry,
                                         );
                                       },
                                 style: FilledButton.styleFrom(
                                   backgroundColor: _gold,
                                   foregroundColor: _darkGreen,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -1502,9 +1519,7 @@ class _MarketplaceGemDetailsScreenState
                   Navigator.pop(dialogContext);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const MyOrdersScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const MyOrdersScreen()),
                   );
                 },
                 style: FilledButton.styleFrom(
@@ -1707,7 +1722,9 @@ class _MarketplaceGemDetailsScreenState
             label: Text(
               _ordering
                   ? 'Processing...'
-                  : (widget.isAuthenticated ? 'Buy Gemstone' : 'Sign In to Buy'),
+                  : (widget.isAuthenticated
+                        ? 'Buy Gemstone'
+                        : 'Sign In to Buy'),
               style: const TextStyle(fontWeight: FontWeight.w800),
             ),
           ),

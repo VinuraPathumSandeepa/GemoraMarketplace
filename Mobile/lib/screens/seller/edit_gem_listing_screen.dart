@@ -215,14 +215,14 @@ class _EditGemListingScreenState extends State<EditGemListingScreen> {
       if (_newGemImage != null) {
         await _listingService.uploadGemImage(
           id: widget.listing.id,
-          filePath: _newGemImage!.path,
+          file: _newGemImage!,
         );
       }
 
       if (_newCertificate != null) {
         await _listingService.uploadCertificate(
           id: widget.listing.id,
-          filePath: _newCertificate!.path,
+          file: _newCertificate!,
         );
       }
 

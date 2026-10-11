@@ -430,6 +430,8 @@ public partial class OrderService : IOrderService
 
             newStatus;
 
+        order.BuyerMessageAt = DateTime.UtcNow;
+
         order.UpdatedAt =
 
             DateTime.UtcNow;
@@ -2416,11 +2418,11 @@ public partial class OrderService : IOrderService
 
             CourierName =
 
-                o.Shipment.CourierName,
+                o.Shipment.CourierName ?? string.Empty,
 
             TrackingNumber =
 
-                o.Shipment.TrackingNumber,
+                o.Shipment.TrackingNumber ?? string.Empty,
 
             TrackingUrl =
 
@@ -2864,11 +2866,11 @@ private static OrderResponseDto
 
                     CourierName =
                         order.Shipment
-                            .CourierName,
+                            .CourierName ?? string.Empty,
 
                     TrackingNumber =
                         order.Shipment
-                            .TrackingNumber,
+                            .TrackingNumber ?? string.Empty,
 
                     TrackingUrl =
                         order.Shipment
