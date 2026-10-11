@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../config/api_config.dart';
 import '../../models/marketplace/marketplace_gem.dart';
 import '../../services/marketplace_service.dart';
+import '../../widgets/gemora_mark.dart';
+import '../onboarding/welcome_screen.dart';
 import 'my_orders_screen.dart';
 
 class MarketplaceScreen extends StatefulWidget {
@@ -338,6 +340,20 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     );
   }
 
+  Future<void> _openWelcomeTutorial() async {
+    final action = await Navigator.of(context).push<WelcomeAction>(
+      MaterialPageRoute(
+        builder: (tutorialContext) => WelcomeScreen(
+          isReplay: true,
+          canSignIn: !widget.isAuthenticated,
+          onFinished: (value) => Navigator.of(tutorialContext).pop(value),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (action == WelcomeAction.signIn) widget.onLogin?.call();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -424,11 +440,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: _lightGold.withValues(alpha: 0.24)),
                 ),
-                child: const Icon(
-                  Icons.diamond_outlined,
-                  color: _lightGold,
-                  size: 28,
-                ),
+                child: const Center(child: GemoraMark(size: 35)),
               ),
               const SizedBox(width: 12),
               const Expanded(
@@ -450,6 +462,16 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                     ),
                   ],
                 ),
+              ),
+              IconButton(
+                tooltip: 'Welcome tour',
+                onPressed: _openWelcomeTutorial,
+                icon: const Icon(Icons.help_outline_rounded, color: _lightGold),
+                constraints: const BoxConstraints.tightFor(
+                  width: 36,
+                  height: 40,
+                ),
+                padding: EdgeInsets.zero,
               ),
               if (!widget.isAuthenticated)
                 TextButton(
