@@ -41,18 +41,39 @@ class MarketplaceGem {
       (certificateNumber != null && certificateNumber!.trim().isNotEmpty) ||
       (certificateAuthority != null && certificateAuthority!.trim().isNotEmpty);
 
+  static double _toDouble(dynamic value, [double fallback = 0.0]) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? fallback;
+    return fallback;
+  }
+
+  static int _toInt(dynamic value, [int fallback = 0]) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? fallback;
+    return fallback;
+  }
+
+  static bool _toBool(dynamic value, [bool fallback = true]) {
+    if (value is bool) return value;
+    if (value is String) {
+      final lower = value.trim().toLowerCase();
+      if (lower == 'true') return true;
+      if (lower == 'false') return false;
+    }
+    return fallback;
+  }
+
   factory MarketplaceGem.fromJson(Map<String, dynamic> json) => MarketplaceGem(
-    id: json['id'] is int
-        ? json['id'] as int
-        : int.tryParse(json['id']?.toString() ?? '') ?? 0,
+    id: _toInt(json['id']),
     title: json['title']?.toString() ?? '',
     gemType: json['gemType']?.toString() ?? '',
     description: json['description']?.toString() ?? '',
-    caratWeight: (json['caratWeight'] as num?)?.toDouble() ?? 0,
+    caratWeight: _toDouble(json['caratWeight']),
     color: json['color']?.toString() ?? '',
     clarity: json['clarity']?.toString() ?? '',
     cut: json['cut']?.toString() ?? '',
-    price: (json['price'] as num?)?.toDouble() ?? 0,
+    price: _toDouble(json['price']),
     currency: json['currency']?.toString() ?? 'LKR',
     primaryImageUrl: json['primaryImageUrl']?.toString(),
     certificateNumber: json['certificateNumber']?.toString(),
@@ -60,6 +81,6 @@ class MarketplaceGem {
     countryCode: json['countryCode']?.toString() ?? '',
     region: json['region']?.toString() ?? '',
     sellerName: json['sellerName']?.toString() ?? '',
-    isAvailable: json['isAvailable'] as bool? ?? true,
+    isAvailable: _toBool(json['isAvailable'], true),
   );
 }

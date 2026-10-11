@@ -9,6 +9,9 @@ import 'token_storage_service.dart';
 
 class MarketplaceService {
   final TokenStorageService _tokenStorage = TokenStorageService();
+  final http.Client? client;
+
+  MarketplaceService({this.client});
 
   Future<Map<String, String>> _authHeaders({bool isJson = false}) async {
     final token = await _tokenStorage.getToken();
@@ -45,21 +48,31 @@ class MarketplaceService {
       queryParameters: queryParameters.isEmpty ? null : queryParameters,
     );
 
-    final response = await http.get(
-      uri,
-      headers: const {'Accept': 'application/json'},
-    );
+    final httpClient = client;
+    final response = httpClient != null
+        ? await httpClient.get(
+            uri,
+            headers: const {'Accept': 'application/json'},
+          )
+        : await http.get(uri, headers: const {'Accept': 'application/json'});
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       final decoded = jsonDecode(response.body);
 
-      if (decoded is! List) {
+      final List<dynamic> items;
+      if (decoded is List) {
+        items = decoded;
+      } else if (decoded is Map && decoded['items'] is List) {
+        items = decoded['items'] as List<dynamic>;
+      } else {
         throw Exception('The marketplace returned an unexpected response.');
       }
 
-      return decoded
-          .whereType<Map<String, dynamic>>()
-          .map(MarketplaceGem.fromJson)
+      return items
+          .whereType<Map>()
+          .map(
+            (item) => MarketplaceGem.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList();
     }
 
@@ -69,21 +82,25 @@ class MarketplaceService {
   }
 
   Future<MarketplaceGem> getGem(int id) async {
-    final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/Marketplace/gems/$id'),
-      headers: const {'Accept': 'application/json'},
-    );
+    final uri = Uri.parse('${ApiConfig.baseUrl}/Marketplace/gems/$id');
+    final httpClient = client;
+    final response = httpClient != null
+        ? await httpClient.get(
+            uri,
+            headers: const {'Accept': 'application/json'},
+          )
+        : await http.get(uri, headers: const {'Accept': 'application/json'});
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       final decoded = jsonDecode(response.body);
 
-      if (decoded is! Map<String, dynamic>) {
+      if (decoded is! Map) {
         throw Exception(
           'The marketplace returned an unexpected gemstone response.',
         );
       }
 
-      return MarketplaceGem.fromJson(decoded);
+      return MarketplaceGem.fromJson(Map<String, dynamic>.from(decoded));
     }
 
     throw Exception(
