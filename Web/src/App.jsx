@@ -19,6 +19,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
+import NotificationsPage from "./pages/NotificationsPage";
 
 // ============================================================
 // ROLE DASHBOARDS
@@ -152,6 +153,12 @@ function App() {
         }
       />
 
+      <Route path="/seller/notifications" element={
+        <RoleProtectedRoute allowedRoles={["Seller"]}>
+          <NotificationsPage />
+        </RoleProtectedRoute>
+      } />
+
       {/* ======================================================
           COMPONENT 1 — SELLER: MY GEM LISTINGS
 
@@ -255,6 +262,12 @@ function App() {
           </RoleProtectedRoute>
         }
       />
+
+      <Route path="/gemologist/notifications" element={
+        <RoleProtectedRoute allowedRoles={["Gemologist"]}>
+          <NotificationsPage />
+        </RoleProtectedRoute>
+      } />
 
       {/* ======================================================
           COMPONENT 1 — GEMOLOGIST VERIFICATION QUEUE

@@ -11,6 +11,8 @@ import {
 
 import UserAvatar
   from "../components/UserAvatar";
+import NotificationBell from "../components/NotificationBell";
+import { NotificationProvider } from "../context/NotificationContext";
 
 function DashboardLayout({ children }) {
   const navigate = useNavigate();
@@ -238,6 +240,7 @@ function DashboardLayout({ children }) {
   // ============================================================
 
   return (
+    <NotificationProvider key={user?.id}>
     <div className="gemora-app-shell">
 
       {/* ======================================================
@@ -298,6 +301,8 @@ function DashboardLayout({ children }) {
               ================================================== */}
 
           <div className="gemora-user-area">
+
+            {(user?.role === "Seller" || user?.role === "Gemologist") && <NotificationBell />}
 
             {/* ROLE */}
 
@@ -487,6 +492,7 @@ function DashboardLayout({ children }) {
       </main>
 
     </div>
+    </NotificationProvider>
   );
 }
 

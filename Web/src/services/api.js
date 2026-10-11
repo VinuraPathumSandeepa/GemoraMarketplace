@@ -1,9 +1,8 @@
 import axios from "axios";
 
 const API_BASE_URL =
-  // "https://gemora-api.onrender.com/api";
-  // import.meta.env.VITE_API_URL ||
-  "http://localhost:5198/api";
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "/api" : "https://gemora-api.onrender.com/api");
 
 export const API_ORIGIN =
   API_BASE_URL.replace(

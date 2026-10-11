@@ -1,0 +1,36 @@
+.gemora-notification-root { position: relative; flex: none; }
+.gemora-notification-bell { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid rgba(217,188,123,.25); border-radius: 13px; color: #f8f4ec; background: rgba(255,255,255,.06); cursor: pointer; }
+.gemora-notification-bell:hover, .gemora-notification-bell:focus-visible { background: rgba(217,188,123,.16); outline-color: #e4bc74; }
+.gemora-notification-badge { position: absolute; top: -6px; right: -7px; min-width: 18px; padding: 2px 4px; border-radius: 99px; background: #e4bc74; color: #08251e; font-size: 10px; font-weight: 800; line-height: 15px; }
+.gemora-notification-popover { position: absolute; z-index: 1100; top: calc(100% + 14px); right: 0; width: min(380px, calc(100vw - 24px)); max-height: min(550px, calc(100vh - 100px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid #e7dfd2; border-radius: 18px; background: #fff; box-shadow: 0 22px 55px rgba(8,37,30,.2); color: #10241f; }
+.gemora-notification-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 18px 14px; border-bottom: 1px solid #eee8df; }
+.gemora-notification-head strong { font-size: 16px; }
+.gemora-notification-head button, .gemora-notification-view-all { border: 0; background: none; color: #16483b; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.gemora-notification-head button:disabled { opacity: .45; cursor: default; }
+.gemora-notification-list { overflow-y: auto; }
+.gemora-notification-item { display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 15px 18px; border: 0; border-bottom: 1px solid #f0ebe4; background: #fff; color: #10241f; text-align: left; font: inherit; cursor: pointer; }
+.gemora-notification-item:hover, .gemora-notification-item:focus-visible { background: #f7f4ed; }
+.gemora-notification-item.unread { background: #fffcf5; }
+.gemora-notification-icon { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 11px; background: #edf3ed; color: #16483b; font-size: 20px; }
+.gemora-notification-copy { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
+.gemora-notification-copy strong { font-size: 13px; font-weight: 700; }
+.gemora-notification-copy span { color: #63726c; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.gemora-notification-copy small { color: #83908a; font-size: 11px; }
+.gemora-notification-dot { flex: none; width: 7px; height: 7px; margin-top: 7px; border-radius: 50%; background: #c99242; }
+.gemora-notification-state { margin: 0; padding: 35px 22px; color: #63726c; text-align: center; font-size: 13px; }
+.gemora-notification-state button { margin-top: 10px; border: 0; background: none; color: #16483b; font-weight: 700; cursor: pointer; }
+.gemora-notification-action-error { margin: 0; padding: 11px 18px; background: #fff2ec; color: #944b35; font-size: 12px; }
+.gemora-notification-view-all { display: flex; justify-content: center; gap: 8px; width: 100%; padding: 16px; border-top: 1px solid #eee8df; }
+.gemora-notifications-page { max-width: 920px; margin: 0 auto; padding: 38px 24px 70px; color: #10241f; }
+.gemora-notifications-title { display: flex; justify-content: space-between; align-items: end; gap: 20px; }
+.gemora-notifications-title span { color: #98703c; font-size: 11px; font-weight: 800; letter-spacing: .13em; }
+.gemora-notifications-title h1 { margin: 7px 0; font-size: clamp(26px,4vw,36px); }
+.gemora-notifications-title p { margin: 0; color: #697771; }
+.gemora-notifications-actions { display: flex; gap: 9px; }
+.gemora-notifications-actions button, .gemora-notification-filters button { padding: 9px 13px; border: 1px solid #ded8ce; border-radius: 10px; background: #fff; color: #16483b; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.gemora-notifications-actions button:disabled { opacity: .5; cursor: default; }
+.gemora-notification-filters { display: flex; gap: 8px; margin: 26px 0 14px; }
+.gemora-notification-filters button.active { background: #16483b; color: #fff; border-color: #16483b; }
+.gemora-notifications-panel { overflow: hidden; border: 1px solid #e7dfd2; border-radius: 16px; background: #fff; }
+.gemora-notifications-panel .gemora-notification-item { padding: 19px 22px; }
+@media (max-width: 600px) { .gemora-notifications-page { padding: 24px 14px 50px; } .gemora-notifications-title { align-items: start; flex-direction: column; } .gemora-notification-popover { position: fixed; top: 72px; right: 12px; max-height: calc(100vh - 86px); } }
