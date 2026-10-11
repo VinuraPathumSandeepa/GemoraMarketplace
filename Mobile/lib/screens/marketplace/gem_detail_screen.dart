@@ -24,12 +24,17 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
     _service = widget.service ?? MarketplaceService();
   }
 
-  void _buy() {
-    String selectedCountry = 'LK';
+  Future<void> _buy() async {
+    final deliveryDetails = await _collectDeliveryDetails();
+    if (deliveryDetails == null || !mounted) return;
+
+    String selectedCountry = deliveryDetails['countryCode']?.toString() ?? 'LK';
     final addressController = TextEditingController(
-      text: '120 Galle Road, Colombo 03',
+      text: deliveryDetails['addressLine1']?.toString() ?? '',
     );
-    final regionController = TextEditingController(text: 'Western Province');
+    final regionController = TextEditingController(
+      text: deliveryDetails['region']?.toString() ?? '',
+    );
     final formKey = GlobalKey<FormState>();
 
     const countries = [
@@ -64,6 +69,10 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
         'address': '10 Marina Boulevard, Singapore',
       },
     ];
+
+    if (!countries.any((country) => country['code'] == selectedCountry)) {
+      selectedCountry = 'LK';
+    }
 
     showModalBottomSheet<void>(
       context: context,
@@ -175,6 +184,12 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
                                 shippingAddress: addressController.text.trim(),
                                 shippingRegion: regionController.text.trim(),
                                 shippingCountryCode: selectedCountry,
+                                deliveryDetails: {
+                                  ...deliveryDetails,
+                                  'addressLine1': addressController.text.trim(),
+                                  'region': regionController.text.trim(),
+                                  'countryCode': selectedCountry,
+                                },
                               );
                             },
                             child: const Text('Place Order'),
@@ -197,6 +212,7 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
     required String shippingAddress,
     required String shippingRegion,
     required String shippingCountryCode,
+    required Map<String, dynamic> deliveryDetails,
   }) async {
     setState(() => _ordering = true);
 
@@ -206,6 +222,7 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
         shippingAddress: shippingAddress,
         shippingRegion: shippingRegion,
         shippingCountryCode: shippingCountryCode,
+        deliveryDetails: deliveryDetails,
       );
       if (!mounted) return;
       setState(() => _ordering = false);
