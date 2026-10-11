@@ -2612,7 +2612,15 @@ public partial class OrderService : IOrderService
 
                             })
 
-                        .ToList()
+                        .ToList(),
+
+                ExportStatus = o.ExportRequest != null
+                    ? o.ExportRequest.Status.ToString()
+                    : (o.ShippingCountryCode == "LK" ? "NotRequired" : "NotStarted"),
+
+                ExportRequestId = o.ExportRequest != null
+                    ? o.ExportRequest.Id
+                    : null
 
             };
 
@@ -2953,7 +2961,15 @@ private static OrderResponseDto
                             h.CreatedAt
                     })
 
-                .ToList()
+                .ToList(),
+
+        ExportStatus = order.ExportRequest != null
+            ? order.ExportRequest.Status.ToString()
+            : (order.ShippingCountryCode == "LK" ? "NotRequired" : "NotStarted"),
+
+        ExportRequestId = order.ExportRequest != null
+            ? order.ExportRequest.Id
+            : null
     };
 }
 

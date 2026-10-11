@@ -78,6 +78,7 @@ public class OrderResponseDto
     { get; set; }
             = new();
 
+    public string? ExportStatus { get; set; }
 
-
+    public Guid? ExportRequestId { get; set; }
 }

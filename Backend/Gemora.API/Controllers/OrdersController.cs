@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Gemora.Application.DTOs.ExportCompliance;
 using Gemora.Application.DTOs.Orders;
 using Gemora.Application.Interfaces;
 using Gemora.Domain.Constants;
@@ -13,11 +14,14 @@ namespace Gemora.API.Controllers;
 public class OrdersController : ControllerBase
 {
     private readonly IOrderService _service;
+    private readonly IExportComplianceService _exportComplianceService;
 
     public OrdersController(
-        IOrderService service)
+        IOrderService service,
+        IExportComplianceService exportComplianceService)
     {
         _service = service;
+        _exportComplianceService = exportComplianceService;
     }
 
 
@@ -87,6 +91,47 @@ public class OrdersController : ControllerBase
         }
 
         return Ok(order);
+    }
+
+
+    // =========================================================
+    // BUYER/SELLER - GET EXPORT TRACKING FOR ORDER
+    // GET: /api/orders/{id:guid}/export-tracking
+    // =========================================================
+
+    [HttpGet("{id:guid}/export-tracking")]
+    public async Task<ActionResult<BuyerExportTrackingDto>>
+        GetExportTracking(Guid id)
+    {
+        var tracking = await _exportComplianceService
+            .GetExportTrackingForOrderAsync(id, CurrentUserId());
+
+        if (tracking == null)
+        {
+            return NotFound(new
+            {
+                message = "Order was not found."
+            });
+        }
+
+        return Ok(tracking);
+    }
+
+
+    // =========================================================
+    // BUYER - GET ALL MY EXPORT TRACKING
+    // GET: /api/export-tracking/my
+    // =========================================================
+
+    [HttpGet("/api/export-tracking/my")]
+    [Authorize(Roles = UserRoles.Buyer)]
+    public async Task<ActionResult<List<BuyerExportTrackingDto>>>
+        GetMyExportTracking()
+    {
+        var list = await _exportComplianceService
+            .GetBuyerExportTrackingListAsync(CurrentUserId());
+
+        return Ok(list);
     }
 
 

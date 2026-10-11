@@ -556,16 +556,83 @@ public static class DatabaseCompatibilityInitializer
                 CREATE INDEX IF NOT EXISTS
                 "IX_ProfileImages_UserId"
                 ON "ProfileImages" ("UserId");
+                """,
+
+                // =================================================
+                // EXPORT REQUEST ↔ ORDER INTEGRATION
+                // =================================================
+
+                """
+                ALTER TABLE "ExportRequests"
+                ADD COLUMN IF NOT EXISTS
+                "OrderId" uuid NULL;
+                """,
+
+                """
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1
+                        FROM pg_constraint
+                        WHERE conname = 'FK_ExportRequests_Orders_OrderId'
+                    ) THEN
+                        ALTER TABLE "ExportRequests"
+                        ADD CONSTRAINT "FK_ExportRequests_Orders_OrderId"
+                        FOREIGN KEY ("OrderId")
+                        REFERENCES "Orders" ("Id")
+                        ON DELETE SET NULL;
+                    END IF;
+                END $$;
+                """,
+
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS
+                "IX_ExportRequests_OrderId"
+                ON "ExportRequests" ("OrderId");
                 """
             };
 
 
-        foreach (var command in commands)
+        const int maxRetries = 3;
+        for (var attempt = 1; attempt <= maxRetries; attempt++)
         {
-            await dbContext.Database
-                .ExecuteSqlRawAsync(
-                    command,
-                    cancellationToken);
+            try
+            {
+                await dbContext.Database.OpenConnectionAsync(cancellationToken);
+                try
+                {
+                    foreach (var command in commands)
+                    {
+                        if (string.IsNullOrWhiteSpace(command))
+                        {
+                            continue;
+                        }
+
+                        await dbContext.Database.ExecuteSqlRawAsync(
+                            command,
+                            cancellationToken);
+                    }
+                }
+                finally
+                {
+                    await dbContext.Database.CloseConnectionAsync();
+                }
+
+                return;
+            }
+            catch (Exception ex) when (attempt < maxRetries && (ex is Npgsql.NpgsqlException || ex is System.IO.IOException || ex is System.Net.Sockets.SocketException))
+            {
+                try
+                {
+                    await dbContext.Database.CloseConnectionAsync();
+                }
+                catch
+                {
+                    // Ignore cleanup error on broken connection
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(attempt * 2), cancellationToken);
+            }
         }
     }
 }

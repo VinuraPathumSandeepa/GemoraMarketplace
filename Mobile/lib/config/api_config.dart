@@ -5,9 +5,20 @@ class ApiConfig {
   // SERVER CONFIGURATION
   // ============================================================
 
+  // Override at build time with, for example:
+  // `--dart-define=API_SERVER_URL=https://api.example.com`.
+  static const String _configuredServerUrl = String.fromEnvironment(
+    'API_SERVER_URL',
+  );
+
   // Android emulators reach the host through 10.0.2.2. Browsers and desktop
-  // builds run on the host, so they must use localhost instead.
+  // builds run on the host, so they use localhost by default.
   static String get serverUrl {
+    final configuredUrl = _configuredServerUrl.trim();
+    if (configuredUrl.isNotEmpty) {
+      return configuredUrl.replaceFirst(RegExp(r'/+$'), '');
+    }
+
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
       return 'http://localhost:5198';
     }
@@ -39,6 +50,31 @@ class ApiConfig {
   static String get exportRequests => '$baseUrl/ExportRequests';
 
   static String get myExportRequests => '$baseUrl/ExportRequests/my';
+
+  static String exportRequestFromOrder(dynamic orderId) =>
+      '$exportRequests/from-order/$orderId';
+
+  static String orderExportTracking(dynamic orderId) =>
+      '$baseUrl/orders/$orderId/export-tracking';
+
+  static String get myExportTracking => '$baseUrl/export-tracking/my';
+
+  static String get sellerOrders => '$baseUrl/seller/orders';
+
+  static String? resolveImageUrl(String? value) {
+    final imageUrl = value?.trim();
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return null;
+    }
+
+    final parsedUrl = Uri.tryParse(imageUrl);
+    if (parsedUrl != null && parsedUrl.hasScheme) {
+      return imageUrl;
+    }
+
+    final relativePath = imageUrl.replaceFirst(RegExp(r'^/+'), '');
+    return '$serverUrl/$relativePath';
+  }
 
   // ============================================================
   // GEM LISTING ENDPOINTS

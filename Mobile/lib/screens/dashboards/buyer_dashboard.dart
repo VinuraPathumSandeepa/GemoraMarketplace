@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
-import '../export_compliance/my_export_requests_screen.dart';
 import '../marketplace/ai_buyer_assistant_screen.dart';
+import '../marketplace/buyer_export_tracking_screen.dart';
 import '../marketplace/marketplace_home_screen.dart';
 import '../marketplace/my_orders_screen.dart';
 
@@ -15,28 +15,37 @@ class BuyerDashboard extends StatefulWidget {
 }
 
 class _BuyerDashboardState extends State<BuyerDashboard> {
-  static const _titles = [
-    'Marketplace',
-    'AI Buyer Assistant',
-    'My Orders',
-    'My Exports',
-  ];
+  static const _titles = ['Marketplace', 'AI Buyer Assistant', 'My Orders'];
 
   int _index = 0;
-
   final _pages = const [
     MarketplaceHomeScreen(),
     AiBuyerAssistantScreen(),
     MyOrdersScreen(),
-    MyExportRequestsScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final user = auth.user;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_index]),
         actions: [
+          IconButton(
+            tooltip: user?.fullName != null
+                ? 'Track My Exports (${user!.fullName})'
+                : 'Track My Exports',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const BuyerExportTrackingScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.flight_takeoff),
+          ),
           IconButton(
             tooltip: 'Logout',
             onPressed: () => context.read<AuthProvider>().logout(),
@@ -63,11 +72,6 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
             icon: Icon(Icons.receipt_long_outlined),
             selectedIcon: Icon(Icons.receipt_long),
             label: 'Orders',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.flight_takeoff_outlined),
-            selectedIcon: Icon(Icons.flight_takeoff),
-            label: 'Exports',
           ),
         ],
       ),

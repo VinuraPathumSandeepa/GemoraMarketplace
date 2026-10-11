@@ -315,6 +315,9 @@ namespace Gemora.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("OriginCountry")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -349,6 +352,9 @@ namespace Gemora.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DestinationCountry");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique();
 
                     b.HasIndex("RequestedByUserId");
 
@@ -1086,6 +1092,11 @@ namespace Gemora.Infrastructure.Migrations
 
             modelBuilder.Entity("Gemora.Domain.Entities.ExportRequest", b =>
                 {
+                    b.HasOne("Gemora.Domain.Entities.Order", "Order")
+                        .WithOne("ExportRequest")
+                        .HasForeignKey("Gemora.Domain.Entities.ExportRequest", "OrderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Gemora.Domain.Entities.User", "RequestedByUser")
                         .WithMany()
                         .HasForeignKey("RequestedByUserId")
@@ -1096,6 +1107,8 @@ namespace Gemora.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("ReviewedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Order");
 
                     b.Navigation("RequestedByUser");
 
@@ -1275,6 +1288,8 @@ namespace Gemora.Infrastructure.Migrations
             modelBuilder.Entity("Gemora.Domain.Entities.Order", b =>
                 {
                     b.Navigation("DeliveryDetails");
+
+                    b.Navigation("ExportRequest");
 
                     b.Navigation("FulfillmentStatusHistory");
 

@@ -1114,6 +1114,12 @@ public DbSet<FulfillmentStatusHistory>
                 .HasForeignKey(c => c.ExportRequestId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            entity.HasOne(e => e.Order)
+                .WithOne(o => o.ExportRequest)
+                .HasForeignKey<ExportRequest>(e => e.OrderId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
 
             // ----------------------------------------------------
             // INDEXES
@@ -1124,6 +1130,9 @@ public DbSet<FulfillmentStatusHistory>
             entity.HasIndex(e => e.Status);
 
             entity.HasIndex(e => e.DestinationCountry);
+
+            entity.HasIndex(e => e.OrderId)
+                .IsUnique();
         });
 
 

@@ -159,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
         elevation: 0,
         centerTitle: true,
         title: const Text(
-          'Sign In',
+          'Sign In to Gemora',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
       ),
@@ -236,7 +236,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
 
                               Text(
-                                'Gemstone Marketplace',
+                                'Gemora Marketplace',
 
                                 style: TextStyle(
                                   color: _mutedText,
@@ -279,7 +279,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 8),
 
                       const Text(
-                        'Sign In to Gemora',
+                        'Sign in to your account',
 
                         textAlign: TextAlign.center,
 

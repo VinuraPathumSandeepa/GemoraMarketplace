@@ -64,6 +64,8 @@ public class Order
 
     public Shipment? Shipment { get; set; }
 
+    public ExportRequest? ExportRequest { get; set; }
+
     public ICollection<FulfillmentStatusHistory> FulfillmentStatusHistory
     { get; set; } = new List<FulfillmentStatusHistory>();
 
