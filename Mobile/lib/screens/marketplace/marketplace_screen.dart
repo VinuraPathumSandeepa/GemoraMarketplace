@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../config/api_config.dart';
-import '../../models/marketplace_gem_model.dart';
+import '../../models/marketplace/marketplace_gem.dart';
 import '../../services/marketplace_service.dart';
+import 'my_orders_screen.dart';
 
 class MarketplaceScreen extends StatefulWidget {
   final bool isAuthenticated;
@@ -39,7 +40,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
   final GlobalKey _exploreSectionKey = GlobalKey();
 
-  List<MarketplaceGemModel> _gems = [];
+  List<MarketplaceGem> _gems = [];
 
   bool _loading = true;
 
@@ -187,20 +188,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     });
   }
 
-  String _resolveImageUrl(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return '';
-    }
-
-    if (value.startsWith('http://') || value.startsWith('https://')) {
-      return value;
-    }
-
-    return '${ApiConfig.serverUrl}'
-        '${value.startsWith('/') ? '' : '/'}'
-        '$value';
-  }
-
   String get _firstName {
     final value = widget.displayName?.trim();
 
@@ -240,8 +227,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     }
   }
 
-  Future<void> _openGem(MarketplaceGemModel gem) async {
-    await Navigator.of(context).push(
+  Future<void> _openGem(MarketplaceGem gem) async {
+    final result = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => MarketplaceGemDetailsScreen(
           gemId: gem.id,
@@ -251,6 +238,10 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         ),
       ),
     );
+
+    if (result == true && mounted) {
+      _loadGems();
+    }
   }
 
   void _handleBottomNavigation(int index) {
@@ -701,8 +692,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     );
   }
 
-  Widget _buildGemCard(MarketplaceGemModel gem) {
-    final imageUrl = _resolveImageUrl(gem.primaryImageUrl);
+  Widget _buildGemCard(MarketplaceGem gem) {
+    final imageUrl = gem.resolvedImageUrl;
 
     return Material(
       color: Colors.white,
@@ -723,15 +714,30 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                 child: Container(
                   width: double.infinity,
                   color: const Color(0xFFF2EFE8),
-                  child: imageUrl.isEmpty
-                      ? const Icon(
-                          Icons.diamond_outlined,
-                          color: _gold,
-                          size: 48,
+                  child: imageUrl == null
+                      ? const Center(
+                          child: Icon(
+                            Icons.diamond_outlined,
+                            color: _gold,
+                            size: 48,
+                          ),
                         )
                       : Image.network(
                           imageUrl,
                           fit: BoxFit.cover,
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return const Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: _gold,
+                                ),
+                              ),
+                            );
+                          },
                           errorBuilder: (context, error, stackTrace) {
                             return const Center(
                               child: Icon(
@@ -891,12 +897,15 @@ class MarketplaceGemDetailsScreen extends StatefulWidget {
 
   final VoidCallback? onLogin;
 
+  final MarketplaceService? service;
+
   const MarketplaceGemDetailsScreen({
     super.key,
     required this.gemId,
     required this.isAuthenticated,
     this.role,
     this.onLogin,
+    this.service,
   });
 
   @override
@@ -906,11 +915,13 @@ class MarketplaceGemDetailsScreen extends StatefulWidget {
 
 class _MarketplaceGemDetailsScreenState
     extends State<MarketplaceGemDetailsScreen> {
-  final MarketplaceService _service = MarketplaceService();
+  late final MarketplaceService _service;
 
-  MarketplaceGemModel? _gem;
+  MarketplaceGem? _gem;
 
   bool _loading = true;
+
+  bool _ordering = false;
 
   String? _error;
 
@@ -931,7 +942,7 @@ class _MarketplaceGemDetailsScreenState
   @override
   void initState() {
     super.initState();
-
+    _service = widget.service ?? MarketplaceService();
     _load();
   }
 
@@ -960,19 +971,7 @@ class _MarketplaceGemDetailsScreenState
     }
   }
 
-  String _imageUrl(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return '';
-    }
-
-    if (value.startsWith('http://') || value.startsWith('https://')) {
-      return value;
-    }
-
-    return '${ApiConfig.serverUrl}'
-        '${value.startsWith('/') ? '' : '/'}'
-        '$value';
-  }
+  String? _imageUrl(String? value) => ApiConfig.resolveImageUrl(value);
 
   void _buy() {
     if (!widget.isAuthenticated) {
@@ -1003,13 +1002,533 @@ class _MarketplaceGemDetailsScreenState
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Purchase workflow will connect to Marketplace Orders next.',
-        ),
-      ),
+    final gem = _gem;
+    if (gem == null) return;
+
+    _showPurchaseConfirmation(gem);
+  }
+
+  void _showPurchaseConfirmation(MarketplaceGem gem) {
+    String selectedCountry = 'LK';
+    final addressController =
+        TextEditingController(text: '120 Galle Road, Colombo 03');
+    final regionController =
+        TextEditingController(text: 'Western Province');
+    final formKey = GlobalKey<FormState>();
+
+    const countries = [
+      {
+        'code': 'LK',
+        'name': 'Sri Lanka (Domestic - LK)',
+        'region': 'Western Province',
+        'address': '120 Galle Road, Colombo 03',
+      },
+      {
+        'code': 'US',
+        'name': 'United States (International - US)',
+        'region': 'California',
+        'address': '742 Evergreen Terrace, Springfield',
+      },
+      {
+        'code': 'GB',
+        'name': 'United Kingdom (International - GB)',
+        'region': 'Greater London',
+        'address': '10 Downing Street, London',
+      },
+      {
+        'code': 'AU',
+        'name': 'Australia (International - AU)',
+        'region': 'New South Wales',
+        'address': '42 Wallaby Way, Sydney',
+      },
+      {
+        'code': 'SG',
+        'name': 'Singapore (International - SG)',
+        'region': 'Central Region',
+        'address': '10 Marina Boulevard, Singapore',
+      },
+      {
+        'code': 'JP',
+        'name': 'Japan (International - JP)',
+        'region': 'Tokyo',
+        'address': '1-1 Chiyoda, Chiyoda-ku, Tokyo',
+      },
+      {
+        'code': 'DE',
+        'name': 'Germany (International - DE)',
+        'region': 'Bavaria',
+        'address': 'Maximilianstrasse 15, Munich',
+      },
+      {
+        'code': 'AE',
+        'name': 'United Arab Emirates (International - AE)',
+        'region': 'Dubai',
+        'address': 'Sheikh Zayed Road, Dubai',
+      },
+    ];
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final isDomestic = selectedCountry == 'LK';
+
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: _cream,
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: _border,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Confirm Purchase',
+                          style: TextStyle(
+                            color: _darkGreen,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: _border),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                gem.title,
+                                style: const TextStyle(
+                                  color: _text,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '${gem.currency} ${gem.price.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      color: _darkGreen,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Seller: ${gem.sellerName}',
+                                    style: const TextStyle(
+                                      color: _muted,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Shipping Country',
+                          style: TextStyle(
+                            color: _text,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        DropdownButtonFormField<String>(
+                          initialValue: selectedCountry,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: _border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: _border),
+                            ),
+                          ),
+                          items: countries.map((c) {
+                            return DropdownMenuItem<String>(
+                              value: c['code'],
+                              child: Text(
+                                c['name']!,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val == null) return;
+                            setModalState(() {
+                              selectedCountry = val;
+                              final match = countries.firstWhere(
+                                (c) => c['code'] == val,
+                                orElse: () => countries.first,
+                              );
+                              regionController.text = match['region']!;
+                              addressController.text = match['address']!;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        const Text(
+                          'Shipping Address',
+                          style: TextStyle(
+                            color: _text,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          controller: addressController,
+                          decoration: InputDecoration(
+                            hintText: 'Enter street address',
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: _border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: _border),
+                            ),
+                          ),
+                          validator: (val) =>
+                              (val == null || val.trim().isEmpty)
+                                  ? 'Shipping address is required'
+                                  : null,
+                        ),
+                        const SizedBox(height: 14),
+                        const Text(
+                          'State / Province / Region',
+                          style: TextStyle(
+                            color: _text,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          controller: regionController,
+                          decoration: InputDecoration(
+                            hintText: 'Enter province or region',
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: _border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: _border),
+                            ),
+                          ),
+                          validator: (val) =>
+                              (val == null || val.trim().isEmpty)
+                                  ? 'Region is required'
+                                  : null,
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDomestic
+                                ? const Color(0xFFE8F5E9)
+                                : const Color(0xFFFFF8E1),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isDomestic
+                                  ? const Color(0xFFA5D6A7)
+                                  : const Color(0xFFFFE082),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isDomestic
+                                    ? Icons.check_circle_outline
+                                    : Icons.flight_takeoff,
+                                size: 16,
+                                color: isDomestic
+                                    ? const Color(0xFF2E7D32)
+                                    : const Color(0xFFC99242),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  isDomestic
+                                      ? 'Domestic delivery: Export clearance not required'
+                                      : 'International delivery: Export clearance required (Component 4)',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDomestic
+                                        ? const Color(0xFF2E7D32)
+                                        : const Color(0xFF8D6E63),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _ordering
+                                    ? null
+                                    : () => Navigator.pop(sheetContext),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: _border),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Cancel',
+                                  style: TextStyle(color: _muted),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: _ordering
+                                    ? null
+                                    : () async {
+                                        if (!formKey.currentState!.validate()) {
+                                          return;
+                                        }
+                                        Navigator.pop(sheetContext);
+                                        await _submitOrder(
+                                          gemId: gem.id,
+                                          shippingAddress:
+                                              addressController.text.trim(),
+                                          shippingRegion:
+                                              regionController.text.trim(),
+                                          shippingCountryCode: selectedCountry,
+                                        );
+                                      },
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: _gold,
+                                  foregroundColor: _darkGreen,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: _ordering
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: _darkGreen,
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Place Order',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
+  }
+
+  Future<void> _submitOrder({
+    required int gemId,
+    required String shippingAddress,
+    required String shippingRegion,
+    required String shippingCountryCode,
+  }) async {
+    setState(() => _ordering = true);
+
+    try {
+      final order = await _service.createOrder(
+        gemId,
+        shippingAddress: shippingAddress,
+        shippingRegion: shippingRegion,
+        shippingCountryCode: shippingCountryCode,
+      );
+
+      if (!mounted) return;
+
+      setState(() => _ordering = false);
+
+      final isInternational = order.shippingCountryCode != 'LK';
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return AlertDialog(
+            backgroundColor: _cream,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Color(0xFF2E7D32)),
+                SizedBox(width: 8),
+                Text(
+                  'Order Created',
+                  style: TextStyle(
+                    color: _darkGreen,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Order ${order.orderNumber} created successfully.',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: _text,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Total: ${order.currency} ${order.agreedPrice.toStringAsFixed(2)}',
+                  style: const TextStyle(color: _muted),
+                ),
+                Text(
+                  'Destination: ${order.shippingCountryCode ?? shippingCountryCode}',
+                  style: const TextStyle(color: _muted),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isInternational
+                        ? const Color(0xFFFFF8E1)
+                        : const Color(0xFFE8F5E9),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    isInternational
+                        ? 'Export clearance is required for this international order. The seller can now start export compliance (Component 4).'
+                        : 'This is a domestic order within Sri Lanka. Export clearance is not required.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isInternational
+                          ? const Color(0xFF8D6E63)
+                          : const Color(0xFF2E7D32),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  Navigator.pop(context, true);
+                },
+                child: const Text('Close'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const MyOrdersScreen(),
+                    ),
+                  );
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: _darkGreen,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('View My Orders'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final errorMessage = e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red.shade800,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _ordering = false);
+    }
   }
 
   @override
@@ -1050,16 +1569,29 @@ class _MarketplaceGemDetailsScreenState
             borderRadius: BorderRadius.circular(22),
             border: Border.all(color: _border),
           ),
-          child: image.isEmpty
-              ? const Icon(Icons.diamond_outlined, color: _gold, size: 80)
+          child: image == null
+              ? const Center(
+                  child: Icon(Icons.diamond_outlined, color: _gold, size: 80),
+                )
               : Image.network(
                   image,
-                  fit: BoxFit.contain,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: _gold,
+                      ),
+                    );
+                  },
                   errorBuilder: (context, error, stackTrace) {
-                    return const Icon(
-                      Icons.diamond_outlined,
-                      color: _gold,
-                      size: 80,
+                    return const Center(
+                      child: Icon(
+                        Icons.diamond_outlined,
+                        color: _gold,
+                        size: 80,
+                      ),
                     );
                   },
                 ),
@@ -1157,14 +1689,25 @@ class _MarketplaceGemDetailsScreenState
         SizedBox(
           height: 54,
           child: FilledButton.icon(
-            onPressed: _buy,
+            onPressed: _ordering ? null : _buy,
             style: FilledButton.styleFrom(
               backgroundColor: _gold,
               foregroundColor: _darkGreen,
             ),
-            icon: const Icon(Icons.shopping_bag_outlined),
+            icon: _ordering
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: _darkGreen,
+                    ),
+                  )
+                : const Icon(Icons.shopping_bag_outlined),
             label: Text(
-              widget.isAuthenticated ? 'Buy Gemstone' : 'Sign In to Buy',
+              _ordering
+                  ? 'Processing...'
+                  : (widget.isAuthenticated ? 'Buy Gemstone' : 'Sign In to Buy'),
               style: const TextStyle(fontWeight: FontWeight.w800),
             ),
           ),

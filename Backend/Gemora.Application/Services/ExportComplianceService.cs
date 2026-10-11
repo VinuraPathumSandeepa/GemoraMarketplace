@@ -36,71 +36,11 @@ public class ExportComplianceService : IExportComplianceService
             return userVal;
         }
 
-        if (string.IsNullOrWhiteSpace(dto.OriginCountry) ||
-            !string.Equals(dto.OriginCountry.Trim(), "Sri Lanka", StringComparison.OrdinalIgnoreCase))
-        {
-            return new ExportRequestOperationResult
-            {
-                Success = false,
-                Message = "Export requests must originate from Sri Lanka.",
-                ErrorCode = "INVALID_ORIGIN_COUNTRY"
-            };
-        }
-
-        if (string.IsNullOrWhiteSpace(dto.DestinationCountry) ||
-            !ComplianceConstants.SupportedCountries.Any(c => string.Equals(c, dto.DestinationCountry.Trim(), StringComparison.OrdinalIgnoreCase)))
-        {
-            return new ExportRequestOperationResult
-            {
-                Success = false,
-                Message = "Destination country is required and must be a valid supported country.",
-                ErrorCode = "INVALID_REQUEST"
-            };
-        }
-
-        if (dto.DeclaredValue <= 0)
-        {
-            return new ExportRequestOperationResult
-            {
-                Success = false,
-                Message = "Declared value must be greater than 0.",
-                ErrorCode = "INVALID_REQUEST"
-            };
-        }
-
-        if (string.IsNullOrWhiteSpace(dto.Currency))
-        {
-            return new ExportRequestOperationResult
-            {
-                Success = false,
-                Message = "Currency is required.",
-                ErrorCode = "INVALID_REQUEST"
-            };
-        }
-
-        var now = DateTime.UtcNow;
-        var exportRequest = new ExportRequest
-        {
-            Id = Guid.NewGuid(),
-            RequestedByUserId = userId,
-            OriginCountry = dto.OriginCountry.Trim(),
-            DestinationCountry = dto.DestinationCountry.Trim(),
-            DeclaredValue = dto.DeclaredValue,
-            Currency = dto.Currency.Trim().ToUpperInvariant(),
-            Purpose = string.IsNullOrWhiteSpace(dto.Purpose) ? null : dto.Purpose.Trim(),
-            Status = ExportRequestStatus.Draft,
-            CreatedAt = now,
-            UpdatedAt = now
-        };
-
-        _context.ExportRequests.Add(exportRequest);
-        await _context.SaveChangesAsync();
-
         return new ExportRequestOperationResult
         {
-            Success = true,
-            Message = "Export request created successfully.",
-            Request = MapToResponseDto(exportRequest)
+            Success = false,
+            Message = "Export requests must be started from an eligible marketplace order.",
+            ErrorCode = "ORDER_REQUIRED"
         };
     }
 
@@ -118,6 +58,8 @@ public class ExportComplianceService : IExportComplianceService
 
         var requests = await _context.ExportRequests
             .AsNoTracking()
+            .Include(r => r.Order)
+                .ThenInclude(o => o!.GemListing)
             .Where(r => r.RequestedByUserId == userId)
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();
@@ -157,6 +99,8 @@ public class ExportComplianceService : IExportComplianceService
 
         var request = await _context.ExportRequests
             .AsNoTracking()
+            .Include(r => r.Order)
+                .ThenInclude(o => o!.GemListing)
             .FirstOrDefaultAsync(r => r.Id == exportRequestId && r.RequestedByUserId == userId);
 
         if (request == null)
@@ -993,7 +937,10 @@ public class ExportComplianceService : IExportComplianceService
             Status = entity.Status.ToString(),
             SubmittedAt = entity.SubmittedAt,
             CreatedAt = entity.CreatedAt,
-            UpdatedAt = entity.UpdatedAt
+            UpdatedAt = entity.UpdatedAt,
+            OrderId = entity.OrderId,
+            OrderNumber = entity.OrderId.HasValue ? $"GEM-{entity.OrderId.Value.ToString("N")[..8].ToUpperInvariant()}" : null,
+            GemListingTitle = entity.Order?.GemListing?.Title
         };
     }
 
@@ -1012,7 +959,10 @@ public class ExportComplianceService : IExportComplianceService
             SubmittedAt = entity.SubmittedAt,
             ReviewedAt = entity.ReviewedAt,
             CreatedAt = entity.CreatedAt,
-            UpdatedAt = entity.UpdatedAt
+            UpdatedAt = entity.UpdatedAt,
+            OrderId = entity.OrderId,
+            OrderNumber = entity.OrderId.HasValue ? $"GEM-{entity.OrderId.Value.ToString("N")[..8].ToUpperInvariant()}" : null,
+            GemListingTitle = entity.Order?.GemListing?.Title
         };
     }
 
@@ -1143,5 +1093,314 @@ public class ExportComplianceService : IExportComplianceService
         }
 
         return null;
+    }
+
+    // ==========================================
+    // CREATE EXPORT REQUEST FROM ORDER
+    // ==========================================
+    public async Task<ExportRequestOperationResult> CreateExportRequestFromOrderAsync(
+        Guid userId,
+        Guid orderId)
+    {
+        var userVal = await ValidateSellerUserAsync(userId);
+        if (userVal != null)
+        {
+            return userVal;
+        }
+
+        var order = await _context.Orders
+            .Include(o => o.GemListing)
+            .Include(o => o.DeliveryDetails)
+            .Include(o => o.ExportRequest)
+            .FirstOrDefaultAsync(o => o.Id == orderId);
+
+        if (order == null)
+        {
+            return new ExportRequestOperationResult
+            {
+                Success = false,
+                Message = "Order was not found.",
+                ErrorCode = "ORDER_NOT_FOUND"
+            };
+        }
+
+        if (order.SellerId != userId)
+        {
+            return new ExportRequestOperationResult
+            {
+                Success = false,
+                Message = "You do not have permission to manage export clearance for this order.",
+                ErrorCode = "FORBIDDEN"
+            };
+        }
+
+        if (order.ExportRequest != null || await _context.ExportRequests.AnyAsync(e => e.OrderId == orderId))
+        {
+            return new ExportRequestOperationResult
+            {
+                Success = false,
+                Message = "An export clearance request already exists for this order.",
+                ErrorCode = "EXPORT_REQUEST_ALREADY_EXISTS"
+            };
+        }
+
+        if (order.Status == OrderStatuses.Cancelled ||
+            order.Status == OrderStatuses.Rejected ||
+            order.Status == OrderStatuses.Refunded ||
+            order.Status == OrderStatuses.Failed)
+        {
+            return new ExportRequestOperationResult
+            {
+                Success = false,
+                Message = $"Order in status '{order.Status}' is not eligible for export compliance.",
+                ErrorCode = "ORDER_NOT_ELIGIBLE_FOR_EXPORT"
+            };
+        }
+
+        if (order.GemListingId == null || order.GemListing == null)
+        {
+            return new ExportRequestOperationResult
+            {
+                Success = false,
+                Message = "Order does not have an active gemstone listing.",
+                ErrorCode = "ORDER_NOT_ELIGIBLE_FOR_EXPORT"
+            };
+        }
+
+        var destinationRaw = !string.IsNullOrWhiteSpace(order.ShippingCountryCode)
+            ? order.ShippingCountryCode.Trim()
+            : order.DeliveryDetails?.CountryCode?.Trim() ?? string.Empty;
+
+        if (string.Equals(destinationRaw, "LK", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(destinationRaw, "Sri Lanka", StringComparison.OrdinalIgnoreCase))
+        {
+            return new ExportRequestOperationResult
+            {
+                Success = false,
+                Message = "Domestic orders do not require international export clearance.",
+                ErrorCode = "ORDER_NOT_ELIGIBLE_FOR_EXPORT"
+            };
+        }
+
+        var destinationCountry = ResolveCountryName(destinationRaw);
+
+        if (string.IsNullOrWhiteSpace(destinationCountry) ||
+            !ComplianceConstants.SupportedCountries.Any(c => string.Equals(c, destinationCountry, StringComparison.OrdinalIgnoreCase)))
+        {
+            return new ExportRequestOperationResult
+            {
+                Success = false,
+                Message = $"Destination country '{destinationRaw}' is not supported for international export clearance.",
+                ErrorCode = "ORDER_NOT_ELIGIBLE_FOR_EXPORT"
+            };
+        }
+
+        var now = DateTime.UtcNow;
+        var exportRequest = new ExportRequest
+        {
+            Id = Guid.NewGuid(),
+            OrderId = order.Id,
+            RequestedByUserId = userId,
+            OriginCountry = "Sri Lanka",
+            DestinationCountry = destinationCountry,
+            DeclaredValue = order.TotalAmount > 0 ? order.TotalAmount : 1.00m,
+            Currency = string.IsNullOrWhiteSpace(order.Currency) ? "USD" : order.Currency.Trim().ToUpperInvariant(),
+            Purpose = $"Marketplace Order GEM-{order.Id.ToString("N")[..8].ToUpperInvariant()}",
+            Status = ExportRequestStatus.Draft,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+
+        _context.ExportRequests.Add(exportRequest);
+        await _context.SaveChangesAsync();
+
+        return new ExportRequestOperationResult
+        {
+            Success = true,
+            Message = "Export clearance request created successfully.",
+            Request = MapToResponseDto(exportRequest)
+        };
+    }
+
+    // ==========================================
+    // BUYER-SAFE EXPORT TRACKING FOR ORDER
+    // ==========================================
+    public async Task<BuyerExportTrackingDto?> GetExportTrackingForOrderAsync(
+        Guid orderId,
+        Guid userId)
+    {
+        var order = await _context.Orders
+            .AsNoTracking()
+            .Include(o => o.GemListing)
+            .Include(o => o.ExportRequest)
+            .FirstOrDefaultAsync(o => o.Id == orderId);
+
+        if (order == null)
+        {
+            return null;
+        }
+
+        if (order.BuyerId != userId && order.SellerId != userId)
+        {
+            return null;
+        }
+
+        return MapToBuyerTrackingDto(order, order.ExportRequest);
+    }
+
+    // ==========================================
+    // BUYER-SAFE EXPORT TRACKING LIST
+    // ==========================================
+    public async Task<List<BuyerExportTrackingDto>> GetBuyerExportTrackingListAsync(
+        Guid buyerId)
+    {
+        var orders = await _context.Orders
+            .AsNoTracking()
+            .Include(o => o.GemListing)
+            .Include(o => o.ExportRequest)
+            .Where(o => o.BuyerId == buyerId)
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync();
+
+        return orders
+            .Select(o => MapToBuyerTrackingDto(o, o.ExportRequest))
+            .ToList();
+    }
+
+    private static readonly Dictionary<string, string> IsoToCountryName = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["US"] = "United States",
+        ["USA"] = "United States",
+        ["GB"] = "United Kingdom",
+        ["UK"] = "United Kingdom",
+        ["AU"] = "Australia",
+        ["CA"] = "Canada",
+        ["DE"] = "Germany",
+        ["FR"] = "France",
+        ["IT"] = "Italy",
+        ["ES"] = "Spain",
+        ["NL"] = "Netherlands",
+        ["CH"] = "Switzerland",
+        ["AE"] = "United Arab Emirates",
+        ["UAE"] = "United Arab Emirates",
+        ["SG"] = "Singapore",
+        ["JP"] = "Japan",
+        ["IN"] = "India",
+        ["CN"] = "China",
+        ["HK"] = "Hong Kong",
+        ["NZ"] = "New Zealand",
+        ["QA"] = "Qatar",
+        ["SA"] = "Saudi Arabia",
+        ["KW"] = "Kuwait",
+        ["OM"] = "Oman",
+        ["BH"] = "Bahrain",
+        ["TH"] = "Thailand",
+        ["MY"] = "Malaysia",
+        ["LK"] = "Sri Lanka"
+    };
+
+    private static string ResolveCountryName(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
+        var trimmed = raw.Trim();
+        if (IsoToCountryName.TryGetValue(trimmed, out var mapped))
+        {
+            return mapped;
+        }
+
+        var matched = ComplianceConstants.SupportedCountries
+            .FirstOrDefault(c => string.Equals(c, trimmed, StringComparison.OrdinalIgnoreCase));
+
+        return matched ?? trimmed;
+    }
+
+    private static BuyerExportTrackingDto MapToBuyerTrackingDto(Order order, ExportRequest? exportRequest)
+    {
+        var isDomestic = string.Equals(order.ShippingCountryCode, "LK", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(order.ShippingCountryCode, "Sri Lanka", StringComparison.OrdinalIgnoreCase);
+
+        var orderNumber = $"GEM-{order.Id.ToString("N")[..8].ToUpperInvariant()}";
+        var gemTitle = order.GemListing?.Title ?? "Gemstone";
+        var gemImageUrl = order.GemListing?.PrimaryImageUrl;
+        var destination = ResolveCountryName(order.ShippingCountryCode);
+
+        if (exportRequest == null)
+        {
+            if (isDomestic)
+            {
+                return new BuyerExportTrackingDto
+                {
+                    OrderId = order.Id,
+                    OrderNumber = orderNumber,
+                    GemListingId = order.GemListingId,
+                    GemTitle = gemTitle,
+                    GemImageUrl = gemImageUrl,
+                    ExportRequestId = null,
+                    Status = "NotRequired",
+                    RequiresExport = false,
+                    StageDescription = "Domestic order — international export clearance not required.",
+                    OriginCountry = "Sri Lanka",
+                    DestinationCountry = "Sri Lanka",
+                    SubmittedAt = null,
+                    ReviewedAt = null,
+                    UpdatedAt = order.UpdatedAt ?? order.CreatedAt,
+                    IsApproved = false
+                };
+            }
+
+            return new BuyerExportTrackingDto
+            {
+                OrderId = order.Id,
+                OrderNumber = orderNumber,
+                GemListingId = order.GemListingId,
+                GemTitle = gemTitle,
+                GemImageUrl = gemImageUrl,
+                ExportRequestId = null,
+                Status = "NotStarted",
+                RequiresExport = true,
+                StageDescription = "Export clearance has not yet been initiated by the seller.",
+                OriginCountry = "Sri Lanka",
+                DestinationCountry = destination,
+                SubmittedAt = null,
+                ReviewedAt = null,
+                UpdatedAt = order.UpdatedAt ?? order.CreatedAt,
+                IsApproved = false
+            };
+        }
+
+        return new BuyerExportTrackingDto
+        {
+            OrderId = order.Id,
+            OrderNumber = orderNumber,
+            GemListingId = order.GemListingId,
+            GemTitle = gemTitle,
+            GemImageUrl = gemImageUrl,
+            ExportRequestId = exportRequest.Id,
+            Status = exportRequest.Status.ToString(),
+            RequiresExport = true,
+            StageDescription = GetBuyerFriendlyStageDescription(exportRequest.Status),
+            OriginCountry = exportRequest.OriginCountry,
+            DestinationCountry = exportRequest.DestinationCountry,
+            SubmittedAt = exportRequest.SubmittedAt,
+            ReviewedAt = exportRequest.ReviewedAt,
+            UpdatedAt = exportRequest.UpdatedAt,
+            IsApproved = exportRequest.Status == ExportRequestStatus.Approved
+        };
+    }
+
+    private static string GetBuyerFriendlyStageDescription(ExportRequestStatus status)
+    {
+        return status switch
+        {
+            ExportRequestStatus.Draft => "Export documentation is currently being prepared by the seller.",
+            ExportRequestStatus.Submitted => "Export clearance request submitted and queued for verification.",
+            ExportRequestStatus.UnderComplianceReview => "Export documentation is undergoing automated compliance checks.",
+            ExportRequestStatus.UnderOfficerReview => "An authorized Gemora Export Officer is reviewing the export request.",
+            ExportRequestStatus.RevisionRequired => "The Export Officer requested document updates from the seller.",
+            ExportRequestStatus.Approved => "Export clearance approved. Shipment may proceed for international transit.",
+            ExportRequestStatus.Rejected => "Export clearance was not approved by the Export Officer.",
+            ExportRequestStatus.Cancelled => "Export clearance request was cancelled.",
+            _ => "Export clearance in progress."
+        };
     }
 }

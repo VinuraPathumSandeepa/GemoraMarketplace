@@ -6,6 +6,7 @@ import '../../widgets/notification_bell.dart';
 import '../export_compliance/my_export_requests_screen.dart';
 import '../seller/create_gem_listing_screen.dart';
 import '../seller/my_gem_listings_screen.dart';
+import '../seller/seller_orders_screen.dart';
 
 class SellerDashboard extends StatelessWidget {
   const SellerDashboard({super.key});
@@ -190,6 +191,24 @@ class SellerDashboard extends StatelessWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => const MyExportRequestsScreen(),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 14),
+
+            // ======================================================
+            // ORDERS & EXPORT CLEARANCE
+            // ======================================================
+            _DashboardActionCard(
+              icon: Icons.receipt_long_rounded,
+              title: 'Orders & Export Clearance',
+              description: 'Manage buyer orders and initiate export compliance clearance.',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const SellerOrdersScreen(),
                   ),
                 );
               },

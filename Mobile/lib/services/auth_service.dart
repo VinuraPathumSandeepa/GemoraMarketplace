@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -14,11 +15,20 @@ class AuthService {
   // ==========================================
 
   Future<UserModel> login(String email, String password) async {
-    final response = await http.post(
-      Uri.parse(ApiConfig.login),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email.trim(), 'password': password}),
-    );
+    final response = await http
+        .post(
+          Uri.parse(ApiConfig.login),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email.trim(), 'password': password}),
+        )
+        .timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            throw TimeoutException(
+              'Connection timed out (10s). Unable to reach server at ${ApiConfig.baseUrl}.',
+            );
+          },
+        );
 
     final responseData = _decodeResponse(response.body);
 
@@ -35,7 +45,8 @@ class AuthService {
     await _tokenStorage.saveToken(token);
 
     try {
-      return await getCurrentUser();
+      final user = await getCurrentUser();
+      return user;
     } catch (_) {
       await _tokenStorage.deleteToken();
       rethrow;
@@ -128,13 +139,22 @@ class AuthService {
       throw Exception('Authentication token not found.');
     }
 
-    final response = await http.get(
-      Uri.parse(ApiConfig.currentUser),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+    final response = await http
+        .get(
+          Uri.parse(ApiConfig.currentUser),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        )
+        .timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            throw TimeoutException(
+              'Connection timed out (10s). Unable to load current user at ${ApiConfig.baseUrl}.',
+            );
+          },
+        );
 
     if (response.statusCode != 200) {
       throw Exception('Unable to load current user.');

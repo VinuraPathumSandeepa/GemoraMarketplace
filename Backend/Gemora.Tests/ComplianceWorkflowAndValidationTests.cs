@@ -699,9 +699,9 @@ public class ComplianceWorkflowAndValidationTests
         Assert.NotEqual(Guid.Empty, retryResult.WorkflowId);
     }
 
-    // 19. Create export request with Sri Lanka origin -> accepted
+    // 19. Direct standalone create export request -> rejected with ORDER_REQUIRED
     [Fact]
-    public async Task Test19_CreateExportRequest_SriLankaOrigin_Accepted()
+    public async Task Test19_CreateExportRequest_DirectStandalone_RejectedOrderRequired()
     {
         using var context = CreateDbContext();
         var (requester, _) = SeedUsers(context);
@@ -719,24 +719,25 @@ public class ComplianceWorkflowAndValidationTests
 
         var result = await service.CreateExportRequestAsync(requester.Id, dto);
 
-        Assert.True(result.Success);
-        Assert.Equal("Sri Lanka", result.Request!.OriginCountry);
-        Assert.Equal("United States", result.Request.DestinationCountry);
+        Assert.False(result.Success);
+        Assert.Equal("ORDER_REQUIRED", result.ErrorCode);
+        Assert.Equal("Export requests must be started from an eligible marketplace order.", result.Message);
     }
 
-    // 20. Create export request with another origin -> rejected
+    // 20. Update export request with non-Sri Lanka origin -> rejected
     [Theory]
     [InlineData("Australia")]
     [InlineData("Afghanistan")]
     [InlineData("United States")]
-    public async Task Test20_CreateExportRequest_NonSriLankaOrigin_Rejected(string nonSriLankaOrigin)
+    public async Task Test20_UpdateExportRequest_NonSriLankaOrigin_Rejected(string nonSriLankaOrigin)
     {
         using var context = CreateDbContext();
         var (requester, _) = SeedUsers(context);
+        var request = SeedExportRequest(context, requester, ExportRequestStatus.Draft);
         var fileStorage = new FakeFileStorageService();
         var service = new ExportComplianceService(context, fileStorage);
 
-        var dto = new CreateExportRequestDto
+        var dto = new UpdateExportRequestDto
         {
             OriginCountry = nonSriLankaOrigin,
             DestinationCountry = "United States",
@@ -744,7 +745,7 @@ public class ComplianceWorkflowAndValidationTests
             Currency = "USD"
         };
 
-        var result = await service.CreateExportRequestAsync(requester.Id, dto);
+        var result = await service.UpdateExportRequestAsync(requester.Id, request.Id, dto);
 
         Assert.False(result.Success);
         Assert.Equal("INVALID_ORIGIN_COUNTRY", result.ErrorCode);
@@ -776,16 +777,17 @@ public class ComplianceWorkflowAndValidationTests
         Assert.Equal("Export requests must originate from Sri Lanka.", result.Message);
     }
 
-    // 22. Destination valid ISO country -> accepted
+    // 22. Destination valid ISO country -> accepted on update
     [Fact]
-    public async Task Test22_CreateExportRequest_ValidDestinationIsoCountry_Accepted()
+    public async Task Test22_UpdateExportRequest_ValidDestinationIsoCountry_Accepted()
     {
         using var context = CreateDbContext();
         var (requester, _) = SeedUsers(context);
+        var request = SeedExportRequest(context, requester, ExportRequestStatus.Draft);
         var fileStorage = new FakeFileStorageService();
         var service = new ExportComplianceService(context, fileStorage);
 
-        var dto = new CreateExportRequestDto
+        var dto = new UpdateExportRequestDto
         {
             OriginCountry = "Sri Lanka",
             DestinationCountry = "Japan",
@@ -793,7 +795,7 @@ public class ComplianceWorkflowAndValidationTests
             Currency = "USD"
         };
 
-        var result = await service.CreateExportRequestAsync(requester.Id, dto);
+        var result = await service.UpdateExportRequestAsync(requester.Id, request.Id, dto);
 
         Assert.True(result.Success);
         Assert.Equal("Japan", result.Request!.DestinationCountry);
@@ -873,24 +875,52 @@ public class ComplianceWorkflowAndValidationTests
     // ==========================================
 
     [Fact]
-    public async Task RoleTest1_SellerCanCreateExportRequest()
+    public async Task RoleTest1_SellerCanCreateExportRequestFromOrder()
     {
         using var context = CreateDbContext();
         var (seller, _) = SeedUsers(context);
+        var buyer = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "buyer@gemora.com",
+            FullName = "Test Buyer",
+            Role = UserRoles.Buyer
+        };
+        var listing = new GemListing
+        {
+            Id = 555,
+            SellerId = seller.Id,
+            Title = "Ceylon Blue Sapphire 2.5ct",
+            Price = 1000m,
+            Currency = "USD",
+            Status = GemListingStatuses.Approved,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        var order = new Order
+        {
+            Id = Guid.NewGuid(),
+            BuyerId = buyer.Id,
+            SellerId = seller.Id,
+            GemListingId = listing.Id,
+            GemListing = listing,
+            TotalAmount = 1000,
+            Currency = "USD",
+            ShippingCountryCode = "US",
+            Status = OrderStatuses.Confirmed
+        };
+        context.Users.Add(buyer);
+        context.GemListings.Add(listing);
+        context.Orders.Add(order);
+        await context.SaveChangesAsync();
+
         var service = new ExportComplianceService(context, new FakeFileStorageService());
 
-        var dto = new CreateExportRequestDto
-        {
-            OriginCountry = "Sri Lanka",
-            DestinationCountry = "United States",
-            DeclaredValue = 1000,
-            Currency = "USD"
-        };
-
-        var result = await service.CreateExportRequestAsync(seller.Id, dto);
+        var result = await service.CreateExportRequestFromOrderAsync(seller.Id, order.Id);
 
         Assert.True(result.Success);
         Assert.NotNull(result.Request);
+        Assert.Equal(order.Id, result.Request.OrderId);
     }
 
     [Fact]

@@ -2,6 +2,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 function RoleProtectedRoute({
+  roles,
   allowedRoles,
   children,
 }) {
@@ -11,13 +12,14 @@ function RoleProtectedRoute({
     loading,
   } = useAuth();
 
-  // Wait until AuthContext checks the JWT
+  const permittedRoles =
+    roles ?? allowedRoles ?? [];
+
   if (loading) {
     return <p>Loading...</p>;
   }
 
-  // User is not logged in
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user) {
     return (
       <Navigate
         to="/login"
@@ -26,9 +28,10 @@ function RoleProtectedRoute({
     );
   }
 
-  // User is logged in but does not have
-  // permission to access this page
-  if (!allowedRoles.includes(user?.role)) {
+  if (
+    permittedRoles.length > 0 &&
+    !permittedRoles.includes(user.role)
+  ) {
     return (
       <Navigate
         to="/dashboard"
