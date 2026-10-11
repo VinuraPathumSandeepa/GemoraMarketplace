@@ -23,7 +23,7 @@ class ApiConfig {
       return 'http://localhost:5198';
     }
 
-    return 'http://10.0.2.2:5198';
+    // return 'http://10.0.2.2:5198';
   }
 
   static String get baseUrl => '$serverUrl/api';
