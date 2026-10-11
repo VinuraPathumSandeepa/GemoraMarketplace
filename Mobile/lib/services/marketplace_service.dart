@@ -100,7 +100,7 @@ class MarketplaceService {
       },
       body: jsonEncode({
         'message': message.trim(),
-        if (conversationId != null) 'conversationId': conversationId,
+        'conversationId': ?conversationId,
       }),
     );
 
@@ -150,7 +150,7 @@ class MarketplaceService {
       },
       body: jsonEncode({
         'gemListingId': gemListingId,
-        if (deliveryDetails != null) 'deliveryDetails': deliveryDetails,
+        'deliveryDetails': ?deliveryDetails,
         if (deliveryDetails == null) ...{
           'shippingAddress': shippingAddress.trim(),
           'shippingRegion': shippingRegion.trim(),

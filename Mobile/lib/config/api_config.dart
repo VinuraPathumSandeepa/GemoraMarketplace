@@ -11,7 +11,7 @@ class ApiConfig {
     const configured = String.fromEnvironment('API_SERVER_URL');
     if (configured.isNotEmpty) return configured;
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
-      return 'http://localhost:5198';
+      return 'https://gemora-api.onrender.com';
     }
     return 'http://10.0.2.2:5198';
   }
