@@ -640,7 +640,9 @@ public static class DatabaseCompatibilityInitializer
 
                 return;
             }
-            catch (Exception ex) when (attempt < maxRetries && (ex is Npgsql.NpgsqlException || ex is System.IO.IOException || ex is System.Net.Sockets.SocketException))
+            catch (Exception ex) when (
+                attempt < maxRetries &&
+                IsTransientDatabaseException(ex))
             {
                 try
                 {
@@ -728,39 +730,79 @@ public static class DatabaseCompatibilityInitializer
                 );
             """;
 
-        var connection =
-            dbContext.Database.GetDbConnection();
+        const int maxAttempts = 3;
 
-        var openedHere =
-            connection.State != ConnectionState.Open;
-
-        if (openedHere)
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            await dbContext.Database.OpenConnectionAsync(
-                cancellationToken);
-        }
+            var connection =
+                dbContext.Database.GetDbConnection();
 
-        try
-        {
-            await using var command =
-                connection.CreateCommand();
+            var openedHere =
+                connection.State != ConnectionState.Open;
 
-            command.CommandText =
-                compatibilityProbe;
-
-            var result =
-                await command.ExecuteScalarAsync(
-                    cancellationToken);
-
-            return result is bool isReady &&
-                   isReady;
-        }
-        finally
-        {
-            if (openedHere)
+            try
             {
-                await dbContext.Database.CloseConnectionAsync();
+                if (openedHere)
+                {
+                    await dbContext.Database.OpenConnectionAsync(
+                        cancellationToken);
+                }
+
+                await using var command =
+                    connection.CreateCommand();
+
+                command.CommandText =
+                    compatibilityProbe;
+
+                var result =
+                    await command.ExecuteScalarAsync(
+                        cancellationToken);
+
+                return result is bool isReady &&
+                       isReady;
+            }
+            catch (Exception ex) when (
+                attempt < maxAttempts &&
+                IsTransientDatabaseException(ex))
+            {
+                await Task.Delay(
+                    TimeSpan.FromSeconds(attempt * 2),
+                    cancellationToken);
+            }
+            finally
+            {
+                if (openedHere)
+                {
+                    try
+                    {
+                        await dbContext.Database.CloseConnectionAsync();
+                    }
+                    catch
+                    {
+                        // A broken provider connection may already be closed.
+                    }
+                }
             }
         }
+
+        return false;
+    }
+
+
+    private static bool IsTransientDatabaseException(
+        Exception exception)
+    {
+        if (
+            exception is Npgsql.NpgsqlException ||
+            exception is System.IO.IOException ||
+            exception is System.Net.Sockets.SocketException
+        )
+        {
+            return true;
+        }
+
+        return exception.InnerException != null &&
+               IsTransientDatabaseException(
+                   exception.InnerException);
     }
 }
