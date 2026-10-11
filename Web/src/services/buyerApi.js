@@ -1,6 +1,6 @@
 const RAW_API_URL =
   import.meta.env.VITE_API_URL ||
-  "http://localhost:5198";
+  "https://gemora-api.onrender.com/api";
 
 
 const API_ORIGIN =
