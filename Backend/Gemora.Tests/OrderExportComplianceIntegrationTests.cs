@@ -250,12 +250,13 @@ public class OrderExportComplianceIntegrationTests
     }
 
     [Fact]
-    public async Task Test08_ExistingSellerManualExportLifecycleStillWorks()
+    public async Task Test08_StandaloneExportCreationIsRejectedAndLegacyRequestsRemainReadable()
     {
         using var context = CreateDbContext();
         var (seller1, _, _, _, _, _, _) = SeedScenario(context);
         var service = new ExportComplianceService(context, new FakeFileStorageService());
 
+        // 1. Direct manual creation without order must be rejected with ORDER_REQUIRED
         var manualDto = new CreateExportRequestDto
         {
             OriginCountry = "Sri Lanka",
@@ -266,17 +267,31 @@ public class OrderExportComplianceIntegrationTests
         };
 
         var result = await service.CreateExportRequestAsync(seller1.Id, manualDto);
+        Assert.False(result.Success);
+        Assert.Equal("ORDER_REQUIRED", result.ErrorCode);
 
-        Assert.True(result.Success);
-        Assert.NotNull(result.Request);
-        Assert.Null(result.Request.OrderId);
-        Assert.Equal("United Kingdom", result.Request.DestinationCountry);
+        // 2. Pre-existing legacy requests (with OrderId == null) remain readable
+        var legacyRequest = new ExportRequest
+        {
+            Id = Guid.NewGuid(),
+            RequestedByUserId = seller1.Id,
+            OriginCountry = "Sri Lanka",
+            DestinationCountry = "United Kingdom",
+            DeclaredValue = 2500.00m,
+            Currency = "USD",
+            Status = ExportRequestStatus.Draft,
+            OrderId = null,
+            CreatedAt = DateTime.UtcNow
+        };
+        context.ExportRequests.Add(legacyRequest);
+        await context.SaveChangesAsync();
 
         var list = await service.GetMyExportRequestsAsync(seller1.Id);
         Assert.True(list.Success);
         Assert.NotNull(list.Requests);
         Assert.Single(list.Requests);
         Assert.Null(list.Requests[0].OrderId);
+        Assert.Equal(legacyRequest.Id, list.Requests[0].Id);
     }
 
     [Fact]

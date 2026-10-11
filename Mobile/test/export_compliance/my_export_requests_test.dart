@@ -57,7 +57,9 @@ class FakeExportComplianceService extends ExportComplianceService {
   }
 
   @override
-  Future<List<ComplianceDocumentModel>> getComplianceDocuments(String id) async {
+  Future<List<ComplianceDocumentModel>> getComplianceDocuments(
+    String id,
+  ) async {
     return documentsToReturn ?? [];
   }
 }
@@ -83,9 +85,7 @@ void main() {
   }) {
     return ChangeNotifierProvider<AuthProvider>(
       create: (_) => MockAuthProvider(user),
-      child: MaterialApp(
-        home: child,
-      ),
+      child: MaterialApp(home: child),
     );
   }
 
@@ -93,23 +93,26 @@ void main() {
     // ----------------------------------------------------
     // BUYER TESTS
     // ----------------------------------------------------
-    testWidgets('1. Buyer opens Track My Exports & getMyExportRequests is NOT invoked',
-        (WidgetTester tester) async {
-      final fakeService = FakeExportComplianceService();
+    testWidgets(
+      '1. Buyer opens Track My Exports & getMyExportRequests is NOT invoked',
+      (WidgetTester tester) async {
+        final fakeService = FakeExportComplianceService();
 
-      await tester.pumpWidget(
-        createTestableWidget(
-          user: buyerUser,
-          child: MyExportRequestsScreen(exportService: fakeService),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          createTestableWidget(
+            user: buyerUser,
+            child: MyExportRequestsScreen(exportService: fakeService),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(fakeService.getMyExportRequestsCalled, isFalse);
-    });
+        expect(fakeService.getMyExportRequestsCalled, isFalse);
+      },
+    );
 
-    testWidgets('2. Buyer mode displays placeholder text',
-        (WidgetTester tester) async {
+    testWidgets('2. Buyer mode displays placeholder text', (
+      WidgetTester tester,
+    ) async {
       final fakeService = FakeExportComplianceService();
 
       await tester.pumpWidget(
@@ -122,33 +125,38 @@ void main() {
 
       expect(find.text('Track My Exports'), findsNWidgets(2));
       expect(
-        find.text('Export tracking will appear here for purchases linked to your account.'),
+        find.text(
+          'Export tracking will appear here for purchases linked to your account.',
+        ),
         findsOneWidget,
       );
     });
 
-    testWidgets('3. Buyer mode has NO Create Request button or seller controls',
-        (WidgetTester tester) async {
-      final fakeService = FakeExportComplianceService();
+    testWidgets(
+      '3. Buyer mode has NO Create Request button or seller controls',
+      (WidgetTester tester) async {
+        final fakeService = FakeExportComplianceService();
 
-      await tester.pumpWidget(
-        createTestableWidget(
-          user: buyerUser,
-          child: MyExportRequestsScreen(exportService: fakeService),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          createTestableWidget(
+            user: buyerUser,
+            child: MyExportRequestsScreen(exportService: fakeService),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Create Request'), findsNothing);
-      expect(find.text('Create Export Request'), findsNothing);
-      expect(find.byIcon(Icons.add), findsNothing);
-    });
+        expect(find.text('Create Request'), findsNothing);
+        expect(find.text('Create Export Request'), findsNothing);
+        expect(find.byIcon(Icons.add), findsNothing);
+      },
+    );
 
     // ----------------------------------------------------
     // SELLER TESTS
     // ----------------------------------------------------
-    testWidgets('4. Seller sees My Export Requests and triggers API call',
-        (WidgetTester tester) async {
+    testWidgets('4. Seller sees My Export Requests and triggers API call', (
+      WidgetTester tester,
+    ) async {
       final fakeService = FakeExportComplianceService();
 
       await tester.pumpWidget(
@@ -163,8 +171,9 @@ void main() {
       expect(find.text('My Export Requests'), findsOneWidget);
     });
 
-    testWidgets('5. Seller request loading state displays spinner',
-        (WidgetTester tester) async {
+    testWidgets('5. Seller request loading state displays spinner', (
+      WidgetTester tester,
+    ) async {
       final fakeService = FakeExportComplianceService()
         ..delay = const Duration(seconds: 2);
 
@@ -181,59 +190,76 @@ void main() {
       await tester.pump(const Duration(seconds: 3)); // finish async
     });
 
-    testWidgets('6. Seller request empty state displays friendly prompt',
-        (WidgetTester tester) async {
-      final fakeService = FakeExportComplianceService()..requestsToReturn = [];
+    testWidgets(
+      '6. Seller request empty state displays friendly prompt and View Orders button',
+      (WidgetTester tester) async {
+        final fakeService = FakeExportComplianceService()
+          ..requestsToReturn = [];
 
-      await tester.pumpWidget(
-        createTestableWidget(
-          user: sellerUser,
-          child: MyExportRequestsScreen(exportService: fakeService),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          createTestableWidget(
+            user: sellerUser,
+            child: MyExportRequestsScreen(exportService: fakeService),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text("You haven't created any export requests yet."), findsOneWidget);
-      expect(find.text('Create Export Request'), findsOneWidget);
-    });
+        expect(
+          find.text('Export clearance starts from an international order.'),
+          findsOneWidget,
+        );
+        expect(find.text('View Orders'), findsOneWidget);
+      },
+    );
 
-    testWidgets('7. Seller request error state displays error message and Retry button',
-        (WidgetTester tester) async {
-      final fakeService = FakeExportComplianceService()
-        ..errorToThrow = Exception("We couldn't load your export requests. Please try again.");
+    testWidgets(
+      '7. Seller request error state displays error message and Retry button',
+      (WidgetTester tester) async {
+        final fakeService = FakeExportComplianceService()
+          ..errorToThrow = Exception(
+            "We couldn't load your export requests. Please try again.",
+          );
 
-      await tester.pumpWidget(
-        createTestableWidget(
-          user: sellerUser,
-          child: MyExportRequestsScreen(exportService: fakeService),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          createTestableWidget(
+            user: sellerUser,
+            child: MyExportRequestsScreen(exportService: fakeService),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(
-        find.text("We couldn't load your export requests. Please try again."),
-        findsOneWidget,
-      );
-      expect(find.text('Retry'), findsOneWidget);
-    });
+        expect(
+          find.text("We couldn't load your export requests. Please try again."),
+          findsOneWidget,
+        );
+        expect(find.text('Retry'), findsOneWidget);
+      },
+    );
 
-    testWidgets('8. Seller mode displays Create Request control',
-        (WidgetTester tester) async {
-      final fakeService = FakeExportComplianceService()..requestsToReturn = [];
+    testWidgets(
+      '8. Seller mode no longer displays generic Create Request button',
+      (WidgetTester tester) async {
+        final fakeService = FakeExportComplianceService()
+          ..requestsToReturn = [];
 
-      await tester.pumpWidget(
-        createTestableWidget(
-          user: sellerUser,
-          child: MyExportRequestsScreen(exportService: fakeService),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          createTestableWidget(
+            user: sellerUser,
+            child: MyExportRequestsScreen(exportService: fakeService),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Create Request'), findsOneWidget);
-    });
+        expect(find.text('Create Request'), findsNothing);
+        expect(find.text('Create Export Request'), findsNothing);
+        expect(find.byType(FloatingActionButton), findsNothing);
+        expect(find.text('View Orders'), findsOneWidget);
+      },
+    );
 
-    testWidgets('9. Export request list renders status tags correctly',
-        (WidgetTester tester) async {
+    testWidgets('9. Export request list renders status tags correctly', (
+      WidgetTester tester,
+    ) async {
       final fakeService = FakeExportComplianceService()
         ..requestsToReturn = [
           ExportRequestModel(
@@ -267,38 +293,40 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Sri Lanka → United States'), findsOneWidget);
-      expect(find.text('UnderOfficerReview'), findsOneWidget);
+      expect(find.text('Officer Review'), findsOneWidget);
       expect(find.text('Sri Lanka → Switzerland'), findsOneWidget);
       expect(find.text('Approved'), findsOneWidget);
     });
 
-    testWidgets('10. Export request details screen renders UnderOfficerReview status',
-        (WidgetTester tester) async {
-      final fakeService = FakeExportComplianceService()
-        ..detailRequestToReturn = ExportRequestModel(
-          id: 'req-100',
-          originCountry: 'Sri Lanka',
-          destinationCountry: 'Germany',
-          declaredValue: 8000.0,
-          currency: 'USD',
-          status: 'UnderOfficerReview',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
+    testWidgets(
+      '10. Export request details screen renders Officer Review status',
+      (WidgetTester tester) async {
+        final fakeService = FakeExportComplianceService()
+          ..detailRequestToReturn = ExportRequestModel(
+            id: 'req-100',
+            originCountry: 'Sri Lanka',
+            destinationCountry: 'Germany',
+            declaredValue: 8000.0,
+            currency: 'USD',
+            status: 'UnderOfficerReview',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
 
-      await tester.pumpWidget(
-        createTestableWidget(
-          user: sellerUser,
-          child: ExportRequestDetailScreen(
-            requestId: 'req-100',
-            exportService: fakeService,
+        await tester.pumpWidget(
+          createTestableWidget(
+            user: sellerUser,
+            child: ExportRequestDetailScreen(
+              requestId: 'req-100',
+              exportService: fakeService,
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Export Request Details'), findsOneWidget);
-      expect(find.text('UnderOfficerReview'), findsAtLeastNWidgets(1));
-    });
+        expect(find.text('Export Request Details'), findsOneWidget);
+        expect(find.text('Officer Review'), findsAtLeastNWidgets(1));
+      },
+    );
   });
 }
