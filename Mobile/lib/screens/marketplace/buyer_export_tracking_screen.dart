@@ -6,11 +6,13 @@ import '../../services/export_compliance_service.dart';
 class BuyerExportTrackingScreen extends StatefulWidget {
   final dynamic orderId;
   final ExportComplianceService? service;
+  final bool showAppBar;
 
   const BuyerExportTrackingScreen({
     super.key,
     this.orderId,
     this.service,
+    this.showAppBar = true,
   });
 
   @override
@@ -100,6 +102,13 @@ class _BuyerExportTrackingScreenState extends State<BuyerExportTrackingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.showAppBar) {
+      return ColoredBox(
+        color: _ivory,
+        child: _buildBody(),
+      );
+    }
+
     final title = widget.orderId != null ? 'Order Export Tracking' : 'Track My Exports';
 
     return Scaffold(
