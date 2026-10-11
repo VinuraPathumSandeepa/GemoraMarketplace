@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../widgets/notification_bell.dart';
 import '../gemologist/verification_queue_screen.dart';
 
 class GemologistDashboard extends StatelessWidget {
@@ -10,7 +11,6 @@ class GemologistDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
-
     final user = authProvider.user;
 
     return Scaffold(
@@ -36,6 +36,7 @@ class GemologistDashboard extends StatelessWidget {
             ),
           ],
         ),
+        actions: const [NotificationBell(), SizedBox(width: 8)],
       ),
       body: SafeArea(
         child: ListView(
@@ -70,9 +71,7 @@ class GemologistDashboard extends StatelessWidget {
                       letterSpacing: 1.3,
                     ),
                   ),
-
                   const SizedBox(height: 12),
-
                   Text(
                     'Welcome, ${user?.fullName ?? 'Gemologist'}',
                     style: const TextStyle(
@@ -81,9 +80,7 @@ class GemologistDashboard extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-
                   const SizedBox(height: 8),
-
                   const Text(
                     'Review gemstone evidence, use AI-assisted analysis, and make the final professional verification decision.',
                     style: TextStyle(
@@ -200,9 +197,7 @@ class GemologistDashboard extends StatelessWidget {
                       letterSpacing: 1.2,
                     ),
                   ),
-
                   const SizedBox(height: 12),
-
                   Text(
                     user?.fullName ?? 'Gemora Gemologist',
                     style: const TextStyle(
@@ -211,9 +206,7 @@ class GemologistDashboard extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-
                   const SizedBox(height: 5),
-
                   Text(
                     user?.email ?? '',
                     style: const TextStyle(
@@ -221,9 +214,7 @@ class GemologistDashboard extends StatelessWidget {
                       fontSize: 13,
                     ),
                   ),
-
                   const SizedBox(height: 5),
-
                   const Text(
                     'Role: Gemologist',
                     style: TextStyle(color: Color(0xFF697771), fontSize: 12),
@@ -240,11 +231,8 @@ class GemologistDashboard extends StatelessWidget {
 
 class _GemologistActionCard extends StatelessWidget {
   final IconData icon;
-
   final String title;
-
   final String description;
-
   final VoidCallback onTap;
 
   const _GemologistActionCard({
@@ -279,9 +267,7 @@ class _GemologistActionCard extends StatelessWidget {
                 ),
                 child: Icon(icon, color: const Color(0xFFE4BC74), size: 27),
               ),
-
               const SizedBox(width: 16),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,7 +292,6 @@ class _GemologistActionCard extends StatelessWidget {
                   ],
                 ),
               ),
-
               const Icon(
                 Icons.arrow_forward_ios_rounded,
                 size: 16,

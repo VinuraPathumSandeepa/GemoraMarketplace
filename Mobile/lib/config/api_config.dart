@@ -24,6 +24,21 @@ class ApiConfig {
   static const String currentUser = '$baseUrl/Auth/me';
 
   // ============================================================
+  // NOTIFICATION ENDPOINTS
+  // ============================================================
+
+  static const String notifications = '$baseUrl/Notifications';
+
+  static const String notificationUnreadCount =
+      '$baseUrl/Notifications/unread-count';
+
+  static String markNotificationRead(String notificationId) =>
+      '$baseUrl/Notifications/$notificationId/read';
+
+  static const String markAllNotificationsRead =
+      '$baseUrl/Notifications/read-all';
+
+  // ============================================================
   // EXPORT COMPLIANCE ENDPOINTS
   // ============================================================
 

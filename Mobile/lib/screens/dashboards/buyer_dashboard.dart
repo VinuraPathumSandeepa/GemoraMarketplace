@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../widgets/notification_bell.dart';
 import '../export_compliance/my_export_requests_screen.dart';
 import '../marketplace/marketplace_screen.dart';
 
@@ -45,6 +46,7 @@ class BuyerDashboard extends StatelessWidget {
             ),
           ],
         ),
+        actions: const [NotificationBell(), SizedBox(width: 8)],
       ),
       body: SafeArea(
         child: ListView(
@@ -53,7 +55,6 @@ class BuyerDashboard extends StatelessWidget {
             // ============================================================
             // WELCOME
             // ============================================================
-
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
@@ -152,14 +153,11 @@ class BuyerDashboard extends StatelessWidget {
                 fontWeight: FontWeight.w800,
               ),
             ),
-
             const SizedBox(height: 7),
-
             const Text(
               'Explore verified gemstones and manage services available for your buyer account.',
               style: TextStyle(color: _muted, fontSize: 13, height: 1.45),
             ),
-
             const SizedBox(height: 20),
 
             // ============================================================
@@ -281,9 +279,7 @@ class BuyerDashboard extends StatelessWidget {
                       letterSpacing: 1.2,
                     ),
                   ),
-
                   const SizedBox(height: 12),
-
                   Row(
                     children: [
                       Container(
@@ -342,13 +338,9 @@ class BuyerDashboard extends StatelessWidget {
 
 class _BuyerActionCard extends StatelessWidget {
   final IconData icon;
-
   final String title;
-
   final String description;
-
   final String badge;
-
   final VoidCallback onTap;
 
   const _BuyerActionCard({
@@ -384,9 +376,7 @@ class _BuyerActionCard extends StatelessWidget {
                 ),
                 child: Icon(icon, color: const Color(0xFFE4BC74), size: 27),
               ),
-
               const SizedBox(width: 16),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -424,9 +414,7 @@ class _BuyerActionCard extends StatelessWidget {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 6),
-
                     Text(
                       description,
                       style: const TextStyle(
@@ -438,9 +426,7 @@ class _BuyerActionCard extends StatelessWidget {
                   ],
                 ),
               ),
-
               const SizedBox(width: 10),
-
               const Icon(
                 Icons.arrow_forward_ios_rounded,
                 size: 16,
