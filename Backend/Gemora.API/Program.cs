@@ -787,33 +787,6 @@ builder.Services.AddAuthorization();
 
 
 // ======================================================
-// 7. CORS
-// ======================================================
-// React/Vite development application:
-// http://localhost:5173
-//
-// Flutter does not have browser CORS restrictions in
-// the same way, but it will use the same ASP.NET API.
-// ======================================================
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(
-        "GemoraCorsPolicy",
-        policy =>
-        {
-            policy
-                .WithOrigins(
-                    "http://localhost:5173"
-                )
-                .AllowAnyHeader()
-                .AllowAnyMethod();
-        }
-    );
-});
-
-
-// ======================================================
 // 8. SWAGGER / OPENAPI
 // ======================================================
 

@@ -15,13 +15,12 @@ class AuthService {
   // ==========================================
 
   Future<UserModel> login(String email, String password) async {
-    final response = await http
-        .post(
+    final response =
+        await _post(
           Uri.parse(ApiConfig.login),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'email': email.trim(), 'password': password}),
-        )
-        .timeout(
+        ).timeout(
           const Duration(seconds: 10),
           onTimeout: () {
             throw TimeoutException(
@@ -66,7 +65,7 @@ class AuthService {
     required String password,
     required String role,
   }) async {
-    final response = await http.post(
+    final response = await _post(
       Uri.parse(ApiConfig.register),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -95,7 +94,7 @@ class AuthService {
     required String email,
     required String code,
   }) async {
-    final response = await http.post(
+    final response = await _post(
       Uri.parse(ApiConfig.verifyEmail),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email.trim(), 'code': code.trim()}),
@@ -113,7 +112,7 @@ class AuthService {
   // ==========================================
 
   Future<void> resendVerificationCode({required String email}) async {
-    final response = await http.post(
+    final response = await _post(
       Uri.parse(ApiConfig.resendVerificationCode),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email.trim()}),
@@ -139,15 +138,14 @@ class AuthService {
       throw Exception('Authentication token not found.');
     }
 
-    final response = await http
-        .get(
+    final response =
+        await _get(
           Uri.parse(ApiConfig.currentUser),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
           },
-        )
-        .timeout(
+        ).timeout(
           const Duration(seconds: 10),
           onTimeout: () {
             throw TimeoutException(
