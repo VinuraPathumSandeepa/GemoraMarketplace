@@ -29,6 +29,25 @@ class ApiConfig {
   static String get baseUrl => '$serverUrl/api';
 
   // ============================================================
+  // IMAGE URL RESOLVER
+  // ============================================================
+
+  static String? resolveImageUrl(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return null;
+    }
+
+    final url = value.trim();
+
+    if (url.startsWith('https://') || url.startsWith('http://')) {
+      return url;
+    }
+
+    final slash = url.startsWith('/') ? '' : '/';
+    return '$serverUrl$slash$url';
+  }
+
+  // ============================================================
   // AUTH ENDPOINTS
   // ============================================================
 
@@ -42,6 +61,21 @@ class ApiConfig {
       '$baseUrl/Auth/resend-verification-code';
 
   static String get currentUser => '$baseUrl/Auth/me';
+
+  // ============================================================
+  // NOTIFICATION ENDPOINTS
+  // ============================================================
+
+  static String get notifications => '$baseUrl/Notifications';
+
+  static String get notificationUnreadCount =>
+      '$baseUrl/Notifications/unread-count';
+
+  static String markNotificationRead(String notificationId) =>
+      '$baseUrl/Notifications/$notificationId/read';
+
+  static String get markAllNotificationsRead =>
+      '$baseUrl/Notifications/read-all';
 
   // ============================================================
   // EXPORT COMPLIANCE ENDPOINTS
@@ -59,22 +93,9 @@ class ApiConfig {
 
   static String get myExportTracking => '$baseUrl/export-tracking/my';
 
+  static String get myOrders => '$baseUrl/orders/my';
+
   static String get sellerOrders => '$baseUrl/seller/orders';
-
-  static String? resolveImageUrl(String? value) {
-    final imageUrl = value?.trim();
-    if (imageUrl == null || imageUrl.isEmpty) {
-      return null;
-    }
-
-    final parsedUrl = Uri.tryParse(imageUrl);
-    if (parsedUrl != null && parsedUrl.hasScheme) {
-      return imageUrl;
-    }
-
-    final relativePath = imageUrl.replaceFirst(RegExp(r'^/+'), '');
-    return '$serverUrl/$relativePath';
-  }
 
   // ============================================================
   // GEM LISTING ENDPOINTS

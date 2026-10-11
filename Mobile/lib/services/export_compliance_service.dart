@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
@@ -11,6 +12,12 @@ import 'token_storage_service.dart';
 
 class ExportComplianceService {
   final TokenStorageService _tokenStorage = TokenStorageService();
+  final http.Client? client;
+
+  ExportComplianceService({this.client});
+
+  Future<http.Response> _get(Uri url, Map<String, String> headers) =>
+      client?.get(url, headers: headers) ?? http.get(url, headers: headers);
 
   Future<Map<String, String>> _getHeaders() async {
     final token = await _tokenStorage.getToken();
@@ -71,7 +78,9 @@ class ExportComplianceService {
 
     if (response.statusCode != 200) {
       if (response.statusCode == 403) {
-        throw Exception("You don't have permission to view these export requests.");
+        throw Exception(
+          "You don't have permission to view these export requests.",
+        );
       }
       throw Exception(
         _parseErrorResponse(
@@ -85,7 +94,9 @@ class ExportComplianceService {
     final rawList = data['requests'] as List<dynamic>? ?? [];
 
     return rawList
-        .map((item) => ExportRequestModel.fromJson(item as Map<String, dynamic>))
+        .map(
+          (item) => ExportRequestModel.fromJson(item as Map<String, dynamic>),
+        )
         .toList();
   }
 
@@ -185,7 +196,10 @@ class ExportComplianceService {
     final rawList = data['documents'] as List<dynamic>? ?? [];
 
     return rawList
-        .map((item) => ComplianceDocumentModel.fromJson(item as Map<String, dynamic>))
+        .map(
+          (item) =>
+              ComplianceDocumentModel.fromJson(item as Map<String, dynamic>),
+        )
         .toList();
   }
 
@@ -202,9 +216,7 @@ class ExportComplianceService {
   }) async {
     final headers = await _getHeaders();
 
-    final bodyPayload = <String, dynamic>{
-      'documentType': documentType.trim(),
-    };
+    final bodyPayload = <String, dynamic>{'documentType': documentType.trim()};
 
     if (documentNumber != null && documentNumber.trim().isNotEmpty) {
       bodyPayload['documentNumber'] = documentNumber.trim();
@@ -255,7 +267,9 @@ class ExportComplianceService {
       throw Exception('The selected file is empty.');
     }
     if (fileBytes.length > maxBytes) {
-      throw Exception('The selected file is too large. Maximum file size is 10 MB.');
+      throw Exception(
+        'The selected file is too large. Maximum file size is 10 MB.',
+      );
     }
 
     // 2. Pre-validation: extension check
@@ -327,13 +341,17 @@ class ExportComplianceService {
         throw Exception('Your session has expired. Please sign in again.');
       }
       if (response.statusCode == 403) {
-        throw Exception("You don't have permission to submit this export request.");
+        throw Exception(
+          "You don't have permission to submit this export request.",
+        );
       }
       if (response.statusCode == 404) {
         throw Exception("This export request could not be found.");
       }
       if (response.statusCode == 409) {
-        throw Exception("This request can't be submitted in its current state.");
+        throw Exception(
+          "This request can't be submitted in its current state.",
+        );
       }
 
       try {
@@ -349,7 +367,9 @@ class ExportComplianceService {
         }
       }
 
-      throw Exception("We couldn't submit your export request. Please try again.");
+      throw Exception(
+        "We couldn't submit your export request. Please try again.",
+      );
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -391,12 +411,16 @@ class ExportComplianceService {
       throw Exception('Your session has expired. Please sign in again.');
     }
     if (response.statusCode == 403) {
-      throw Exception("You don't have permission to perform compliance analysis on this export request.");
+      throw Exception(
+        "You don't have permission to perform compliance analysis on this export request.",
+      );
     }
 
     return ComplianceWorkflowAnalysisResultModel(
       success: false,
-      message: serverMessage ?? "The automated compliance service could not complete the analysis.",
+      message:
+          serverMessage ??
+          "The automated compliance service could not complete the analysis.",
       errorCode: errorCode ?? 'AI_PROVIDER_ERROR',
     );
   }
@@ -410,7 +434,9 @@ class ExportComplianceService {
     final headers = await _getHeaders();
 
     final response = await http.post(
-      Uri.parse('${ApiConfig.exportRequests}/$requestId/compliance-analysis/retry'),
+      Uri.parse(
+        '${ApiConfig.exportRequests}/$requestId/compliance-analysis/retry',
+      ),
       headers: headers,
     );
 
@@ -434,12 +460,16 @@ class ExportComplianceService {
       throw Exception('Your session has expired. Please sign in again.');
     }
     if (response.statusCode == 403) {
-      throw Exception("You don't have permission to retry compliance analysis on this export request.");
+      throw Exception(
+        "You don't have permission to retry compliance analysis on this export request.",
+      );
     }
 
     return ComplianceWorkflowAnalysisResultModel(
       success: false,
-      message: serverMessage ?? "AI assessment retry could not be completed at this time.",
+      message:
+          serverMessage ??
+          "AI assessment retry could not be completed at this time.",
       errorCode: errorCode ?? 'AI_PROVIDER_ERROR',
     );
   }
@@ -479,7 +509,9 @@ class ExportComplianceService {
         throw Exception('Your session has expired. Please sign in again.');
       }
       if (response.statusCode == 403) {
-        throw Exception("You don't have permission to update this export request.");
+        throw Exception(
+          "You don't have permission to update this export request.",
+        );
       }
       if (response.statusCode == 404) {
         throw Exception("This export request could not be found.");
@@ -513,7 +545,9 @@ class ExportComplianceService {
   // ==========================================
   // CREATE EXPORT REQUEST FROM ORDER (SELLER)
   // ==========================================
-  Future<ExportRequestModel> createExportRequestFromOrder(dynamic orderId) async {
+  Future<ExportRequestModel> createExportRequestFromOrder(
+    dynamic orderId,
+  ) async {
     final headers = await _getHeaders();
 
     final response = await http.post(
@@ -538,19 +572,29 @@ class ExportComplianceService {
   // ==========================================
   // GET EXPORT TRACKING FOR ORDER (BUYER-SAFE)
   // ==========================================
-  Future<BuyerExportTrackingModel> getOrderExportTracking(dynamic orderId) async {
+  Future<BuyerExportTrackingModel> getOrderExportTracking(
+    dynamic orderId,
+  ) async {
     final headers = await _getHeaders();
 
-    final response = await http.get(
+    final response = await _get(
       Uri.parse(ApiConfig.orderExportTracking(orderId)),
-      headers: headers,
+      headers,
     );
+
+    if (response.statusCode == 404) {
+      final orders = await _getTrackingFromOrders(headers);
+      for (final order in orders) {
+        if (order.orderId == orderId.toString()) return order;
+      }
+      throw Exception('This order could not be found in your account.');
+    }
 
     if (response.statusCode != 200) {
       throw Exception(
-        _parseErrorResponse(
+        _trackingError(
           response,
-          "Export tracking could not be loaded for this order.",
+          'Export tracking could not be loaded for this order.',
         ),
       );
     }
@@ -565,17 +609,15 @@ class ExportComplianceService {
   Future<List<BuyerExportTrackingModel>> getMyExportTracking() async {
     final headers = await _getHeaders();
 
-    final response = await http.get(
-      Uri.parse(ApiConfig.myExportTracking),
-      headers: headers,
-    );
+    final response = await _get(Uri.parse(ApiConfig.myExportTracking), headers);
+
+    if (response.statusCode == 404) {
+      return _getTrackingFromOrders(headers);
+    }
 
     if (response.statusCode != 200) {
       throw Exception(
-        _parseErrorResponse(
-          response,
-          "Failed to load export tracking records.",
-        ),
+        _trackingError(response, 'Failed to load export tracking records.'),
       );
     }
 
@@ -589,6 +631,77 @@ class ExportComplianceService {
         .map(BuyerExportTrackingModel.fromJson)
         .toList();
   }
+
+  String _trackingError(http.Response response, String fallback) {
+    if (response.statusCode >= 500) {
+      return 'Export tracking is temporarily unavailable. Please try again.';
+    }
+    return _parseErrorResponse(response, fallback);
+  }
+
+  Future<List<BuyerExportTrackingModel>> _getTrackingFromOrders(
+    Map<String, String> headers,
+  ) async {
+    final response = await _get(Uri.parse(ApiConfig.myOrders), headers);
+    if (response.statusCode == 404) {
+      throw Exception(
+        'Export tracking is not available on this server. Restart the updated Gemora API and try again.',
+      );
+    }
+    if (response.statusCode != 200) {
+      throw Exception(
+        _trackingError(
+          response,
+          'Could not load your orders for export tracking.',
+        ),
+      );
+    }
+
+    final data = jsonDecode(response.body);
+    if (data is! List) {
+      throw Exception('The server returned an invalid order list.');
+    }
+
+    final orders = data.whereType<Map<String, dynamic>>().toList();
+    if (orders.any((order) => order['exportStatus'] == null)) {
+      throw Exception(
+        'This server does not provide export statuses. Restart the updated Gemora API and try again.',
+      );
+    }
+
+    return orders.map((order) {
+      final status = order['exportStatus'].toString();
+      final country = order['shippingCountryCode']?.toString() ?? '';
+      final domestic =
+          country.toUpperCase() == 'LK' || country.toLowerCase() == 'sri lanka';
+      final description = switch (status.toLowerCase()) {
+        'notrequired' =>
+          'Domestic order — international export clearance not required.',
+        'notstarted' =>
+          'Export clearance has not yet been initiated by the seller.',
+        'draft' => 'The seller is preparing export clearance.',
+        _ => 'Export clearance status: $status.',
+      };
+
+      return BuyerExportTrackingModel(
+        orderId: order['id']?.toString() ?? '',
+        orderNumber: order['orderNumber']?.toString() ?? '',
+        gemListingId: order['gemListingId'] as int?,
+        gemTitle: order['gemTitle']?.toString() ?? 'Gemstone',
+        gemImageUrl: order['gemImageUrl']?.toString(),
+        exportRequestId: order['exportRequestId']?.toString(),
+        status: status,
+        stageDescription: description,
+        originCountry: 'Sri Lanka',
+        destinationCountry: domestic ? 'Sri Lanka' : country,
+        updatedAt: DateTime.tryParse(
+          order['updatedAt']?.toString() ??
+              order['createdAt']?.toString() ??
+              '',
+        ),
+        isApproved: status.toLowerCase() == 'approved',
+        requiresExport: !domestic,
+      );
+    }).toList();
+  }
 }
-
-

@@ -10,8 +10,13 @@ import 'certificate_viewer_screen.dart';
 
 class VerificationDetailsScreen extends StatefulWidget {
   final int verificationId;
+  final GemVerificationService? service;
 
-  const VerificationDetailsScreen({super.key, required this.verificationId});
+  const VerificationDetailsScreen({
+    super.key,
+    required this.verificationId,
+    this.service,
+  });
 
   @override
   State<VerificationDetailsScreen> createState() =>
@@ -19,7 +24,8 @@ class VerificationDetailsScreen extends StatefulWidget {
 }
 
 class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
-  final GemVerificationService _service = GemVerificationService();
+  late final GemVerificationService _service =
+      widget.service ?? GemVerificationService();
 
   GemVerificationModel? _verification;
   GemAiAnalysisModel? _aiResult;
@@ -245,120 +251,21 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
     final requiresNotes =
         decision == 'ChangesRequested' || decision == 'Rejected';
 
-    final notesController = TextEditingController();
-
-    final confirmed = await showDialog<bool>(
+    final notes = await showDialog<String>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: _decisionColor(decision).withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  _decisionIcon(decision),
-                  color: _decisionColor(decision),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(child: Text(_decisionTitle(decision))),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(_decisionMessage(decision)),
-              const SizedBox(height: 18),
-              TextField(
-                controller: notesController,
-                minLines: 3,
-                maxLines: 6,
-                maxLength: 2000,
-                decoration: InputDecoration(
-                  labelText: requiresNotes
-                      ? 'Review Notes *'
-                      : 'Review Notes (Optional)',
-                  hintText: requiresNotes
-                      ? 'Explain the reason clearly to the seller.'
-                      : 'Add professional review notes if required.',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-              if (requiresNotes)
-                const Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline_rounded,
-                      color: Color(0xFFB7791F),
-                      size: 16,
-                    ),
-                    SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'Review notes are required for this decision.',
-                        style: TextStyle(
-                          color: Color(0xFF8A651E),
-                          fontSize: 11,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, false);
-              },
-              child: const Text('Cancel'),
-            ),
-            FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: _decisionColor(decision),
-              ),
-              onPressed: () {
-                if (requiresNotes && notesController.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Please enter review notes before continuing.',
-                      ),
-                    ),
-                  );
-
-                  return;
-                }
-
-                Navigator.pop(dialogContext, true);
-              },
-              icon: Icon(_decisionIcon(decision)),
-              label: Text(_decisionButtonLabel(decision)),
-            ),
-          ],
-        );
-      },
+      builder: (_) => _ReviewConfirmationDialog(
+        title: _decisionTitle(decision),
+        message: _decisionMessage(decision),
+        buttonLabel: _decisionButtonLabel(decision),
+        icon: _decisionIcon(decision),
+        color: _decisionColor(decision),
+        requiresNotes: requiresNotes,
+      ),
     );
 
-    if (confirmed != true) {
-      notesController.dispose();
+    if (!mounted || notes == null) {
       return;
     }
-
-    final notes = notesController.text.trim();
-
-    notesController.dispose();
 
     await _submitReview(decision: decision, notes: notes);
   }
@@ -1554,6 +1461,131 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
           fontWeight: FontWeight.w800,
         ),
       ),
+    );
+  }
+}
+
+class _ReviewConfirmationDialog extends StatefulWidget {
+  const _ReviewConfirmationDialog({
+    required this.title,
+    required this.message,
+    required this.buttonLabel,
+    required this.icon,
+    required this.color,
+    required this.requiresNotes,
+  });
+
+  final String title;
+  final String message;
+  final String buttonLabel;
+  final IconData icon;
+  final Color color;
+  final bool requiresNotes;
+
+  @override
+  State<_ReviewConfirmationDialog> createState() =>
+      _ReviewConfirmationDialogState();
+}
+
+class _ReviewConfirmationDialogState extends State<_ReviewConfirmationDialog> {
+  final TextEditingController _notesController = TextEditingController();
+  bool _showNotesError = false;
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    final notes = _notesController.text.trim();
+    if (widget.requiresNotes && notes.isEmpty) {
+      setState(() => _showNotesError = true);
+      return;
+    }
+    Navigator.of(context).pop(notes);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      scrollable: true,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: widget.color.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(widget.icon, color: widget.color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Text(widget.title)),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(widget.message),
+          const SizedBox(height: 18),
+          TextField(
+            controller: _notesController,
+            minLines: 3,
+            maxLines: 6,
+            maxLength: 2000,
+            onChanged: (value) {
+              if (_showNotesError && value.trim().isNotEmpty) {
+                setState(() => _showNotesError = false);
+              }
+            },
+            decoration: InputDecoration(
+              labelText: widget.requiresNotes
+                  ? 'Review Notes *'
+                  : 'Review Notes (Optional)',
+              hintText: widget.requiresNotes
+                  ? 'Explain the reason clearly to the seller.'
+                  : 'Add professional review notes if required.',
+              errorText: _showNotesError ? 'Please enter review notes.' : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+          if (widget.requiresNotes)
+            const Row(
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  color: Color(0xFFB7791F),
+                  size: 16,
+                ),
+                SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Review notes are required for this decision.',
+                    style: TextStyle(color: Color(0xFF8A651E), fontSize: 11),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton.icon(
+          style: FilledButton.styleFrom(backgroundColor: widget.color),
+          onPressed: _confirm,
+          icon: Icon(widget.icon),
+          label: Text(widget.buttonLabel),
+        ),
+      ],
     );
   }
 }

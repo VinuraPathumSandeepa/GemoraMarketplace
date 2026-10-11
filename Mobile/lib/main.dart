@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/auth_provider.dart';
+import 'providers/notification_provider.dart';
 import 'screens/dashboards/role_dashboard.dart';
 import 'screens/home/public_home_screen.dart';
 
@@ -21,15 +22,23 @@ class GemoraApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Gemora Marketplace',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7356A3)),
-        scaffoldBackgroundColor: const Color(0xFFF7F7FA),
-        useMaterial3: true,
+    final user = context.watch<AuthProvider>().user;
+
+    // Dashboard and notification routes are pushed onto MaterialApp's
+    // Navigator, so they must share a provider above that Navigator.
+    return ChangeNotifierProvider(
+      key: ValueKey(user?.id ?? user?.email ?? 'guest'),
+      create: (_) => NotificationProvider(),
+      child: MaterialApp(
+        title: 'Gemora Marketplace',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7356A3)),
+          scaffoldBackgroundColor: const Color(0xFFF7F7FA),
+          useMaterial3: true,
+        ),
+        home: const AuthGate(),
       ),
-      home: const AuthGate(),
     );
   }
 }
