@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
-import '../models/marketplace/marketplace_gem.dart';
+import '../models/marketplace_gem_model.dart';
 import '../models/marketplace/order_model.dart';
 import 'token_storage_service.dart';
 
@@ -13,27 +13,26 @@ class MarketplaceService {
 
   MarketplaceService({this.client});
 
-  Future<Map<String, String>> _authHeaders({bool isJson = false}) async {
-    final token = await _tokenStorage.getToken();
+  Future<http.Response> _get(Uri uri, {Map<String, String>? headers}) =>
+      client != null
+      ? client!.get(uri, headers: headers)
+      : http.get(uri, headers: headers);
 
-    final headers = <String, String>{
-      'Accept': 'application/json',
-      if (isJson) 'Content-Type': 'application/json',
-      if (token != null && token.trim().isNotEmpty)
-        'Authorization': 'Bearer ${token.trim()}',
-    };
+  Future<http.Response> _post(
+    Uri uri, {
+    Map<String, String>? headers,
+    Object? body,
+  }) => client != null
+      ? client!.post(uri, headers: headers, body: body)
+      : http.post(uri, headers: headers, body: body);
 
-    return headers;
-  }
-
-  Future<List<MarketplaceGem>> getGems({
+  Future<List<MarketplaceGemModel>> getGems({
     String? search,
     String? gemType,
   }) async {
-    final queryParameters = <String, String>{};
+    final queryParameters = <String, String>{'page': '1', 'pageSize': '50'};
 
     final cleanSearch = search?.trim() ?? '';
-
     final cleanGemType = gemType?.trim() ?? '';
 
     if (cleanSearch.isNotEmpty) {
@@ -44,191 +43,197 @@ class MarketplaceService {
       queryParameters['gemType'] = cleanGemType;
     }
 
-    final uri = Uri.parse('${ApiConfig.baseUrl}/Marketplace/gems').replace(
-      queryParameters: queryParameters.isEmpty ? null : queryParameters,
+    final uri = Uri.parse('${ApiConfig.baseUrl}/marketplace/gems')
+        .replace(queryParameters: queryParameters);
+
+    final response = await _get(
+      uri,
+      headers: const {'Accept': 'application/json'},
     );
 
-    final httpClient = client;
-    final response = httpClient != null
-        ? await httpClient.get(
-            uri,
-            headers: const {'Accept': 'application/json'},
-          )
-        : await http.get(uri, headers: const {'Accept': 'application/json'});
+    _ensureSuccess(response, 'We could not load the gemstone marketplace.');
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final decoded = jsonDecode(response.body);
+    final decoded = _decode(response.body);
+    final items = decoded is Map<String, dynamic> ? decoded['items'] : decoded;
 
-      final List<dynamic> items;
-      if (decoded is List) {
-        items = decoded;
-      } else if (decoded is Map && decoded['items'] is List) {
-        items = decoded['items'] as List<dynamic>;
-      } else {
-        throw Exception('The marketplace returned an unexpected response.');
-      }
-
-      return items
-          .whereType<Map>()
-          .map(
-            (item) => MarketplaceGem.fromJson(Map<String, dynamic>.from(item)),
-          )
-          .toList();
+    if (items is! List) {
+      throw Exception('The marketplace returned an unexpected response.');
     }
 
-    throw Exception(
-      _errorMessage(response, 'We could not load the gemstone marketplace.'),
-    );
+    return items
+        .whereType<Map>()
+        .map(
+          (item) =>
+              MarketplaceGemModel.fromJson(Map<String, dynamic>.from(item)),
+        )
+        .toList();
   }
 
-  Future<MarketplaceGem> getGem(int id) async {
-    final uri = Uri.parse('${ApiConfig.baseUrl}/Marketplace/gems/$id');
-    final httpClient = client;
-    final response = httpClient != null
-        ? await httpClient.get(
-            uri,
-            headers: const {'Accept': 'application/json'},
-          )
-        : await http.get(uri, headers: const {'Accept': 'application/json'});
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final decoded = jsonDecode(response.body);
-
-      if (decoded is! Map) {
-        throw Exception(
-          'The marketplace returned an unexpected gemstone response.',
-        );
-      }
-
-      return MarketplaceGem.fromJson(Map<String, dynamic>.from(decoded));
-    }
-
-    throw Exception(
-      _errorMessage(response, 'This gemstone is not currently available.'),
-    );
-  }
-
-  Future<Map<String, dynamic>> askAgent(String message) async {
-    final headers = await _authHeaders(isJson: true);
-
-    final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/marketplace/agent/assist'),
-      headers: headers,
-      body: jsonEncode({'message': message.trim()}),
+  Future<MarketplaceGemModel> getGem(int id) async {
+    final response = await _get(
+      Uri.parse('${ApiConfig.baseUrl}/marketplace/gems/$id'),
+      headers: const {'Accept': 'application/json'},
     );
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final decoded = jsonDecode(response.body);
+    _ensureSuccess(response, 'This gemstone is not currently available.');
 
-      if (decoded is Map<String, dynamic>) {
-        return decoded;
-      }
+    final decoded = _decode(response.body);
 
+    if (decoded is! Map<String, dynamic>) {
       throw Exception(
-        'The AI assistant returned an unexpected response format.',
+        'The marketplace returned an unexpected gemstone response.',
       );
     }
 
-    throw Exception(
-      _errorMessage(response, 'Could not get response from AI assistant.'),
+    return MarketplaceGemModel.fromJson(decoded);
+  }
+
+  Future<Map<String, dynamic>> askAgent(
+    String message, {
+    String? conversationId,
+  }) async {
+    final response = await _post(
+      Uri.parse('${ApiConfig.baseUrl}/marketplace/agent/assist'),
+      headers: {
+        ...await _authenticatedHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'message': message.trim(),
+        if (conversationId != null) 'conversationId': conversationId,
+      }),
     );
+
+    _ensureSuccess(response, 'The buyer assistant is unavailable.');
+
+    final decoded = _decode(response.body);
+
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('The buyer assistant returned an unexpected response.');
+    }
+
+    return decoded;
+  }
+
+  Future<List<OrderModel>> getMyOrders() async {
+    final response = await _get(
+      Uri.parse('${ApiConfig.baseUrl}/orders/my'),
+      headers: await _authenticatedHeaders(),
+    );
+
+    _ensureSuccess(response, 'We could not load your orders.');
+
+    final decoded = _decode(response.body);
+
+    if (decoded is! List) {
+      throw Exception('The orders service returned an unexpected response.');
+    }
+
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map(OrderModel.fromJson)
+        .toList();
   }
 
   Future<OrderModel> createOrder(
     int gemListingId, {
+    Map<String, dynamic>? deliveryDetails,
     String shippingAddress = 'Main Street',
     String shippingRegion = 'Western',
     String shippingCountryCode = 'LK',
   }) async {
-    final headers = await _authHeaders(isJson: true);
-
-    final payload = jsonEncode({
-      'gemListingId': gemListingId,
-      'shippingAddress': shippingAddress.trim(),
-      'shippingRegion': shippingRegion.trim(),
-      'shippingCountryCode': shippingCountryCode.trim().toUpperCase(),
-    });
-
-    final uri = Uri.parse('${ApiConfig.baseUrl}/orders');
-    final httpClient = client;
-    final response = httpClient != null
-        ? await httpClient.post(uri, headers: headers, body: payload)
-        : await http.post(uri, headers: headers, body: payload);
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final decoded = jsonDecode(response.body);
-
-      if (decoded is Map<String, dynamic>) {
-        return OrderModel.fromJson(decoded);
-      }
-
-      throw Exception('Order creation returned an invalid response.');
-    }
-
-    throw Exception(_errorMessage(response, 'Could not create order.'));
-  }
-
-  Future<List<OrderModel>> getMyOrders() async {
-    final headers = await _authHeaders();
-
-    final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/orders/my'),
-      headers: headers,
+    final response = await _post(
+      Uri.parse('${ApiConfig.baseUrl}/orders'),
+      headers: {
+        ...await _authenticatedHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'gemListingId': gemListingId,
+        if (deliveryDetails != null) 'deliveryDetails': deliveryDetails,
+        if (deliveryDetails == null) ...{
+          'shippingAddress': shippingAddress.trim(),
+          'shippingRegion': shippingRegion.trim(),
+          'shippingCountryCode': shippingCountryCode.trim().toUpperCase(),
+        },
+      }),
     );
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final decoded = jsonDecode(response.body);
+    _ensureSuccess(response, 'We could not create the order.');
 
-      if (decoded is List) {
-        return decoded
-            .whereType<Map<String, dynamic>>()
-            .map(OrderModel.fromJson)
-            .toList();
-      }
+    final decoded = _decode(response.body);
 
-      throw Exception('My orders returned an unexpected response.');
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('The order service returned an unexpected response.');
     }
 
-    throw Exception(_errorMessage(response, 'Could not load your orders.'));
+    return OrderModel.fromJson(decoded);
+  }
+
+  Future<OrderModel> cancelOrder(
+    String orderId, {
+    String reason = 'Cancelled by buyer.',
+  }) async {
+    final response = await _post(
+      Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/cancel'),
+      headers: {
+        ...await _authenticatedHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'reason': reason}),
+    );
+
+    _ensureSuccess(response, 'We could not cancel this order.');
+
+    final decoded = _decode(response.body);
+
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('The order service returned an unexpected response.');
+    }
+
+    return OrderModel.fromJson(decoded);
   }
 
   Future<List<OrderModel>> getSellerOrders() async {
-    final headers = await _authHeaders();
-
-    final response = await http.get(
+    final response = await _get(
       Uri.parse(ApiConfig.sellerOrders),
-      headers: headers,
+      headers: await _authenticatedHeaders(),
     );
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final decoded = jsonDecode(response.body);
-
-      if (decoded is List) {
-        return decoded
-            .whereType<Map<String, dynamic>>()
-            .map(OrderModel.fromJson)
-            .toList();
-      }
-
+    _ensureSuccess(response, 'Could not load seller orders.');
+    final decoded = _decode(response.body);
+    if (decoded is! List) {
       throw Exception('Seller orders returned an unexpected response.');
     }
-
-    throw Exception(_errorMessage(response, 'Could not load seller orders.'));
+    return decoded
+        .whereType<Map>()
+        .map((item) => OrderModel.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
   }
 
-  Future<void> cancelOrder(dynamic orderId) async {
-    final headers = await _authHeaders(isJson: true);
+  Future<Map<String, String>> _authenticatedHeaders() async {
+    final token = await _tokenStorage.getToken();
 
-    final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/cancel'),
-      headers: headers,
-    );
+    return {
+      'Accept': 'application/json',
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
+  }
 
+  dynamic _decode(String body) {
+    try {
+      return jsonDecode(body);
+    } catch (_) {
+      throw Exception('The server returned an invalid response.');
+    }
+  }
+
+  void _ensureSuccess(http.Response response, String fallback) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return;
     }
 
-    throw Exception(_errorMessage(response, 'Could not cancel order.'));
+    throw Exception(_errorMessage(response, fallback));
   }
 
   String _errorMessage(http.Response response, String fallback) {
@@ -236,13 +241,18 @@ class MarketplaceService {
       final decoded = jsonDecode(response.body);
 
       if (decoded is Map<String, dynamic>) {
-        final message = decoded['message']?.toString().trim();
+        final message =
+            (decoded['message'] ?? decoded['detail'] ?? decoded['title'])
+                ?.toString()
+                .trim();
 
         if (message != null && message.isNotEmpty) {
           return message;
         }
       }
-    } catch (_) {}
+    } catch (_) {
+      // Use the endpoint-specific fallback for non-JSON errors.
+    }
 
     return fallback;
   }

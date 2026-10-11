@@ -96,7 +96,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           final o = _orders[index];
           final canCancel = o.status == 'Pending' || o.status == 'Confirmed';
           final exportStatus = o.exportStatus;
-          final hasTracking = exportStatus != null &&
+          final hasTracking =
+              exportStatus != null &&
               exportStatus.toLowerCase() != 'notrequired';
 
           return Card(
@@ -115,11 +116,14 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 children: [
                   const SizedBox(height: 3),
                   Text(
-                    '${o.orderNumber}\n${o.currency} ${o.agreedPrice.toStringAsFixed(2)} • ${o.status}',
+                    '${o.orderNumber}\n${o.currency} ${o.agreedPrice.toStringAsFixed(2)} â€¢ ${o.status}',
                   ),
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF0F4F2),
                       borderRadius: BorderRadius.circular(6),
@@ -143,7 +147,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     leading: const Icon(Icons.circle, size: 10),
                     title: Text(h.newStatus),
                     subtitle: Text(
-                      '${h.changedByName}${h.reason == null ? '' : ' • ${h.reason}'}',
+                      '${h.changedByName}${h.reason == null ? '' : ' â€¢ ${h.reason}'}',
                     ),
                   ),
                 ),
@@ -158,9 +162,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                         onPressed: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => BuyerExportTrackingScreen(
-                                orderId: o.id,
-                              ),
+                              builder: (_) =>
+                                  BuyerExportTrackingScreen(orderId: o.id),
                             ),
                           );
                         },

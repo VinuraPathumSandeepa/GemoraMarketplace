@@ -142,6 +142,23 @@ public class MarketplaceService : IMarketplaceService
         }
 
 
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var search = query.Search.Trim()
+                .Replace("\\", "\\\\")
+                .Replace("%", "\\%")
+                .Replace("_", "\\_");
+
+            var pattern = $"%{search}%";
+
+            gems = gems.Where(g =>
+                EF.Functions.ILike(g.Title, pattern, "\\") ||
+                EF.Functions.ILike(g.GemType, pattern, "\\") ||
+                EF.Functions.ILike(g.Description, pattern, "\\"));
+        }
+
+
+
         // =====================================================
         // PRICE RANGE
         // =====================================================
@@ -252,15 +269,35 @@ public class MarketplaceService : IMarketplaceService
             await gems.CountAsync();
 
 
+
+        // C2-BUG-002: Calculate the offset without int overflow.
+        long offset = ((long)page - 1L) * pageSize;
+
+        // An out-of-range page must return no items.
+        if (offset >= totalItems)
+        {
+            return new PagedMarketplaceResponseDto
+            {
+                Items = new List<MarketplaceGemResponseDto>(),
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = totalItems == 0
+                    ? 0
+                    : (int)Math.Ceiling(
+                        totalItems / (double)pageSize)
+            };
+        }
+
+
+
         // =====================================================
         // RESULTS
         // =====================================================
 
         var items =
             await gems
-                .Skip(
-                    (page - 1) *
-                    pageSize)
+                .Skip((int)offset)
 
                 .Take(
                     pageSize)

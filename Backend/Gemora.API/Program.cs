@@ -568,19 +568,37 @@ builder.Services.AddCors(
             policy =>
             {
                 policy
-                    .WithOrigins(
-                        "http://localhost:5173",
-                        "https://localhost:5173",
+                    .SetIsOriginAllowed(origin =>
+                    {
+                        if (
+                            origin.Equals(
+                                "https://gemora-marketplace-web.onrender.com",
+                                StringComparison.OrdinalIgnoreCase) ||
+                            origin.Equals(
+                                "http://gemora-marketplace-web.onrender.com",
+                                StringComparison.OrdinalIgnoreCase))
+                        {
+                            return true;
+                        }
 
-                        "http://localhost:5174",
-                        "https://localhost:5174",
+                        if (!Uri.TryCreate(
+                                origin,
+                                UriKind.Absolute,
+                                out var uri))
+                        {
+                            return false;
+                        }
 
-                        "http://localhost:5175",
-                        "https://localhost:5175",
-
-                        "https://gemora-marketplace-web.onrender.com",
-                        "http://gemora-marketplace-web.onrender.com"
-                    )
+                        return (
+                                uri.Host.Equals(
+                                    "localhost",
+                                    StringComparison.OrdinalIgnoreCase) ||
+                                uri.Host.Equals(
+                                    "127.0.0.1",
+                                    StringComparison.OrdinalIgnoreCase)) &&
+                            (uri.Scheme == Uri.UriSchemeHttp ||
+                             uri.Scheme == Uri.UriSchemeHttps);
+                    })
                     .AllowAnyHeader()
                     .AllowAnyMethod();
             }

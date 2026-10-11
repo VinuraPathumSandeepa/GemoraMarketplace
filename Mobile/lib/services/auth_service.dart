@@ -15,20 +15,11 @@ class AuthService {
   // ==========================================
 
   Future<UserModel> login(String email, String password) async {
-    final response = await http
-        .post(
-          Uri.parse(ApiConfig.login),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'email': email.trim(), 'password': password}),
-        )
-        .timeout(
-          const Duration(seconds: 10),
-          onTimeout: () {
-            throw TimeoutException(
-              'Connection timed out (10s). Unable to reach server at ${ApiConfig.baseUrl}.',
-            );
-          },
-        );
+    final response = await _post(
+      Uri.parse(ApiConfig.login),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email.trim(), 'password': password}),
+    );
 
     final responseData = _decodeResponse(response.body);
 
@@ -66,7 +57,7 @@ class AuthService {
     required String password,
     required String role,
   }) async {
-    final response = await http.post(
+    final response = await _post(
       Uri.parse(ApiConfig.register),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -95,7 +86,7 @@ class AuthService {
     required String email,
     required String code,
   }) async {
-    final response = await http.post(
+    final response = await _post(
       Uri.parse(ApiConfig.verifyEmail),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email.trim(), 'code': code.trim()}),
@@ -113,7 +104,7 @@ class AuthService {
   // ==========================================
 
   Future<void> resendVerificationCode({required String email}) async {
-    final response = await http.post(
+    final response = await _post(
       Uri.parse(ApiConfig.resendVerificationCode),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email.trim()}),
@@ -139,22 +130,13 @@ class AuthService {
       throw Exception('Authentication token not found.');
     }
 
-    final response = await http
-        .get(
-          Uri.parse(ApiConfig.currentUser),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-        )
-        .timeout(
-          const Duration(seconds: 10),
-          onTimeout: () {
-            throw TimeoutException(
-              'Connection timed out (10s). Unable to load current user at ${ApiConfig.baseUrl}.',
-            );
-          },
-        );
+    final response = await _get(
+      Uri.parse(ApiConfig.currentUser),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
 
     if (response.statusCode != 200) {
       throw Exception('Unable to load current user.');
@@ -201,5 +183,46 @@ class AuthService {
     }
 
     return {};
+  }
+
+  Future<http.Response> _post(
+    Uri uri, {
+    required Map<String, String> headers,
+    required String body,
+  }) async {
+    try {
+      return await http
+          .post(uri, headers: headers, body: body)
+          .timeout(const Duration(seconds: 10));
+    } on TimeoutException {
+      throw TimeoutException(
+        'Connection timed out (10s). Unable to reach server at ${ApiConfig.baseUrl}.',
+      );
+    } on http.ClientException {
+      throw Exception(
+        'Unable to connect to the Gemora API at ${ApiConfig.serverUrl}. '
+        'Start the backend API and try again.',
+      );
+    }
+  }
+
+  Future<http.Response> _get(
+    Uri uri, {
+    required Map<String, String> headers,
+  }) async {
+    try {
+      return await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 10));
+    } on TimeoutException {
+      throw TimeoutException(
+        'Connection timed out (10s). Unable to load data from ${ApiConfig.baseUrl}.',
+      );
+    } on http.ClientException {
+      throw Exception(
+        'Unable to connect to the Gemora API at ${ApiConfig.serverUrl}. '
+        'Start the backend API and try again.',
+      );
+    }
   }
 }
