@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 class ApiConfig {
   // ============================================================
   // SERVER CONFIGURATION
@@ -11,19 +9,13 @@ class ApiConfig {
     'API_SERVER_URL',
   );
 
-  // Android emulators reach the host through 10.0.2.2. Browsers and desktop
-  // builds run on the host, so they use localhost by default.
   static String get serverUrl {
     final configuredUrl = _configuredServerUrl.trim();
     if (configuredUrl.isNotEmpty) {
       return configuredUrl.replaceFirst(RegExp(r'/+$'), '');
     }
 
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
-      return 'http://localhost:5198';
-    }
-
-    // return 'http://10.0.2.2:5198';
+    return 'https://gemora-api.onrender.com';
   }
 
   static String get baseUrl => '$serverUrl/api';

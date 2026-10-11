@@ -5,15 +5,7 @@ import DashboardLayout from "../../layouts/DashboardLayout";
 
 import gemListingService from "../../services/gemVerification/gemListingService";
 
-import api, {
-  resolveApiAssetUrl,
-} from "../../services/api";
-
-import { openProtectedCertificate } from "../../services/certificateAccess";
-
-// ============================================================
-// STATUS CONFIGURATION
-// ============================================================
+const API_ORIGIN = "https://gemora-api.onrender.com/api";
 
 const STATUS_CONFIG = {
   Draft: {
