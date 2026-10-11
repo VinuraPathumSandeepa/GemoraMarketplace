@@ -53,6 +53,33 @@ if (args.Contains("--reset-admin-password", StringComparer.Ordinal))
     return;
 }
 
+// Explicit maintenance command: reset only the existing Gemologist and exit.
+// Normal database seeding intentionally preserves existing credentials.
+if (args.Contains("--reset-gemologist-password", StringComparer.Ordinal))
+{
+    var resetConnection = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Database connection string 'DefaultConnection' is not configured.");
+    var resetPassword = builder.Configuration["SeedUsers:GemologistPassword"];
+    if (string.IsNullOrWhiteSpace(resetPassword))
+        throw new InvalidOperationException("SeedUsers:GemologistPassword is not configured.");
+
+    var resetOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+        .UseNpgsql(resetConnection).Options;
+    await using var resetContext = new ApplicationDbContext(resetOptions);
+    var gemologist = await resetContext.Users.SingleOrDefaultAsync(
+        user => user.Email.ToLower() == "gemologist@gemora.com" && user.Role == "Gemologist")
+        ?? throw new InvalidOperationException("The existing gemologist@gemora.com account was not found.");
+
+    gemologist.PasswordHash = BCrypt.Net.BCrypt.HashPassword(resetPassword);
+    await resetContext.SaveChangesAsync();
+    await resetContext.Entry(gemologist).ReloadAsync();
+    if (!BCrypt.Net.BCrypt.Verify(resetPassword, gemologist.PasswordHash))
+        throw new InvalidOperationException("Gemologist password verification failed.");
+
+    Console.WriteLine("Gemologist password reset and verified. Sign in with the configured SeedUsers:GemologistPassword.");
+    return;
+}
+
 
 // ============================================================
 // SUPABASE STORAGE CONFIGURATION
