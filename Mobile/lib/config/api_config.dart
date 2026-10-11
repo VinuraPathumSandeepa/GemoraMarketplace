@@ -1,10 +1,13 @@
-class ApiConfig {
+﻿class ApiConfig {
   // ============================================================
   // SERVER CONFIGURATION
   // ============================================================
 
   // Android Emulator -> Windows host machine
-  static const String serverUrl = 'http://10.0.2.2:5198';
+  static const String serverUrl = String.fromEnvironment(
+    'API_SERVER_URL',
+    defaultValue: 'http://10.0.2.2:5198',
+  );
 
   static const String baseUrl = '$serverUrl/api';
 
@@ -53,3 +56,4 @@ class ApiConfig {
   static String uploadGemCertificate(int id) =>
       '$baseUrl/GemListings/$id/certificate';
 }
+

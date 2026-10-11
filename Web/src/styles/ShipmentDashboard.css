@@ -1,0 +1,57 @@
+.shipment-dashboard-shortcuts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.shipment-dashboard-analyzer { margin-top: 40px; scroll-margin-top: 90px; }
+.shipment-dashboard-analyzer .admin-ai-dashboard { max-width: none; padding: 0; }
+.shipment-dashboard-shell { min-height: 100vh; background: radial-gradient(ellipse at 90% 40%, #e9ebe2 0, transparent 45%), #f6f2e9; color: #102b30; }
+.shipment-dashboard-shell .gemora-topbar { background: #202b28; border-bottom: 1px solid #d9cfba; }
+.shipment-dashboard-shell .gemora-topbar-inner { min-height: 64px; max-width: 1320px; margin: auto; }
+.shipment-dashboard-shell .gemora-main-content { padding: 0; background: transparent; }
+.shipment-dashboard-shell .gemora-nav-link.active { color: #dfbb6b; border-color: #dfbb6b; }
+.shipment-dashboard-shell .admin-shipping-list { width: 100%; max-width: 1480px; margin-inline: auto; padding: 34px clamp(20px, 3vw, 48px); box-sizing: border-box; min-width: 0; font-size: 12px; }
+.admin-shipping-list .admin-shipping-header { padding: 28px; margin-bottom: 22px; border-color: #e6ddce; border-radius: 17px; }
+.admin-shipping-list h1 { font-size: 34px; font-weight: 600; color: #102b30; }
+.admin-shipping-list .admin-shipping-header p { font-size: 13px; }
+.admin-shipping-list .admin-shipping-eyebrow { font-size: 10px; color: #9c611d; }
+.admin-shipping-list .admin-shipping-stats { gap: 16px; margin-bottom: 28px; }
+.admin-shipping-list .admin-shipping-stat { padding: 20px 12px; border: 1px solid #e6ddce; border-radius: 11px; }
+.admin-shipping-list .admin-shipping-stat h2 { font-size: 10px; font-weight: 500; margin-bottom: 12px; }
+.admin-shipping-list .admin-shipping-stat p { font-size: 27px; }
+.shipment-filters { display: grid; grid-template-columns: minmax(0, 1fr) 165px auto; align-items: end; gap: 16px; margin-bottom: 22px; }
+.shipment-filters label { display: block; font-size: 11px; color: #718187; margin-bottom: 6px; }
+.shipment-filters input, .shipment-filters select { width: 100%; height: 42px; padding: 9px 12px; border: 1px solid #e6ddce; border-radius: 8px; background: #fff; color: #102b30; box-sizing: border-box; }
+.shipment-filters > span { padding-bottom: 12px; white-space: nowrap; color: #718187; font-size: 12px; }
+.admin-shipping-list .admin-shipping-table { padding: 0; overflow-x: auto; border: 1px solid #e6ddce; border-radius: 17px; box-shadow: 0 8px 28px #263b3605; }
+.admin-shipping-list table { min-width: 0; width: 100%; table-layout: fixed; border-collapse: collapse; }
+.admin-shipping-list thead { background: #f6f4ec; }
+.admin-shipping-list th { padding: 16px 14px; font-size: 10px; font-weight: 500; letter-spacing: .08em; color: #60777c; text-align: left; white-space: nowrap; }
+.admin-shipping-list td { padding: 15px 14px; border-top: 1px solid #eeebe4; font-size: 12px; }
+.admin-shipping-list td .text-sm { font-size: 12px; }
+.admin-shipping-list td .text-xs { font-size: 10px; margin-top: 3px; }
+.admin-shipping-list :is(th, td) { white-space: normal; overflow-wrap: anywhere; }
+.admin-shipping-list th:nth-child(1) { width: 12%; }
+.admin-shipping-list th:nth-child(5) { width: 12%; }
+.admin-shipping-list th:nth-child(6) { width: 12%; }
+.admin-shipping-list th:nth-child(7) { width: 14%; }
+.admin-shipping-list th:last-child { width: 190px; }
+.admin-shipping-list td:last-child { padding-inline: 10px; }
+.admin-shipping-list td :is(.shipment-manage, .shipment-analyze) { padding: 8px 10px; font-size: 11px; }
+.admin-shipping-list td .shipment-analyze { background: #14201d; border-color: #14201d; color: #e8c374; }
+.admin-shipping-list tbody tr:hover { background: #fcfaf5; }
+.admin-shipping-list td span.rounded-full { padding: 5px 8px; font-weight: 400; font-size: 10px; }
+.shipment-manage, .shipment-analyze { display: inline-flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; white-space: nowrap; }
+.shipment-manage { background: #f6f0e4; border: 1px solid #dfc69b; color: #815522; margin-right: 8px; }
+.shipment-analyze { background: #14201d; border: 1px solid #14201d; color: #e8c374; }
+.shipment-manage:hover { background: #ece1cd; }
+.shipment-analyze:hover { background: #2b413a; }
+@media (max-width: 700px) {
+  .shipment-dashboard-shell .admin-shipping-list { padding: 20px 14px; }
+  .shipment-filters { grid-template-columns: 1fr 140px; }
+  .shipment-search { grid-column: 1 / -1; }
+  .shipment-filters > span { text-align: right; }
+  .admin-shipping-list h1 { font-size: 28px; }
+  .admin-shipping-list table { min-width: 900px; }
+}
+@media (min-width: 701px) and (max-width: 1100px) {
+  .admin-shipping-list :is(th, td) { padding-inline: 8px; }
+  .admin-shipping-list th:last-child { width: 110px; }
+  .admin-shipping-list td :is(.shipment-manage, .shipment-analyze) { display: flex; margin: 4px 0; }
+}

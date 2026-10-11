@@ -26,6 +26,33 @@ using Npgsql;
 var builder =
     WebApplication.CreateBuilder(args);
 
+// Explicit maintenance command: reset only the existing administrator and exit
+// before schema preparation, seeding, or starting the HTTP server.
+if (args.Contains("--reset-admin-password", StringComparer.Ordinal))
+{
+    var resetConnection = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Database connection string 'DefaultConnection' is not configured.");
+    var resetPassword = builder.Configuration["SeedUsers:AdminPassword"];
+    if (string.IsNullOrWhiteSpace(resetPassword))
+        throw new InvalidOperationException("SeedUsers:AdminPassword is not configured.");
+
+    var resetOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+        .UseNpgsql(resetConnection).Options;
+    await using var resetContext = new ApplicationDbContext(resetOptions);
+    var administrator = await resetContext.Users.SingleOrDefaultAsync(
+        user => user.Email.ToLower() == "admin@gemora.com" && user.Role == "Admin")
+        ?? throw new InvalidOperationException("The existing admin@gemora.com administrator was not found.");
+
+    administrator.PasswordHash = BCrypt.Net.BCrypt.HashPassword(resetPassword);
+    await resetContext.SaveChangesAsync();
+    await resetContext.Entry(administrator).ReloadAsync();
+    if (!BCrypt.Net.BCrypt.Verify(resetPassword, administrator.PasswordHash))
+        throw new InvalidOperationException("Administrator password verification failed.");
+
+    Console.WriteLine("Administrator password reset and verified. Sign in with the configured SeedUsers:AdminPassword.");
+    return;
+}
+
 
 // ============================================================
 // SUPABASE STORAGE CONFIGURATION
