@@ -11,6 +11,12 @@ import 'token_storage_service.dart';
 
 class ExportComplianceService {
   final TokenStorageService _tokenStorage = TokenStorageService();
+  final http.Client? client;
+
+  ExportComplianceService({this.client});
+
+  Future<http.Response> _get(Uri url, Map<String, String> headers) =>
+      client?.get(url, headers: headers) ?? http.get(url, headers: headers);
 
   Future<Map<String, String>> _getHeaders() async {
     final token = await _tokenStorage.getToken();
@@ -538,19 +544,29 @@ class ExportComplianceService {
   // ==========================================
   // GET EXPORT TRACKING FOR ORDER (BUYER-SAFE)
   // ==========================================
-  Future<BuyerExportTrackingModel> getOrderExportTracking(dynamic orderId) async {
+  Future<BuyerExportTrackingModel> getOrderExportTracking(
+    dynamic orderId,
+  ) async {
     final headers = await _getHeaders();
 
-    final response = await http.get(
+    final response = await _get(
       Uri.parse(ApiConfig.orderExportTracking(orderId)),
-      headers: headers,
+      headers,
     );
+
+    if (response.statusCode == 404) {
+      final orders = await _getTrackingFromOrders(headers);
+      for (final order in orders) {
+        if (order.orderId == orderId.toString()) return order;
+      }
+      throw Exception('This order could not be found in your account.');
+    }
 
     if (response.statusCode != 200) {
       throw Exception(
-        _parseErrorResponse(
+        _trackingError(
           response,
-          "Export tracking could not be loaded for this order.",
+          'Export tracking could not be loaded for this order.',
         ),
       );
     }
@@ -565,17 +581,15 @@ class ExportComplianceService {
   Future<List<BuyerExportTrackingModel>> getMyExportTracking() async {
     final headers = await _getHeaders();
 
-    final response = await http.get(
-      Uri.parse(ApiConfig.myExportTracking),
-      headers: headers,
-    );
+    final response = await _get(Uri.parse(ApiConfig.myExportTracking), headers);
+
+    if (response.statusCode == 404) {
+      return _getTrackingFromOrders(headers);
+    }
 
     if (response.statusCode != 200) {
       throw Exception(
-        _parseErrorResponse(
-          response,
-          "Failed to load export tracking records.",
-        ),
+        _trackingError(response, 'Failed to load export tracking records.'),
       );
     }
 
@@ -589,6 +603,77 @@ class ExportComplianceService {
         .map(BuyerExportTrackingModel.fromJson)
         .toList();
   }
+
+  String _trackingError(http.Response response, String fallback) {
+    if (response.statusCode >= 500) {
+      return 'Export tracking is temporarily unavailable. Please try again.';
+    }
+    return _parseErrorResponse(response, fallback);
+  }
+
+  Future<List<BuyerExportTrackingModel>> _getTrackingFromOrders(
+    Map<String, String> headers,
+  ) async {
+    final response = await _get(Uri.parse(ApiConfig.myOrders), headers);
+    if (response.statusCode == 404) {
+      throw Exception(
+        'Export tracking is not available on this server. Restart the updated Gemora API and try again.',
+      );
+    }
+    if (response.statusCode != 200) {
+      throw Exception(
+        _trackingError(
+          response,
+          'Could not load your orders for export tracking.',
+        ),
+      );
+    }
+
+    final data = jsonDecode(response.body);
+    if (data is! List) {
+      throw Exception('The server returned an invalid order list.');
+    }
+
+    final orders = data.whereType<Map<String, dynamic>>().toList();
+    if (orders.any((order) => order['exportStatus'] == null)) {
+      throw Exception(
+        'This server does not provide export statuses. Restart the updated Gemora API and try again.',
+      );
+    }
+
+    return orders.map((order) {
+      final status = order['exportStatus'].toString();
+      final country = order['shippingCountryCode']?.toString() ?? '';
+      final domestic =
+          country.toUpperCase() == 'LK' || country.toLowerCase() == 'sri lanka';
+      final description = switch (status.toLowerCase()) {
+        'notrequired' =>
+          'Domestic order — international export clearance not required.',
+        'notstarted' =>
+          'Export clearance has not yet been initiated by the seller.',
+        'draft' => 'The seller is preparing export clearance.',
+        _ => 'Export clearance status: $status.',
+      };
+
+      return BuyerExportTrackingModel(
+        orderId: order['id']?.toString() ?? '',
+        orderNumber: order['orderNumber']?.toString() ?? '',
+        gemListingId: order['gemListingId'] as int?,
+        gemTitle: order['gemTitle']?.toString() ?? 'Gemstone',
+        gemImageUrl: order['gemImageUrl']?.toString(),
+        exportRequestId: order['exportRequestId']?.toString(),
+        status: status,
+        stageDescription: description,
+        originCountry: 'Sri Lanka',
+        destinationCountry: domestic ? 'Sri Lanka' : country,
+        updatedAt: DateTime.tryParse(
+          order['updatedAt']?.toString() ??
+              order['createdAt']?.toString() ??
+              '',
+        ),
+        isApproved: status.toLowerCase() == 'approved',
+        requiresExport: !domestic,
+      );
+    }).toList();
+  }
 }
-
-

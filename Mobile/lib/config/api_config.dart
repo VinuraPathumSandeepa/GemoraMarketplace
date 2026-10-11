@@ -78,6 +78,8 @@ class ApiConfig {
 
   static const String myExportTracking = '$baseUrl/export-tracking/my';
 
+  static const String myOrders = '$baseUrl/orders/my';
+
   static const String sellerOrders = '$baseUrl/seller/orders';
 
   // ============================================================

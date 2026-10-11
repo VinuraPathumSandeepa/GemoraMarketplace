@@ -1,8 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gemora_mobile/models/buyer_export_tracking_model.dart';
 import 'package:gemora_mobile/screens/marketplace/buyer_export_tracking_screen.dart';
 import 'package:gemora_mobile/services/export_compliance_service.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FakeBuyerTrackingService extends ExportComplianceService {
   List<BuyerExportTrackingModel>? trackingListToReturn;
@@ -16,7 +21,9 @@ class FakeBuyerTrackingService extends ExportComplianceService {
   }
 
   @override
-  Future<BuyerExportTrackingModel> getOrderExportTracking(dynamic orderId) async {
+  Future<BuyerExportTrackingModel> getOrderExportTracking(
+    dynamic orderId,
+  ) async {
     if (errorToThrow != null) throw errorToThrow!;
     return singleTrackingToReturn ??
         BuyerExportTrackingModel(
@@ -34,6 +41,83 @@ class FakeBuyerTrackingService extends ExportComplianceService {
 }
 
 void main() {
+  group('Buyer export tracking API compatibility', () {
+    setUp(
+      () =>
+          SharedPreferences.setMockInitialValues({'auth_token': 'test-token'}),
+    );
+
+    test('uses the tracking endpoint when it returns an empty list', () async {
+      final requests = <String>[];
+      final service = ExportComplianceService(
+        client: MockClient((request) async {
+          requests.add(request.url.path);
+          return http.Response('[]', 200);
+        }),
+      );
+
+      expect(await service.getMyExportTracking(), isEmpty);
+      expect(requests, ['/api/export-tracking/my']);
+    });
+
+    test(
+      'falls back to order export statuses when tracking route is missing',
+      () async {
+        final requests = <String>[];
+        final service = ExportComplianceService(
+          client: MockClient((request) async {
+            requests.add(request.url.path);
+            expect(request.headers['authorization'], 'Bearer test-token');
+            if (request.url.path == '/api/export-tracking/my') {
+              return http.Response('', 404);
+            }
+            return http.Response(
+              jsonEncode([
+                {
+                  'id': 'order-1',
+                  'orderNumber': 'GEM-123',
+                  'gemTitle': 'Blue Sapphire',
+                  'shippingCountryCode': 'US',
+                  'exportStatus': 'Submitted',
+                  'exportRequestId': 'export-1',
+                  'createdAt': '2026-10-11T00:00:00Z',
+                },
+              ]),
+              200,
+            );
+          }),
+        );
+
+        final tracking = await service.getMyExportTracking();
+        expect(requests, ['/api/export-tracking/my', '/api/orders/my']);
+        expect(tracking.single.orderId, 'order-1');
+        expect(tracking.single.status, 'Submitted');
+        expect(tracking.single.exportRequestId, 'export-1');
+        expect(tracking.single.requiresExport, isTrue);
+      },
+    );
+
+    test(
+      'explains when both tracking and order routes are unavailable',
+      () async {
+        final service = ExportComplianceService(
+          client: MockClient((_) async => http.Response('', 404)),
+        );
+
+        expect(
+          service.getMyExportTracking(),
+          throwsA(
+            isA<Exception>().having(
+              (error) => error.toString(),
+              'message',
+              contains('Restart the updated Gemora API'),
+            ),
+          ),
+        );
+      },
+    );
+  });
+
   group('BuyerExportTrackingModel Unit Tests', () {
     test('fromJson deserializes all fields correctly', () {
       final json = {
@@ -94,7 +178,9 @@ void main() {
   });
 
   group('BuyerExportTrackingScreen Widget Tests', () {
-    testWidgets('Displays tracking list when items are returned', (tester) async {
+    testWidgets('Displays tracking list when items are returned', (
+      tester,
+    ) async {
       final fakeService = FakeBuyerTrackingService();
       fakeService.trackingListToReturn = [
         BuyerExportTrackingModel(
@@ -111,9 +197,7 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: BuyerExportTrackingScreen(service: fakeService),
-        ),
+        MaterialApp(home: BuyerExportTrackingScreen(service: fakeService)),
       );
 
       await tester.pumpAndSettle();
@@ -125,14 +209,14 @@ void main() {
       expect(find.text('Sri Lanka → United States'), findsOneWidget);
     });
 
-    testWidgets('Displays empty state when no export tracking records exist', (tester) async {
+    testWidgets('Displays empty state when no export tracking records exist', (
+      tester,
+    ) async {
       final fakeService = FakeBuyerTrackingService();
       fakeService.trackingListToReturn = [];
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: BuyerExportTrackingScreen(service: fakeService),
-        ),
+        MaterialApp(home: BuyerExportTrackingScreen(service: fakeService)),
       );
 
       await tester.pumpAndSettle();
@@ -140,7 +224,9 @@ void main() {
       expect(find.text('No Export Clearances Found'), findsOneWidget);
     });
 
-    testWidgets('Displays single order tracking when orderId is provided', (tester) async {
+    testWidgets('Displays single order tracking when orderId is provided', (
+      tester,
+    ) async {
       final fakeService = FakeBuyerTrackingService();
       fakeService.singleTrackingToReturn = BuyerExportTrackingModel(
         orderId: 'single-order-uuid',
