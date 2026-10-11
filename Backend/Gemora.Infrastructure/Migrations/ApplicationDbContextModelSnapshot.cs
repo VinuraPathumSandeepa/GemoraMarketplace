@@ -531,6 +531,51 @@ namespace Gemora.Infrastructure.Migrations
                     b.ToTable("GemVerifications", (string)null);
                 });
 
+            modelBuilder.Entity("Gemora.Domain.Entities.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("RelatedEntityId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("RelatedEntityType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("Gemora.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -704,6 +749,17 @@ namespace Gemora.Infrastructure.Migrations
                     b.Navigation("Gemologist");
                 });
 
+            modelBuilder.Entity("Gemora.Domain.Entities.Notification", b =>
+                {
+                    b.HasOne("Gemora.Domain.Entities.User", "User")
+                        .WithMany("Notifications")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Gemora.Domain.Entities.AgentWorkflow", b =>
                 {
                     b.Navigation("Steps");
@@ -731,6 +787,8 @@ namespace Gemora.Infrastructure.Migrations
                     b.Navigation("GemListings");
 
                     b.Navigation("GemVerifications");
+
+                    b.Navigation("Notifications");
                 });
 #pragma warning restore 612, 618
         }

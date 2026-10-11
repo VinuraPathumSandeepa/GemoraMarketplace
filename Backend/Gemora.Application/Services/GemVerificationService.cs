@@ -1,6 +1,7 @@
 using Gemora.Application.DTOs.GemVerifications;
 using Gemora.Application.Interfaces;
 using Gemora.Domain.Constants;
+using Gemora.Domain.Entities;
 using Gemora.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,10 +11,12 @@ public class GemVerificationService : IGemVerificationService
 {
     private readonly ApplicationDbContext _context;
 
-    public GemVerificationService(ApplicationDbContext context)
+    public GemVerificationService(
+        ApplicationDbContext context)
     {
         _context = context;
     }
+
 
     // ============================================================
     // GET ALL PENDING VERIFICATIONS
@@ -381,7 +384,7 @@ public class GemVerificationService : IGemVerificationService
         // 8. Update listing status
         //
         // PendingVerification
-        //        ↓
+        //        ->
         // Approved / ChangesRequested / Rejected
         // --------------------------------------------------------
 
@@ -393,18 +396,149 @@ public class GemVerificationService : IGemVerificationService
 
 
         // --------------------------------------------------------
-        // 9. Save changes
+        // 9. Create Seller notification
+        // --------------------------------------------------------
+
+        var sellerNotification =
+            CreateSellerVerificationNotification(
+                verification);
+
+        _context
+            .Set<Notification>()
+            .Add(sellerNotification);
+
+
+        // --------------------------------------------------------
+        // 10. Save everything atomically
         // --------------------------------------------------------
 
         await _context.SaveChangesAsync();
 
 
         // --------------------------------------------------------
-        // 10. Return updated verification
+        // 11. Return updated verification
         // --------------------------------------------------------
 
         return await GetVerificationByIdAsync(
             verificationId);
+    }
+
+
+    // ============================================================
+    // CREATE SELLER VERIFICATION NOTIFICATION
+    // ============================================================
+
+    private static Notification
+        CreateSellerVerificationNotification(
+            GemVerification verification)
+    {
+        var listing =
+            verification.GemListing;
+
+        var decision =
+            verification.Decision;
+
+        var reviewNotes =
+            verification.ReviewNotes;
+
+
+        if (decision ==
+            GemListingStatuses.Approved)
+        {
+            var message =
+                $"{listing.Title} has been approved by the Gemologist and is now visible in the marketplace.";
+
+            if (!string.IsNullOrWhiteSpace(
+                    reviewNotes))
+            {
+                message +=
+                    $" Gemologist message: {reviewNotes}";
+            }
+
+            return new Notification
+            {
+                UserId = listing.SellerId,
+
+                Type =
+                    NotificationTypes.GemApproved,
+
+                Title =
+                    "Gemstone Approved",
+
+                Message =
+                    message,
+
+                RelatedEntityType =
+                    "GemListing",
+
+                RelatedEntityId =
+                    listing.Id.ToString(),
+
+                IsRead =
+                    false,
+
+                CreatedAt =
+                    DateTime.UtcNow
+            };
+        }
+
+
+        if (decision ==
+            GemListingStatuses.ChangesRequested)
+        {
+            return new Notification
+            {
+                UserId = listing.SellerId,
+
+                Type =
+                    NotificationTypes.GemChangesRequested,
+
+                Title =
+                    "Changes Requested",
+
+                Message =
+                    $"Changes were requested for {listing.Title}. Gemologist message: {reviewNotes}",
+
+                RelatedEntityType =
+                    "GemListing",
+
+                RelatedEntityId =
+                    listing.Id.ToString(),
+
+                IsRead =
+                    false,
+
+                CreatedAt =
+                    DateTime.UtcNow
+            };
+        }
+
+
+        return new Notification
+        {
+            UserId = listing.SellerId,
+
+            Type =
+                NotificationTypes.GemRejected,
+
+            Title =
+                "Gemstone Rejected",
+
+            Message =
+                $"{listing.Title} was rejected during verification. Gemologist message: {reviewNotes}",
+
+            RelatedEntityType =
+                "GemListing",
+
+            RelatedEntityId =
+                listing.Id.ToString(),
+
+            IsRead =
+                false,
+
+            CreatedAt =
+                DateTime.UtcNow
+        };
     }
 
 
