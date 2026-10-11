@@ -5,21 +5,29 @@ class OrderHistoryItem {
   final String? reason;
   final DateTime createdAt;
 
-  OrderHistoryItem({required this.previousStatus, required this.newStatus, required this.changedByName, required this.reason, required this.createdAt});
+  const OrderHistoryItem({
+    required this.previousStatus,
+    required this.newStatus,
+    required this.changedByName,
+    required this.reason,
+    required this.createdAt,
+  });
 
-  factory OrderHistoryItem.fromJson(Map<String, dynamic> json) => OrderHistoryItem(
-    previousStatus: json['previousStatus'],
-    newStatus: json['newStatus'] ?? '',
-    changedByName: json['changedByName'] ?? '',
-    reason: json['reason'],
-    createdAt: DateTime.parse(json['createdAt']),
-  );
+  factory OrderHistoryItem.fromJson(Map<String, dynamic> json) {
+    return OrderHistoryItem(
+      previousStatus: _asNullableString(json['previousStatus']),
+      newStatus: json['newStatus']?.toString() ?? '',
+      changedByName: json['changedByName']?.toString() ?? '',
+      reason: _asNullableString(json['reason']),
+      createdAt: _parseDate(json['createdAt']),
+    );
+  }
 }
 
 class OrderModel {
-  final int id;
+  final String id;
   final String orderNumber;
-  final int gemListingId;
+  final int? gemListingId;
   final String gemTitle;
   final String? gemImageUrl;
   final String buyerName;
@@ -30,21 +38,62 @@ class OrderModel {
   final DateTime createdAt;
   final List<OrderHistoryItem> statusHistory;
 
-  OrderModel({required this.id, required this.orderNumber, required this.gemListingId, required this.gemTitle, required this.gemImageUrl, required this.buyerName, required this.sellerName, required this.agreedPrice, required this.currency, required this.status, required this.createdAt, required this.statusHistory});
+  const OrderModel({
+    required this.id,
+    required this.orderNumber,
+    required this.gemListingId,
+    required this.gemTitle,
+    required this.gemImageUrl,
+    required this.buyerName,
+    required this.sellerName,
+    required this.agreedPrice,
+    required this.currency,
+    required this.status,
+    required this.createdAt,
+    required this.statusHistory,
+  });
 
-  factory OrderModel.fromJson(Map<String, dynamic> json) => OrderModel(
-    id: json['id'],
-    orderNumber: json['orderNumber'] ?? '',
-    gemListingId: json['gemListingId'],
-    gemTitle: json['gemTitle'] ?? '',
-    gemImageUrl: json['gemImageUrl'],
-    buyerName: json['buyerName'] ?? '',
-    sellerName: json['sellerName'] ?? '',
-    agreedPrice: (json['agreedPrice'] as num?)?.toDouble() ?? 0,
-    currency: json['currency'] ?? '',
-    status: json['status'] ?? '',
-    createdAt: DateTime.parse(json['createdAt']),
-    statusHistory: ((json['statusHistory'] ?? []) as List)
-      .map((e) => OrderHistoryItem.fromJson(e as Map<String, dynamic>)).toList(),
-  );
+  factory OrderModel.fromJson(Map<String, dynamic> json) {
+    final history = json['statusHistory'];
+
+    return OrderModel(
+      id: json['id']?.toString() ?? '',
+      orderNumber: json['orderNumber']?.toString() ?? '',
+      gemListingId: _asInt(json['gemListingId']),
+      gemTitle: json['gemTitle']?.toString() ?? '',
+      gemImageUrl: _asNullableString(json['gemImageUrl']),
+      buyerName: json['buyerName']?.toString() ?? '',
+      sellerName: json['sellerName']?.toString() ?? '',
+      agreedPrice: _asDouble(json['agreedPrice']),
+      currency: json['currency']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
+      createdAt: _parseDate(json['createdAt']),
+      statusHistory: history is List
+          ? history
+              .whereType<Map<String, dynamic>>()
+              .map(OrderHistoryItem.fromJson)
+              .toList()
+          : const [],
+    );
+  }
+}
+
+String? _asNullableString(dynamic value) {
+  final text = value?.toString().trim();
+  return text == null || text.isEmpty ? null : text;
+}
+
+int? _asInt(dynamic value) {
+  if (value is int) return value;
+  return int.tryParse(value?.toString() ?? '');
+}
+
+double _asDouble(dynamic value) {
+  if (value is num) return value.toDouble();
+  return double.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+DateTime _parseDate(dynamic value) {
+  return DateTime.tryParse(value?.toString() ?? '') ??
+      DateTime.fromMillisecondsSinceEpoch(0);
 }

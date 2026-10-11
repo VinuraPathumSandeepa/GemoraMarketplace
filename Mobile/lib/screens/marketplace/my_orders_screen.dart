@@ -15,13 +15,25 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   String? _error;
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() {
+    super.initState();
+    _load();
+  }
 
   Future<void> _load() async {
+    if (!mounted) return;
+
     setState(() { _loading = true; _error = null; });
-    try { _orders = await _service.getMyOrders(); }
-    catch (e) { _error = e.toString().replaceFirst('Exception: ', ''); }
-    finally { if (mounted) setState(() => _loading = false); }
+    try {
+      final orders = await _service.getMyOrders();
+      if (mounted) setState(() => _orders = orders);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   Future<void> _cancel(OrderModel order) async {

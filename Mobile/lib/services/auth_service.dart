@@ -14,7 +14,7 @@ class AuthService {
   // ==========================================
 
   Future<UserModel> login(String email, String password) async {
-    final response = await http.post(
+    final response = await _post(
       Uri.parse(ApiConfig.login),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email.trim(), 'password': password}),
@@ -55,7 +55,7 @@ class AuthService {
     required String password,
     required String role,
   }) async {
-    final response = await http.post(
+    final response = await _post(
       Uri.parse(ApiConfig.register),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -84,7 +84,7 @@ class AuthService {
     required String email,
     required String code,
   }) async {
-    final response = await http.post(
+    final response = await _post(
       Uri.parse(ApiConfig.verifyEmail),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email.trim(), 'code': code.trim()}),
@@ -102,7 +102,7 @@ class AuthService {
   // ==========================================
 
   Future<void> resendVerificationCode({required String email}) async {
-    final response = await http.post(
+    final response = await _post(
       Uri.parse(ApiConfig.resendVerificationCode),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email.trim()}),
@@ -128,7 +128,7 @@ class AuthService {
       throw Exception('Authentication token not found.');
     }
 
-    final response = await http.get(
+    final response = await _get(
       Uri.parse(ApiConfig.currentUser),
       headers: {
         'Content-Type': 'application/json',
@@ -181,5 +181,34 @@ class AuthService {
     }
 
     return {};
+  }
+
+  Future<http.Response> _post(
+    Uri uri, {
+    required Map<String, String> headers,
+    required String body,
+  }) async {
+    try {
+      return await http.post(uri, headers: headers, body: body);
+    } on http.ClientException {
+      throw Exception(
+        'Unable to connect to the Gemora API at ${ApiConfig.serverUrl}. '
+        'Start the backend API and try again.',
+      );
+    }
+  }
+
+  Future<http.Response> _get(
+    Uri uri, {
+    required Map<String, String> headers,
+  }) async {
+    try {
+      return await http.get(uri, headers: headers);
+    } on http.ClientException {
+      throw Exception(
+        'Unable to connect to the Gemora API at ${ApiConfig.serverUrl}. '
+        'Start the backend API and try again.',
+      );
+    }
   }
 }

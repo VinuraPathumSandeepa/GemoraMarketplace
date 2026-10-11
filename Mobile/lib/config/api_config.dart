@@ -1,43 +1,52 @@
+import 'package:flutter/foundation.dart';
+
 class ApiConfig {
   // ============================================================
   // SERVER CONFIGURATION
   // ============================================================
 
-  // Android Emulator -> Windows host machine
-  static const String serverUrl = 'http://10.0.2.2:5198';
+  // Android emulators reach the host through 10.0.2.2. Browsers and desktop
+  // builds run on the host, so they must use localhost instead.
+  static String get serverUrl {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      return 'http://localhost:5198';
+    }
 
-  static const String baseUrl = '$serverUrl/api';
+    return 'http://10.0.2.2:5198';
+  }
+
+  static String get baseUrl => '$serverUrl/api';
 
   // ============================================================
   // AUTH ENDPOINTS
   // ============================================================
 
-  static const String login = '$baseUrl/Auth/login';
+  static String get login => '$baseUrl/Auth/login';
 
-  static const String register = '$baseUrl/Auth/register';
+  static String get register => '$baseUrl/Auth/register';
 
-  static const String verifyEmail = '$baseUrl/Auth/verify-email';
+  static String get verifyEmail => '$baseUrl/Auth/verify-email';
 
-  static const String resendVerificationCode =
+  static String get resendVerificationCode =>
       '$baseUrl/Auth/resend-verification-code';
 
-  static const String currentUser = '$baseUrl/Auth/me';
+  static String get currentUser => '$baseUrl/Auth/me';
 
   // ============================================================
   // EXPORT COMPLIANCE ENDPOINTS
   // ============================================================
 
-  static const String exportRequests = '$baseUrl/ExportRequests';
+  static String get exportRequests => '$baseUrl/ExportRequests';
 
-  static const String myExportRequests = '$baseUrl/ExportRequests/my';
+  static String get myExportRequests => '$baseUrl/ExportRequests/my';
 
   // ============================================================
   // GEM LISTING ENDPOINTS
   // ============================================================
 
-  static const String myGemListings = '$baseUrl/GemListings/my';
+  static String get myGemListings => '$baseUrl/GemListings/my';
 
-  static const String createGemListing = '$baseUrl/GemListings';
+  static String get createGemListing => '$baseUrl/GemListings';
 
   static String gemListing(int id) => '$baseUrl/GemListings/$id';
 
@@ -52,4 +61,30 @@ class ApiConfig {
 
   static String uploadGemCertificate(int id) =>
       '$baseUrl/GemListings/$id/certificate';
+
+  // ============================================================
+  // GEM VERIFICATION ENDPOINTS
+  // ============================================================
+
+  static String get pendingGemVerifications =>
+      '$baseUrl/GemVerifications/pending';
+
+  static String gemVerification(int verificationId) =>
+      '$baseUrl/GemVerifications/$verificationId';
+
+  static String gemVerificationAiAnalysis(int verificationId) =>
+      '$baseUrl/GemVerifications/$verificationId/ai-analysis';
+
+  static String reviewGemVerification(int verificationId) =>
+      '$baseUrl/GemVerifications/$verificationId/review';
+
+  // ============================================================
+  // PROTECTED CERTIFICATE ENDPOINTS
+  // ============================================================
+
+  static String gemCertificateAccess(int listingId) =>
+      '$baseUrl/GemCertificates/listings/$listingId/access';
+
+  static String gemLegacyCertificate(int listingId) =>
+      '$baseUrl/GemCertificates/listings/$listingId/legacy';
 }

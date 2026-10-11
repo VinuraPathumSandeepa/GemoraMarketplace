@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/marketplace/marketplace_gem.dart';
+import '../../models/marketplace_gem_model.dart';
 import '../../services/marketplace_service.dart';
 import 'gem_detail_screen.dart';
 
@@ -14,16 +14,31 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
   final _service = MarketplaceService();
   bool _loading = true;
   String? _error;
-  List<MarketplaceGem> _gems = [];
+  List<MarketplaceGemModel> _gems = [];
 
   @override
   void initState() { super.initState(); _load(); }
 
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
+    if (!mounted) return;
+
     setState(() { _loading = true; _error = null; });
-    try { _gems = await _service.getGems(search: _search.text.trim()); }
-    catch (e) { _error = e.toString().replaceFirst('Exception: ', ''); }
-    finally { if (mounted) setState(() => _loading = false); }
+    try {
+      final gems = await _service.getGems(search: _search.text.trim());
+      if (mounted) setState(() => _gems = gems);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override

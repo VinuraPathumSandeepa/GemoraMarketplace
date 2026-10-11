@@ -194,9 +194,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       // GEMORA BRAND
                       // ==================================
 
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 12,
+                        runSpacing: 8,
                         children: [
                           Container(
                             width: 50,
@@ -214,8 +216,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               size: 29,
                             ),
                           ),
-
-                          const SizedBox(width: 12),
 
                           const Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
