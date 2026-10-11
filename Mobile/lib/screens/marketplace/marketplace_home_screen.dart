@@ -52,7 +52,37 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
             margin: const EdgeInsets.only(bottom: 14),
             child: ListTile(
               contentPadding: const EdgeInsets.all(14),
-              leading: const CircleAvatar(child: Icon(Icons.diamond_outlined)),
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 52,
+                  height: 52,
+                  child: g.resolvedImageUrl == null
+                      ? const CircleAvatar(
+                          backgroundColor: Color(0xFFF2EFE8),
+                          child: Icon(Icons.diamond_outlined, color: Color(0xFFC99242)),
+                        )
+                      : Image.network(
+                          g.resolvedImageUrl!,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) =>
+                              const CircleAvatar(
+                                backgroundColor: Color(0xFFF2EFE8),
+                                child: Icon(Icons.diamond_outlined, color: Color(0xFFC99242)),
+                              ),
+                        ),
+                ),
+              ),
               title: Text(g.title, style: const TextStyle(fontWeight: FontWeight.w700)),
               subtitle: Text('${g.gemType} • ${g.caratWeight} ct • ${g.currency} ${g.price.toStringAsFixed(0)}'),
               trailing: const Icon(Icons.chevron_right),

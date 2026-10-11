@@ -1,3 +1,5 @@
+import '../../config/api_config.dart';
+
 class MarketplaceGem {
   final int id;
   final String title;
@@ -40,6 +42,8 @@ class MarketplaceGem {
   bool get isCertified =>
       (certificateNumber != null && certificateNumber!.trim().isNotEmpty) ||
       (certificateAuthority != null && certificateAuthority!.trim().isNotEmpty);
+
+  String? get resolvedImageUrl => ApiConfig.resolveImageUrl(primaryImageUrl);
 
   static double _toDouble(dynamic value, [double fallback = 0.0]) {
     if (value is num) return value.toDouble();

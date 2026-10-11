@@ -134,14 +134,26 @@ class MarketplaceService {
     );
   }
 
-  Future<OrderModel> createOrder(int gemListingId) async {
+  Future<OrderModel> createOrder(
+    int gemListingId, {
+    String shippingAddress = 'Main Street',
+    String shippingRegion = 'Western',
+    String shippingCountryCode = 'LK',
+  }) async {
     final headers = await _authHeaders(isJson: true);
 
-    final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/orders'),
-      headers: headers,
-      body: jsonEncode({'gemListingId': gemListingId}),
-    );
+    final payload = jsonEncode({
+      'gemListingId': gemListingId,
+      'shippingAddress': shippingAddress.trim(),
+      'shippingRegion': shippingRegion.trim(),
+      'shippingCountryCode': shippingCountryCode.trim().toUpperCase(),
+    });
+
+    final uri = Uri.parse('${ApiConfig.baseUrl}/orders');
+    final httpClient = client;
+    final response = httpClient != null
+        ? await httpClient.post(uri, headers: headers, body: payload)
+        : await http.post(uri, headers: headers, body: payload);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       final decoded = jsonDecode(response.body);

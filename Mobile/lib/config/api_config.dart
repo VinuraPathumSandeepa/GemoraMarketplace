@@ -14,6 +14,25 @@ class ApiConfig {
   static const String baseUrl = '$serverUrl/api';
 
   // ============================================================
+  // IMAGE URL RESOLVER
+  // ============================================================
+
+  static String? resolveImageUrl(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return null;
+    }
+
+    final url = value.trim();
+
+    if (url.startsWith('https://') || url.startsWith('http://')) {
+      return url;
+    }
+
+    final slash = url.startsWith('/') ? '' : '/';
+    return '$serverUrl$slash$url';
+  }
+
+  // ============================================================
   // AUTH ENDPOINTS
   // ============================================================
 
