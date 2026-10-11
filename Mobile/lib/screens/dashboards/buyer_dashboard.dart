@@ -2,48 +2,54 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../services/export_compliance_service.dart';
 import '../marketplace/ai_buyer_assistant_screen.dart';
 import '../marketplace/buyer_export_tracking_screen.dart';
 import '../marketplace/marketplace_home_screen.dart';
 import '../marketplace/my_orders_screen.dart';
 
 class BuyerDashboard extends StatefulWidget {
-  const BuyerDashboard({super.key});
+  final ExportComplianceService? exportComplianceService;
+
+  const BuyerDashboard({
+    super.key,
+    this.exportComplianceService,
+  });
+
   @override
   State<BuyerDashboard> createState() => _BuyerDashboardState();
 }
 
 class _BuyerDashboardState extends State<BuyerDashboard> {
   int _index = 0;
-  final _pages = const [
-    MarketplaceHomeScreen(),
-    AiBuyerAssistantScreen(),
-    MyOrdersScreen(),
+  late final List<Widget> _pages;
+  final _titles = const [
+    'Marketplace',
+    'AI Buyer Assistant',
+    'My Orders',
+    'Track My Exports',
   ];
-  final _titles = const ['Marketplace', 'AI Buyer Assistant', 'My Orders'];
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      const MarketplaceHomeScreen(),
+      const AiBuyerAssistantScreen(),
+      const MyOrdersScreen(),
+      BuyerExportTrackingScreen(
+        showAppBar: false,
+        service: widget.exportComplianceService,
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-    final user = auth.user;
-
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_index]),
         actions: [
-          IconButton(
-            tooltip: user?.fullName != null
-                ? 'Track My Exports (${user!.fullName})'
-                : 'Track My Exports',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const BuyerExportTrackingScreen(),
-                ),
-              );
-            },
-            icon: const Icon(Icons.flight_takeoff),
-          ),
           IconButton(
             tooltip: 'Logout',
             onPressed: () => context.read<AuthProvider>().logout(),
@@ -55,6 +61,9 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (value) => setState(() => _index = value),
+        backgroundColor: Colors.white,
+        indicatorColor: const Color(0xFFF1E7D5),
+        height: 68,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.storefront_outlined),
@@ -70,6 +79,11 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
             icon: Icon(Icons.receipt_long_outlined),
             selectedIcon: Icon(Icons.receipt_long),
             label: 'Orders',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.flight_takeoff),
+            selectedIcon: Icon(Icons.flight_takeoff),
+            label: 'Exports',
           ),
         ],
       ),
