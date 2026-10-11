@@ -1010,6 +1010,22 @@ function ExportOfficerDashboard() {
                         {renderStatusBadge(requestDetail.status)}
                       </span>
                     </div>
+                    {requestDetail.orderNumber && (
+                      <div className="info-item">
+                        <span className="info-label">Marketplace Order</span>
+                        <span className="info-value">
+                          <code>{requestDetail.orderNumber}</code>
+                        </span>
+                      </div>
+                    )}
+                    {requestDetail.gemListingTitle && (
+                      <div className="info-item">
+                        <span className="info-label">Gem Listing</span>
+                        <span className="info-value">
+                          {requestDetail.gemListingTitle}
+                        </span>
+                      </div>
+                    )}
                     <div className="info-item">
                       <span className="info-label">Requester</span>
                       <span className="info-value">

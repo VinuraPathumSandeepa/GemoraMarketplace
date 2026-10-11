@@ -1,29 +1,57 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-function Dashboard() {
-  const { user, loading } = useAuth();
+export default function Dashboard() {
+  const {
+    user,
+    isAuthenticated,
+    loading,
+  } = useAuth();
 
   if (loading) {
-    return <p>Loading...</p>;
+    return (
+      <div style={{ padding: "40px" }}>
+        Loading...
+      </div>
+    );
   }
 
-  if (!user) {
+  if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />;
   }
 
   switch (user.role) {
     case "Buyer":
-      return <Navigate to="/buyer" replace />;
+      return (
+        <Navigate
+          to="/buyer/dashboard"
+          replace
+        />
+      );
 
     case "Seller":
-      return <Navigate to="/seller" replace />;
-
-    case "Admin":
-      return <Navigate to="/admin" replace />;
+      return (
+        <Navigate
+          to="/seller"
+          replace
+        />
+      );
 
     case "Gemologist":
-      return <Navigate to="/gemologist" replace />;
+      return (
+        <Navigate
+          to="/gemologist"
+          replace
+        />
+      );
+
+    case "Admin":
+      return (
+        <Navigate
+          to="/admin"
+          replace
+        />
+      );
 
     case "ExportOfficer":
       return (
@@ -34,8 +62,6 @@ function Dashboard() {
       );
 
     default:
-      return <Navigate to="/login" replace />;
+      return <Navigate to="/" replace />;
   }
 }
-
-export default Dashboard;

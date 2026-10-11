@@ -1,8 +1,16 @@
 import axios from "axios";
 
-const API_BASE_URL =
+const RAW_API_URL =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? "/api" : "https://gemora-api.onrender.com/api");
+
+const NORMALIZED_API_URL =
+  RAW_API_URL.replace(/\/+$/, "");
+
+const API_BASE_URL =
+  /\/api$/i.test(NORMALIZED_API_URL)
+    ? NORMALIZED_API_URL
+    : `${NORMALIZED_API_URL}/api`;
 
 export const API_ORIGIN =
   API_BASE_URL.replace(
