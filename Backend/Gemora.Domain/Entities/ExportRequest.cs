@@ -38,4 +38,9 @@ public class ExportRequest
     public User? ReviewedByUser { get; set; }
 
     public ICollection<ComplianceDocument> ComplianceDocuments { get; set; } = new List<ComplianceDocument>();
+
+    // Marketplace Order relationship (nullable for legacy/standalone export requests)
+    public Guid? OrderId { get; set; }
+
+    public Order? Order { get; set; }
 }
