@@ -570,22 +570,38 @@ builder.Services.AddScoped<
 
 
 // ============================================================
-// GEM VERIFICATION HYBRID FILE STORAGE
+// GEM VERIFICATION FILE STORAGE
 //
-// New gemstone images:
-//     Supabase public storage
+// Development:
+//     Local storage keeps localhost uploads independent from
+//     external Supabase availability and configuration.
 //
-// New certificates:
-//     Supabase private storage
+// Non-development:
+//     Hybrid storage writes new evidence to Supabase and keeps
+//     legacy /uploads/... references readable.
 //
-// Legacy /uploads/... paths:
-//     Local storage
+// Both implementations preserve the same IFileStorageService
+// contract, so listing and verification functions are unchanged.
 // ============================================================
 
-builder.Services.AddScoped<
-    Gemora.Domain.Interfaces.IFileStorageService,
-    HybridFileStorageService
->();
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddScoped<
+        Gemora.Domain.Interfaces.IFileStorageService
+    >(
+        serviceProvider =>
+            serviceProvider.GetRequiredService<
+                Gemora.Infrastructure.Services.LocalFileStorageService
+            >()
+    );
+}
+else
+{
+    builder.Services.AddScoped<
+        Gemora.Domain.Interfaces.IFileStorageService,
+        HybridFileStorageService
+    >();
+}
 
 
 // ============================================================
