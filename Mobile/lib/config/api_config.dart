@@ -13,7 +13,7 @@ class ApiConfig {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
       return 'https://gemora-api.onrender.com';
     }
-    return 'http://10.0.2.2:5198';
+    return 'https://gemora-api.onrender.com';
   }
 
   static String get baseUrl => '$serverUrl/api';
