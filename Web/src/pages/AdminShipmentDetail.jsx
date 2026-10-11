@@ -17,7 +17,11 @@ function AdminShipmentDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "plan" ? "plan" : "overview");
+  const [activeTab, setActiveTab] = useState("overview");
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    setActiveTab(["overview", "plan", "booking", "operations", "insurance", "tracking", "audit", "exceptions"].includes(tab) ? tab : "overview");
+  }, [id, searchParams]);
   
   // Action states
   const [approving, setApproving] = useState(false);

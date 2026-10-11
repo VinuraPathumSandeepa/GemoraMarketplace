@@ -1,4 +1,16 @@
 .shipment-dashboard-shortcuts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.admin-shipping-list button.admin-shipping-stat { font: inherit; }
+.admin-shipping-list button.admin-shipping-stat[aria-pressed="true"] { border-color: var(--gemora-gold); outline: 2px solid var(--gemora-gold-light); }
+.shipment-row-actions { display: flex; align-items: flex-start; flex-direction: column; gap: 6px; }
+.admin-shipping-list .shipment-row-actions a { max-width: 100%; white-space: normal; text-align: center; box-sizing: border-box; }
+.shipment-reference { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.admin-shipping-list button.shipment-copy { padding: 2px 5px; font-size: 10px; }
+.shipment-copy-message { min-height: 1.6em; margin-bottom: 8px !important; }
+.shipment-queue-caption { text-align: left; padding: 14px; color: var(--gemora-muted); }
+.admin-shipping-list .shipment-queue-heading th { width: auto; background: var(--gemora-cream); font-weight: 700; }
+.shipment-dashboard-analyzer summary { cursor: pointer; font-weight: 600; }
+.admin-shipping-list .shipment-agent-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 20px; }
+.shipment-dashboard-analyzer > p { margin-top: 14px; }
 .shipment-dashboard-analyzer { margin-top: 40px; scroll-margin-top: 90px; }
 .shipment-dashboard-analyzer .admin-ai-dashboard { max-width: none; padding: 0; }
 .shipment-dashboard-shell { min-height: 100vh; background: radial-gradient(ellipse at 90% 40%, #e9ebe2 0, transparent 45%), #f6f2e9; color: #102b30; }
