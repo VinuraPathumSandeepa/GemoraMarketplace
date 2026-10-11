@@ -3,8 +3,13 @@ class ApiConfig {
   // SERVER CONFIGURATION
   // ============================================================
 
-  // Android Emulator -> Windows host machine
-  static const String serverUrl = 'http://10.0.2.2:5198';
+  // Local development backend URL.
+  // Defaults to standard Android emulator loopback (10.0.2.2).
+  // For ChromeOS ARC / adb-reverse, pass `--dart-define=API_SERVER_URL=http://127.0.0.1:5198`.
+  static const String serverUrl = String.fromEnvironment(
+    'API_SERVER_URL',
+    defaultValue: 'http://10.0.2.2:5198',
+  );
 
   static const String baseUrl = '$serverUrl/api';
 
