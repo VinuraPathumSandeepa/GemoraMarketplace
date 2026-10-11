@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../constants/compliance_constants.dart';
+import '../../constants/gemora_colors.dart';
 import '../../models/export_request_model.dart';
 import '../../services/export_compliance_service.dart';
 
 class EditExportRequestScreen extends StatefulWidget {
   final ExportRequestModel request;
 
-  const EditExportRequestScreen({
-    super.key,
-    required this.request,
-  });
+  const EditExportRequestScreen({super.key, required this.request});
 
   @override
   State<EditExportRequestScreen> createState() =>
@@ -33,15 +31,19 @@ class _EditExportRequestScreenState extends State<EditExportRequestScreen> {
   @override
   void initState() {
     super.initState();
-    _destinationCountry = ComplianceConstants.supportedCountries.contains(widget.request.destinationCountry)
+    _destinationCountry =
+        ComplianceConstants.supportedCountries.contains(
+          widget.request.destinationCountry,
+        )
         ? widget.request.destinationCountry
         : ComplianceConstants.supportedCountries.first;
-    _declaredValueController =
-        TextEditingController(text: widget.request.declaredValue.toString());
-    _currencyController =
-        TextEditingController(text: widget.request.currency);
-    _purposeController =
-        TextEditingController(text: widget.request.purpose ?? '');
+    _declaredValueController = TextEditingController(
+      text: widget.request.declaredValue.toString(),
+    );
+    _currencyController = TextEditingController(text: widget.request.currency);
+    _purposeController = TextEditingController(
+      text: widget.request.purpose ?? '',
+    );
   }
 
   @override
@@ -98,8 +100,15 @@ class _EditExportRequestScreenState extends State<EditExportRequestScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: GemoraColors.cream,
       appBar: AppBar(
-        title: const Text('Edit Request Details'),
+        backgroundColor: GemoraColors.darkGreen,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Edit Request Details',
+          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.8),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -131,7 +140,8 @@ class _EditExportRequestScreenState extends State<EditExportRequestScreen> {
                 enabled: false,
                 decoration: const InputDecoration(
                   labelText: 'Origin Country *',
-                  helperText: 'Gemora export requests must originate from Sri Lanka',
+                  helperText:
+                      'Gemora export requests must originate from Sri Lanka',
                   border: OutlineInputBorder(),
                   filled: true,
                 ),
@@ -146,10 +156,7 @@ class _EditExportRequestScreenState extends State<EditExportRequestScreen> {
                   border: OutlineInputBorder(),
                 ),
                 items: ComplianceConstants.supportedCountries.map((c) {
-                  return DropdownMenuItem<String>(
-                    value: c,
-                    child: Text(c),
-                  );
+                  return DropdownMenuItem<String>(value: c, child: Text(c));
                 }).toList(),
                 onChanged: _isSaving
                     ? null
@@ -172,8 +179,9 @@ class _EditExportRequestScreenState extends State<EditExportRequestScreen> {
               // DECLARED VALUE
               TextFormField(
                 controller: _declaredValueController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Declared Value *',
                   hintText: 'e.g. 5000.00',
@@ -226,10 +234,16 @@ class _EditExportRequestScreenState extends State<EditExportRequestScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed:
-                          _isSaving ? null : () => Navigator.of(context).pop(),
+                      onPressed: _isSaving
+                          ? null
+                          : () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
+                        foregroundColor: GemoraColors.darkGreen,
+                        side: const BorderSide(color: GemoraColors.border),
                         padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       child: const Text('Cancel'),
                     ),
@@ -239,7 +253,12 @@ class _EditExportRequestScreenState extends State<EditExportRequestScreen> {
                     child: FilledButton(
                       onPressed: _isSaving ? null : _submitForm,
                       style: FilledButton.styleFrom(
+                        backgroundColor: GemoraColors.darkGreen,
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       child: _isSaving
                           ? const Row(

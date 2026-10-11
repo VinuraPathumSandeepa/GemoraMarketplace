@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
 import '../config/api_config.dart';
+import '../models/buyer_export_tracking_model.dart';
 import '../models/compliance_analysis_result_model.dart';
 import '../models/compliance_document_model.dart';
 import '../models/export_request_model.dart';
@@ -10,6 +11,12 @@ import 'token_storage_service.dart';
 
 class ExportComplianceService {
   final TokenStorageService _tokenStorage = TokenStorageService();
+  final http.Client? client;
+
+  ExportComplianceService({this.client});
+
+  Future<http.Response> _get(Uri url, Map<String, String> headers) =>
+      client?.get(url, headers: headers) ?? http.get(url, headers: headers);
 
   Future<Map<String, String>> _getHeaders() async {
     final token = await _tokenStorage.getToken();
@@ -508,6 +515,165 @@ class ExportComplianceService {
 
     return ExportRequestModel.fromJson(rawRequest);
   }
+
+  // ==========================================
+  // CREATE EXPORT REQUEST FROM ORDER (SELLER)
+  // ==========================================
+  Future<ExportRequestModel> createExportRequestFromOrder(dynamic orderId) async {
+    final headers = await _getHeaders();
+
+    final response = await http.post(
+      Uri.parse(ApiConfig.exportRequestFromOrder(orderId)),
+      headers: headers,
+    );
+
+    if (response.statusCode != 201) {
+      throw Exception(
+        _parseErrorResponse(
+          response,
+          "Failed to start export clearance for this order.",
+        ),
+      );
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final reqJson = data['request'] as Map<String, dynamic>;
+    return ExportRequestModel.fromJson(reqJson);
+  }
+
+  // ==========================================
+  // GET EXPORT TRACKING FOR ORDER (BUYER-SAFE)
+  // ==========================================
+  Future<BuyerExportTrackingModel> getOrderExportTracking(
+    dynamic orderId,
+  ) async {
+    final headers = await _getHeaders();
+
+    final response = await _get(
+      Uri.parse(ApiConfig.orderExportTracking(orderId)),
+      headers,
+    );
+
+    if (response.statusCode == 404) {
+      final orders = await _getTrackingFromOrders(headers);
+      for (final order in orders) {
+        if (order.orderId == orderId.toString()) return order;
+      }
+      throw Exception('This order could not be found in your account.');
+    }
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        _trackingError(
+          response,
+          'Export tracking could not be loaded for this order.',
+        ),
+      );
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return BuyerExportTrackingModel.fromJson(data);
+  }
+
+  // ==========================================
+  // GET ALL BUYER EXPORT TRACKING (BUYER-SAFE)
+  // ==========================================
+  Future<List<BuyerExportTrackingModel>> getMyExportTracking() async {
+    final headers = await _getHeaders();
+
+    final response = await _get(Uri.parse(ApiConfig.myExportTracking), headers);
+
+    if (response.statusCode == 404) {
+      return _getTrackingFromOrders(headers);
+    }
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        _trackingError(response, 'Failed to load export tracking records.'),
+      );
+    }
+
+    final data = jsonDecode(response.body);
+    if (data is! List) {
+      return [];
+    }
+
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(BuyerExportTrackingModel.fromJson)
+        .toList();
+  }
+
+  String _trackingError(http.Response response, String fallback) {
+    if (response.statusCode >= 500) {
+      return 'Export tracking is temporarily unavailable. Please try again.';
+    }
+    return _parseErrorResponse(response, fallback);
+  }
+
+  Future<List<BuyerExportTrackingModel>> _getTrackingFromOrders(
+    Map<String, String> headers,
+  ) async {
+    final response = await _get(Uri.parse(ApiConfig.myOrders), headers);
+    if (response.statusCode == 404) {
+      throw Exception(
+        'Export tracking is not available on this server. Restart the updated Gemora API and try again.',
+      );
+    }
+    if (response.statusCode != 200) {
+      throw Exception(
+        _trackingError(
+          response,
+          'Could not load your orders for export tracking.',
+        ),
+      );
+    }
+
+    final data = jsonDecode(response.body);
+    if (data is! List) {
+      throw Exception('The server returned an invalid order list.');
+    }
+
+    final orders = data.whereType<Map<String, dynamic>>().toList();
+    if (orders.any((order) => order['exportStatus'] == null)) {
+      throw Exception(
+        'This server does not provide export statuses. Restart the updated Gemora API and try again.',
+      );
+    }
+
+    return orders.map((order) {
+      final status = order['exportStatus'].toString();
+      final country = order['shippingCountryCode']?.toString() ?? '';
+      final domestic =
+          country.toUpperCase() == 'LK' || country.toLowerCase() == 'sri lanka';
+      final description = switch (status.toLowerCase()) {
+        'notrequired' =>
+          'Domestic order — international export clearance not required.',
+        'notstarted' =>
+          'Export clearance has not yet been initiated by the seller.',
+        'draft' => 'The seller is preparing export clearance.',
+        _ => 'Export clearance status: $status.',
+      };
+
+      return BuyerExportTrackingModel(
+        orderId: order['id']?.toString() ?? '',
+        orderNumber: order['orderNumber']?.toString() ?? '',
+        gemListingId: order['gemListingId'] as int?,
+        gemTitle: order['gemTitle']?.toString() ?? 'Gemstone',
+        gemImageUrl: order['gemImageUrl']?.toString(),
+        exportRequestId: order['exportRequestId']?.toString(),
+        status: status,
+        stageDescription: description,
+        originCountry: 'Sri Lanka',
+        destinationCountry: domestic ? 'Sri Lanka' : country,
+        updatedAt: DateTime.tryParse(
+          order['updatedAt']?.toString() ??
+              order['createdAt']?.toString() ??
+              '',
+        ),
+        isApproved: status.toLowerCase() == 'approved',
+        requiresExport: !domestic,
+      );
+    }).toList();
+  }
 }
-
-
