@@ -36,71 +36,11 @@ public class ExportComplianceService : IExportComplianceService
             return userVal;
         }
 
-        if (string.IsNullOrWhiteSpace(dto.OriginCountry) ||
-            !string.Equals(dto.OriginCountry.Trim(), "Sri Lanka", StringComparison.OrdinalIgnoreCase))
-        {
-            return new ExportRequestOperationResult
-            {
-                Success = false,
-                Message = "Export requests must originate from Sri Lanka.",
-                ErrorCode = "INVALID_ORIGIN_COUNTRY"
-            };
-        }
-
-        if (string.IsNullOrWhiteSpace(dto.DestinationCountry) ||
-            !ComplianceConstants.SupportedCountries.Any(c => string.Equals(c, dto.DestinationCountry.Trim(), StringComparison.OrdinalIgnoreCase)))
-        {
-            return new ExportRequestOperationResult
-            {
-                Success = false,
-                Message = "Destination country is required and must be a valid supported country.",
-                ErrorCode = "INVALID_REQUEST"
-            };
-        }
-
-        if (dto.DeclaredValue <= 0)
-        {
-            return new ExportRequestOperationResult
-            {
-                Success = false,
-                Message = "Declared value must be greater than 0.",
-                ErrorCode = "INVALID_REQUEST"
-            };
-        }
-
-        if (string.IsNullOrWhiteSpace(dto.Currency))
-        {
-            return new ExportRequestOperationResult
-            {
-                Success = false,
-                Message = "Currency is required.",
-                ErrorCode = "INVALID_REQUEST"
-            };
-        }
-
-        var now = DateTime.UtcNow;
-        var exportRequest = new ExportRequest
-        {
-            Id = Guid.NewGuid(),
-            RequestedByUserId = userId,
-            OriginCountry = dto.OriginCountry.Trim(),
-            DestinationCountry = dto.DestinationCountry.Trim(),
-            DeclaredValue = dto.DeclaredValue,
-            Currency = dto.Currency.Trim().ToUpperInvariant(),
-            Purpose = string.IsNullOrWhiteSpace(dto.Purpose) ? null : dto.Purpose.Trim(),
-            Status = ExportRequestStatus.Draft,
-            CreatedAt = now,
-            UpdatedAt = now
-        };
-
-        _context.ExportRequests.Add(exportRequest);
-        await _context.SaveChangesAsync();
-
         return new ExportRequestOperationResult
         {
-            Success = true,
-            Message = "Export request created successfully.",
-            Request = MapToResponseDto(exportRequest)
+            Success = false,
+            Message = "Export requests must be started from an eligible marketplace order.",
+            ErrorCode = "ORDER_REQUIRED"
         };
     }
 
@@ -118,6 +58,8 @@ public class ExportComplianceService : IExportComplianceService
 
         var requests = await _context.ExportRequests
             .AsNoTracking()
+            .Include(r => r.Order)
+                .ThenInclude(o => o!.GemListing)
             .Where(r => r.RequestedByUserId == userId)
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();
@@ -157,6 +99,8 @@ public class ExportComplianceService : IExportComplianceService
 
         var request = await _context.ExportRequests
             .AsNoTracking()
+            .Include(r => r.Order)
+                .ThenInclude(o => o!.GemListing)
             .FirstOrDefaultAsync(r => r.Id == exportRequestId && r.RequestedByUserId == userId);
 
         if (request == null)
@@ -995,7 +939,8 @@ public class ExportComplianceService : IExportComplianceService
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
             OrderId = entity.OrderId,
-            OrderNumber = entity.OrderId.HasValue ? $"GEM-{entity.OrderId.Value.ToString("N")[..8].ToUpperInvariant()}" : null
+            OrderNumber = entity.OrderId.HasValue ? $"GEM-{entity.OrderId.Value.ToString("N")[..8].ToUpperInvariant()}" : null,
+            GemListingTitle = entity.Order?.GemListing?.Title
         };
     }
 
@@ -1016,7 +961,8 @@ public class ExportComplianceService : IExportComplianceService
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
             OrderId = entity.OrderId,
-            OrderNumber = entity.OrderId.HasValue ? $"GEM-{entity.OrderId.Value.ToString("N")[..8].ToUpperInvariant()}" : null
+            OrderNumber = entity.OrderId.HasValue ? $"GEM-{entity.OrderId.Value.ToString("N")[..8].ToUpperInvariant()}" : null,
+            GemListingTitle = entity.Order?.GemListing?.Title
         };
     }
 

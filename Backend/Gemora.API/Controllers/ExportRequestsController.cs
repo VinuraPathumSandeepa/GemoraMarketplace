@@ -60,6 +60,7 @@ public class ExportRequestsController : ControllerBase
 
             return BadRequest(new
             {
+                errorCode = result.ErrorCode,
                 message = result.Message
             });
         }

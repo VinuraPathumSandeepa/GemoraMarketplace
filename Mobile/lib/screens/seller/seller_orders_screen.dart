@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../constants/gemora_colors.dart';
 import '../../models/marketplace/order_model.dart';
 import '../../services/export_compliance_service.dart';
 import '../../services/marketplace_service.dart';
@@ -60,7 +61,9 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
     setState(() => _startingExport.add(order.id));
 
     try {
-      final created = await _exportService.createExportRequestFromOrder(order.id);
+      final created = await _exportService.createExportRequestFromOrder(
+        order.id,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -70,11 +73,14 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
           ),
         );
 
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => ExportRequestDetailScreen(requestId: created.id),
-          ),
-        ).then((_) => _load());
+        Navigator.of(context)
+            .push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    ExportRequestDetailScreen(requestId: created.id),
+              ),
+            )
+            .then((_) => _load());
       }
     } catch (e) {
       if (mounted) {
@@ -91,24 +97,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
   }
 
   Color _getStatusColor(String? status) {
-    switch (status?.toLowerCase()) {
-      case 'approved':
-        return const Color(0xFF2E7D32);
-      case 'submitted':
-        return const Color(0xFF1976D2);
-      case 'undercompliancereview':
-        return const Color(0xFF7B1FA2);
-      case 'underofficerreview':
-        return const Color(0xFFE65100);
-      case 'revisionrequired':
-        return const Color(0xFFF57F17);
-      case 'rejected':
-        return const Color(0xFFC62828);
-      case 'draft':
-        return Colors.blueGrey;
-      default:
-        return Colors.grey.shade700;
-    }
+    return GemoraColors.getStatusColor(status);
   }
 
   String _formatStatusLabel(String? status) {
@@ -220,7 +209,8 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
           final exportStatus = order.exportStatus ?? 'NotStarted';
           final isNotStarted = exportStatus.toLowerCase() == 'notstarted';
           final isDomestic = exportStatus.toLowerCase() == 'notrequired';
-          final hasExport = !isNotStarted && !isDomestic && order.exportRequestId != null;
+          final hasExport =
+              !isNotStarted && !isDomestic && order.exportRequestId != null;
           final isStarting = _startingExport.contains(order.id);
           final statusColor = _getStatusColor(exportStatus);
 
@@ -271,10 +261,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                   const SizedBox(height: 4),
                   Text(
                     '${order.orderNumber} • Buyer: ${order.buyerName}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade700,
-                    ),
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -310,7 +297,10 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                           children: [
                             const Text(
                               'Destination: ',
-                              style: TextStyle(fontSize: 13, color: Colors.black87),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.black87,
+                              ),
                             ),
                             Text(
                               order.shippingCountryCode ?? 'International',
@@ -326,7 +316,10 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                           children: [
                             const Text(
                               'Status: ',
-                              style: TextStyle(fontSize: 13, color: Colors.black87),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.black87,
+                              ),
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -349,9 +342,49 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        if (isNotStarted)
+                        if (isDomestic)
+                          const Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle_outline,
+                                size: 16,
+                                color: GemoraColors.statusDraft,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                'Export clearance not required',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: GemoraColors.mutedText,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          )
+                        else if (isNotStarted) ...[
+                          const Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 16,
+                                color: GemoraColors.darkGold,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                'Export clearance required',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: GemoraColors.darkGold,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
                           ElevatedButton.icon(
-                            onPressed: isStarting ? null : () => _startExport(order),
+                            onPressed: isStarting
+                                ? null
+                                : () => _startExport(order),
                             icon: isStarting
                                 ? const SizedBox(
                                     width: 16,
@@ -362,15 +395,20 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                                     ),
                                   )
                                 : const Icon(Icons.flight_takeoff, size: 16),
-                            label: Text(isStarting
-                                ? 'Starting...'
-                                : 'Start Export Request'),
+                            label: Text(
+                              isStarting
+                                  ? 'Starting...'
+                                  : 'Start Export Clearance',
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _darkEmerald,
                               foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
-                          )
-                        else if (hasExport)
+                          ),
+                        ] else if (hasExport)
                           OutlinedButton.icon(
                             onPressed: () {
                               Navigator.of(context).push(
@@ -381,20 +419,17 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                                 ),
                               );
                             },
-                            icon: const Icon(Icons.visibility_outlined, size: 16),
-                            label: const Text('View Export Request'),
+                            icon: const Icon(
+                              Icons.visibility_outlined,
+                              size: 16,
+                            ),
+                            label: const Text('View Export Clearance'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: _darkEmerald,
                               side: const BorderSide(color: _darkEmerald),
-                            ),
-                          )
-                        else if (isDomestic)
-                          Text(
-                            'Domestic order — export clearance not required.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                              fontStyle: FontStyle.italic,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                           ),
                       ],

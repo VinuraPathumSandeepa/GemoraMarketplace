@@ -13,6 +13,7 @@ class ExportRequestModel {
   final DateTime updatedAt;
   final String? orderId;
   final String? orderNumber;
+  final String? gemListingTitle;
 
   ExportRequestModel({
     required this.id,
@@ -29,6 +30,7 @@ class ExportRequestModel {
     required this.updatedAt,
     this.orderId,
     this.orderNumber,
+    this.gemListingTitle,
   });
 
   factory ExportRequestModel.fromJson(Map<String, dynamic> json) {
@@ -57,6 +59,7 @@ class ExportRequestModel {
           : DateTime.now(),
       orderId: json['orderId']?.toString(),
       orderNumber: json['orderNumber']?.toString(),
+      gemListingTitle: json['gemListingTitle']?.toString(),
     );
   }
 

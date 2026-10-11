@@ -1,11 +1,27 @@
 import 'package:flutter/material.dart';
 
-import '../../constants/compliance_constants.dart';
+import '../../constants/gemora_colors.dart';
 import '../../services/export_compliance_service.dart';
+import '../seller/seller_orders_screen.dart';
 import 'export_request_detail_screen.dart';
 
 class CreateExportRequestScreen extends StatefulWidget {
-  const CreateExportRequestScreen({super.key});
+  final String? orderId;
+  final String? orderNumber;
+  final String? destinationCountry;
+  final double? declaredValue;
+  final String? currency;
+  final String? gemTitle;
+
+  const CreateExportRequestScreen({
+    super.key,
+    this.orderId,
+    this.orderNumber,
+    this.destinationCountry,
+    this.declaredValue,
+    this.currency,
+    this.gemTitle,
+  });
 
   @override
   State<CreateExportRequestScreen> createState() =>
@@ -13,55 +29,32 @@ class CreateExportRequestScreen extends StatefulWidget {
 }
 
 class _CreateExportRequestScreenState extends State<CreateExportRequestScreen> {
-  final _formKey = GlobalKey<FormState>();
   final _exportService = ExportComplianceService();
-
-  final String _originCountry = 'Sri Lanka';
-  String _destinationCountry = 'United States';
-  final _declaredValueController = TextEditingController();
-  final _currencyController = TextEditingController(text: 'USD');
-  final _purposeController = TextEditingController();
-
   bool _isSubmitting = false;
   String? _errorMessage;
 
-  @override
-  void dispose() {
-    _declaredValueController.dispose();
-    _currencyController.dispose();
-    _purposeController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate() || _isSubmitting) return;
+  Future<void> _submitOrderExport() async {
+    if (widget.orderId == null || _isSubmitting) return;
 
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
     });
 
-    final declaredValue = double.parse(_declaredValueController.text.trim());
-
     try {
-      final newRequest = await _exportService.createExportRequest(
-        originCountry: _originCountry,
-        destinationCountry: _destinationCountry,
-        declaredValue: declaredValue,
-        currency: _currencyController.text,
-        purpose: _purposeController.text,
+      final newRequest = await _exportService.createExportRequestFromOrder(
+        widget.orderId!,
       );
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Export request created successfully.'),
-          backgroundColor: Colors.green,
+          content: Text('Export clearance request initiated successfully.'),
+          backgroundColor: Color(0xFF2E7D32),
         ),
       );
 
-      // Navigate to newly created request detail and pop create screen
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => ExportRequestDetailScreen(requestId: newRequest.id),
@@ -82,160 +75,213 @@ class _CreateExportRequestScreenState extends State<CreateExportRequestScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final hasOrder = widget.orderId != null;
+
     return Scaffold(
+      backgroundColor: GemoraColors.cream,
       appBar: AppBar(
-        title: const Text('Create Export Request'),
+        backgroundColor: GemoraColors.darkGreen,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Start Export Clearance',
+          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.8),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (_errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.shade300),
-                  ),
-                  child: Text(
-                    _errorMessage!,
-                    style: TextStyle(color: Colors.red.shade800, fontSize: 14),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
+        padding: const EdgeInsets.all(22),
+        child: hasOrder ? _buildOrderBoundForm() : _buildStandaloneNotice(),
+      ),
+    );
+  }
 
-              // ORIGIN COUNTRY (READ-ONLY FIXED AS SRI LANKA)
-              TextFormField(
-                initialValue: 'Sri Lanka',
-                readOnly: true,
-                enabled: false,
-                decoration: const InputDecoration(
-                  labelText: 'Origin Country *',
-                  helperText: 'Gemora export requests must originate from Sri Lanka',
-                  border: OutlineInputBorder(),
-                  filled: true,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // DESTINATION COUNTRY DROPDOWN
-              DropdownButtonFormField<String>(
-                initialValue: _destinationCountry,
-                decoration: const InputDecoration(
-                  labelText: 'Destination Country *',
-                  border: OutlineInputBorder(),
-                ),
-                items: ComplianceConstants.supportedCountries.map((c) {
-                  return DropdownMenuItem<String>(
-                    value: c,
-                    child: Text(c),
-                  );
-                }).toList(),
-                onChanged: _isSubmitting
-                    ? null
-                    : (val) {
-                        if (val != null) {
-                          setState(() {
-                            _destinationCountry = val;
-                          });
-                        }
-                      },
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Destination country is required.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // DECLARED VALUE
-              TextFormField(
-                controller: _declaredValueController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Declared Value *',
-                  hintText: 'e.g. 5000.00',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Enter a declared value greater than 0.';
-                  }
-                  final val = double.tryParse(value.trim());
-                  if (val == null || val <= 0) {
-                    return 'Enter a declared value greater than 0.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // CURRENCY
-              TextFormField(
-                controller: _currencyController,
-                decoration: const InputDecoration(
-                  labelText: 'Currency *',
-                  hintText: 'e.g. USD',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Currency is required.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // PURPOSE (OPTIONAL)
-              TextFormField(
-                controller: _purposeController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Purpose (optional)',
-                  hintText: 'e.g. Commercial sale of sapphires',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // SUBMIT BUTTON
-              FilledButton(
-                onPressed: _isSubmitting ? null : _submitForm,
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: _isSubmitting
-                    ? const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          ),
-                          SizedBox(width: 12),
-                          Text('Creating request...'),
-                        ],
-                      )
-                    : const Text(
-                        'Create Request',
-                        style: TextStyle(fontSize: 16),
-                      ),
-              ),
-            ],
+  Widget _buildStandaloneNotice() {
+    return Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: GemoraColors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: GemoraColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
-        ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 68,
+            height: 68,
+            decoration: BoxDecoration(
+              color: GemoraColors.cream,
+              borderRadius: BorderRadius.circular(34),
+              border: Border.all(color: GemoraColors.border),
+            ),
+            child: const Icon(
+              Icons.receipt_long,
+              size: 36,
+              color: GemoraColors.darkGold,
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Order Required for Export Clearance',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: GemoraColors.darkGreen,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Export clearance requests must be started from an eligible international marketplace order. Standalone export requests without an order are not permitted.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: GemoraColors.deepGreen,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const SellerOrdersScreen()),
+              );
+            },
+            icon: const Icon(Icons.arrow_forward, size: 18),
+            label: const Text('View Seller Orders'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: GemoraColors.darkGreen,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderBoundForm() {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: GemoraColors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: GemoraColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_errorMessage != null) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Text(
+                _errorMessage!,
+                style: TextStyle(color: Colors.red.shade800, fontSize: 13),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          const Text(
+            'Order Information',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: GemoraColors.darkGreen,
+            ),
+          ),
+          const Divider(height: 20, color: GemoraColors.border),
+          _readOnlyRow(
+            'Order Reference',
+            widget.orderNumber ?? widget.orderId!,
+          ),
+          if (widget.gemTitle != null)
+            _readOnlyRow('Gemstone Listing', widget.gemTitle!),
+          _readOnlyRow('Origin Country', 'Sri Lanka (Fixed)'),
+          _readOnlyRow(
+            'Destination Country',
+            widget.destinationCountry ?? 'From Order',
+          ),
+          if (widget.declaredValue != null)
+            _readOnlyRow(
+              'Declared Value',
+              '${widget.currency ?? 'USD'} ${widget.declaredValue!.toStringAsFixed(2)}',
+            ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _isSubmitting ? null : _submitOrderExport,
+            icon: _isSubmitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.flight_takeoff, size: 18),
+            label: Text(
+              _isSubmitting
+                  ? 'Initiating Clearance...'
+                  : 'Start Export Clearance',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: GemoraColors.darkGreen,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _readOnlyRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 140,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                color: GemoraColors.mutedText,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                color: GemoraColors.deepGreen,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

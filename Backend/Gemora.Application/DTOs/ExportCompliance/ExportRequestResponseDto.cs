@@ -25,4 +25,6 @@ public class ExportRequestResponseDto
     public Guid? OrderId { get; set; }
 
     public string? OrderNumber { get; set; }
+
+    public string? GemListingTitle { get; set; }
 }
