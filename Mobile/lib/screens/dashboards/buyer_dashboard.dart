@@ -121,7 +121,8 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const SellerShipmentList(),
+                    builder: (context) =>
+                        const SellerShipmentList(buyerView: true),
                   ),
                 );
               },

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../config/api_config.dart';
 import '../../models/marketplace_gem_model.dart';
 import '../../services/marketplace_service.dart';
+import '../shipments/seller_shipment_list.dart';
 
 class MarketplaceScreen extends StatefulWidget {
   final bool isAuthenticated;
@@ -254,6 +255,11 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 
   void _handleBottomNavigation(int index) {
+    if (_showShipments && index == 4) {
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const SellerShipmentList()));
+      return;
+    }
     switch (index) {
       case 0:
         _goHome();
@@ -844,6 +850,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     );
   }
 
+  bool get _showShipments =>
+      widget.isAuthenticated && widget.role?.trim().toLowerCase() == 'seller';
+
   Widget _buildBottomNavigation() {
     return NavigationBar(
       selectedIndex: _bottomIndex,
@@ -877,6 +886,12 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           selectedIcon: Icon(Icons.person),
           label: 'Profile',
         ),
+        if (_showShipments)
+          const NavigationDestination(
+            icon: Icon(Icons.local_shipping_outlined),
+            selectedIcon: Icon(Icons.local_shipping),
+            label: 'My Shipments',
+          ),
       ],
     );
   }

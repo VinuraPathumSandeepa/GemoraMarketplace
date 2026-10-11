@@ -692,6 +692,40 @@ builder.Services
     .AddJwtBearer(
         options =>
         {
+            options.Events = new JwtBearerEvents
+            {
+                OnTokenValidated = async context =>
+                {
+                    var identity = context.Principal?.Identity as ClaimsIdentity;
+                    if (identity == null || !Guid.TryParse(
+                        identity.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId))
+                    {
+                        context.Fail("Invalid user identity.");
+                        return;
+                    }
+
+                    // Match authorization to /Auth/me, including role changes
+                    // made after this token was issued.
+                    var db = context.HttpContext.RequestServices
+                        .GetRequiredService<ApplicationDbContext>();
+                    var role = await db.Users.AsNoTracking()
+                        .Where(user => user.Id == userId)
+                        .Select(user => user.Role)
+                        .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
+                    if (string.IsNullOrWhiteSpace(role))
+                    {
+                        context.Fail("Account no longer exists or has no role.");
+                        return;
+                    }
+
+                    foreach (var claim in identity.FindAll(identity.RoleClaimType).ToList())
+                    {
+                        identity.RemoveClaim(claim);
+                    }
+                    identity.AddClaim(new Claim(identity.RoleClaimType, role));
+                }
+            };
+
             options.TokenValidationParameters =
                 new TokenValidationParameters
                 {

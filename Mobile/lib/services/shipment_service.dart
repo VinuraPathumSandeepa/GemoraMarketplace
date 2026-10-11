@@ -1,50 +1,122 @@
+import 'dart:async';
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+
 import '../config/api_config.dart';
 import 'token_storage_service.dart';
 
 class ShipmentService {
-  final TokenStorageService _tokenStorage = TokenStorageService();
-
-  Future<Map<String, String>> _getHeaders() async {
-    final token = await _tokenStorage.getToken();
-    return {
+  final http.Client _client;
+  final Future<String?> Function() _token;
+  ShipmentService({
+    http.Client? client,
+    Future<String?> Function()? tokenLoader,
+  }) : _client = client ?? http.Client(),
+       _token = tokenLoader ?? TokenStorageService().getToken;
+  Future<dynamic> request(
+    String path, {
+    String method = 'GET',
+    Map<String, dynamic>? body,
+    bool optional = false,
+  }) async {
+    final token = await _token();
+    if (token == null || token.trim().isEmpty) {
+      throw Exception('Your session has expired. Please sign in again.');
+    }
+    final uri = Uri.parse('${ApiConfig.baseUrl}$path');
+    final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
-  }
-
-  /// Get all shipments for the authenticated user
-  Future<List<dynamic>> getMyShipments() async {
-    final headers = await _getHeaders();
-    final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/shipments/my'),
-      headers: headers,
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as List<dynamic>;
-    } else {
-      throw Exception('Failed to load shipments: ${response.body}');
+    http.Response response;
+    try {
+      response =
+          await (method == 'POST'
+                  ? _client.post(
+                      uri,
+                      headers: headers,
+                      body: body == null ? null : jsonEncode(body),
+                    )
+                  : _client.get(uri, headers: headers))
+              .timeout(const Duration(seconds: 90));
+    } on TimeoutException {
+      throw Exception(
+        'The request timed out. Refresh to check its status before trying again.',
+      );
+    } on http.ClientException {
+      throw Exception(
+        'Cannot reach Gemora. Check your connection and that the backend is running.',
+      );
     }
-  }
-
-  /// Get shipment by ID
-  Future<Map<String, dynamic>> getShipmentById(String id) async {
-    final headers = await _getHeaders();
-    final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/shipments/$id'),
-      headers: headers,
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    } else {
-      throw Exception('Failed to load shipment: ${response.body}');
+    if (optional && response.statusCode == 404) return null;
+    dynamic decoded;
+    try {
+      decoded = response.body.isEmpty ? null : jsonDecode(response.body);
+    } catch (_) {
+      decoded = null;
     }
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (decoded == null && response.statusCode != 204) {
+        throw Exception('The server returned an invalid response.');
+      }
+      return decoded;
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Your session has expired. Please sign in again.');
+    }
+    if (response.statusCode == 403) {
+      throw Exception('You do not have permission to perform this action.');
+    }
+    if (decoded is Map) {
+      final errors = decoded['errors'];
+      if (errors is Map) {
+        throw Exception(
+          errors.entries
+              .map(
+                (e) =>
+                    '${e.key}: ${e.value is List ? (e.value as List).join(' ') : e.value}',
+              )
+              .join('\n'),
+        );
+      }
+      throw Exception(
+        decoded['message'] ??
+            decoded['title'] ??
+            'Request failed (HTTP ${response.statusCode}).',
+      );
+    }
+    throw Exception(
+      'Request failed (HTTP ${response.statusCode}). Please try again.',
+    );
   }
 
-  /// Create a new shipment (Seller only)
+  Future<List<dynamic>> getMyShipments() async =>
+      (await request('/shipments/my')) as List<dynamic>;
+  Future<Map<String, dynamic>> getShipmentById(String id) async =>
+      Map<String, dynamic>.from(await request('/shipments/$id'));
+  Future<List<dynamic>> getTrackingEvents(String id) async =>
+      (await request('/shipments/$id/tracking')) as List<dynamic>;
+  Future<Map<String, dynamic>?> getInsuranceRecord(String id) async =>
+      await request('/shipments/$id/insurance', optional: true);
+  Future<Map<String, dynamic>?> getShippingPlan(String id) async =>
+      await request('/shipments/$id/plan', optional: true);
+  Future<Map<String, dynamic>> generateShippingPlan(String id) async =>
+      await request('/shipments/$id/plan', method: 'POST');
+  Future<List<dynamic>> getShipmentEligibleOrders() async =>
+      (await request('/orders/my-shipment-eligible')) as List<dynamic>;
+  Future<List<dynamic>> getSellerOrders() async =>
+      (await request('/seller/orders')) as List<dynamic>;
+  Future<Map<String, dynamic>> getSellerOrder(String id) async =>
+      await request('/seller/orders/$id');
+  Future<void> orderAction(
+    String id,
+    String action,
+    Map<String, dynamic> body,
+  ) async {
+    await request('/seller/orders/$id/$action', method: 'POST', body: body);
+  }
+
   Future<Map<String, dynamic>> createShipment({
     required String orderId,
     required String originAddress,
@@ -57,119 +129,26 @@ class ShipmentService {
     String? preferredService,
     String specialHandlingNotes = '',
     bool exportRequired = false,
-  }) async {
-    final headers = await _getHeaders();
-    final body = jsonEncode({
+    double? packageWeight,
+    String? packageDimensions,
+  }) async => await request(
+    '/shipments',
+    method: 'POST',
+    body: {
       'orderId': orderId,
-      'originAddress': originAddress,
-      'originRegion': originRegion,
-      'originCountryCode': originCountryCode,
-      'destinationAddress': destinationAddress,
-      'destinationRegion': destinationRegion,
-      'destinationCountryCode': destinationCountryCode,
-      'packageDescription': packageDescription,
+      'originAddress': originAddress.trim(),
+      'originRegion': originRegion.trim(),
+      'originCountryCode': originCountryCode.trim().toUpperCase(),
+      'destinationAddress': destinationAddress.trim(),
+      'destinationRegion': destinationRegion.trim(),
+      'destinationCountryCode': destinationCountryCode.trim().toUpperCase(),
+      'packageDescription': packageDescription.trim(),
       'preferredService': preferredService ?? 'Standard',
-      'specialHandlingNotes': specialHandlingNotes,
+      'specialHandlingNotes': specialHandlingNotes.trim(),
       'exportRequired': exportRequired,
-    });
-
-    final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/shipments'),
-      headers: headers,
-      body: body,
-    );
-
-    if (response.statusCode == 201) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    } else {
-      final error = jsonDecode(response.body);
-      throw Exception(error['message'] ?? 'Failed to create shipment');
-    }
-  }
-
-  /// Get tracking events for a shipment
-  Future<List<dynamic>> getTrackingEvents(String shipmentId) async {
-    final headers = await _getHeaders();
-    final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/shipments/$shipmentId/tracking'),
-      headers: headers,
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as List<dynamic>;
-    } else {
-      throw Exception('Failed to load tracking events: ${response.body}');
-    }
-  }
-
-  /// Get insurance record for a shipment (returns single object or null)
-  Future<Map<String, dynamic>?> getInsuranceRecord(String shipmentId) async {
-    final headers = await _getHeaders();
-    final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/shipments/$shipmentId/insurance'),
-      headers: headers,
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    } else if (response.statusCode == 404) {
-      // No insurance record found - this is OK
-      return null;
-    } else {
-      throw Exception('Failed to load insurance record: ${response.body}');
-    }
-  }
-
-  /// Generate shipping plan
-  Future<Map<String, dynamic>> generateShippingPlan(String shipmentId) async {
-    final headers = await _getHeaders();
-    final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/shipments/$shipmentId/plan'),
-      headers: headers,
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    } else {
-      final error = jsonDecode(response.body);
-      throw Exception(error['message'] ?? 'Failed to generate shipping plan');
-    }
-  }
-
-  /// Get shipping plan
-  Future<Map<String, dynamic>?> getShippingPlan(String shipmentId) async {
-    final headers = await _getHeaders();
-    final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/shipments/$shipmentId/plan'),
-      headers: headers,
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    } else if (response.statusCode == 404) {
-      // No plan generated yet - this is OK
-      return null;
-    } else {
-      throw Exception('Failed to load shipping plan: ${response.body}');
-    }
-  }
-
-  /// Get seller's eligible orders for shipment creation
-  Future<List<dynamic>> getShipmentEligibleOrders() async {
-    final headers = await _getHeaders();
-    final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/orders/my-shipment-eligible'),
-      headers: headers,
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as List<dynamic>;
-    } else if (response.statusCode == 401) {
-      throw Exception('Authentication required. Please login again.');
-    } else if (response.statusCode == 403) {
-      throw Exception('Only sellers can access eligible orders.');
-    } else {
-      throw Exception('Failed to load eligible orders: ${response.body}');
-    }
-  }
+      'packageWeight': ?packageWeight,
+      'packageDimensions': packageDimensions?.trim(),
+    },
+  );
+  void dispose() => _client.close();
 }

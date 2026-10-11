@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../shipments/seller_shipment_list.dart';
+import '../shipments/seller_order_inbox.dart';
 import '../export_compliance/my_export_requests_screen.dart';
 import '../seller/create_gem_listing_screen.dart';
 import '../seller/my_gem_listings_screen.dart';
@@ -26,6 +27,13 @@ class SellerDashboard extends StatelessWidget {
         backgroundColor: const Color(0xFF08251E),
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Orders',
+            onPressed: () => showSellerOrderInbox(context),
+            icon: const Icon(Icons.notifications_outlined),
+          ),
+        ],
         title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -171,6 +179,23 @@ class SellerDashboard extends StatelessWidget {
               },
             ),
 
+            const SizedBox(height: 30),
+            _DashboardActionCard(
+              icon: Icons.local_shipping_outlined,
+              title: 'My Shipments',
+              description: 'Manage your gemstone deliveries, shipping plans, insurance, and tracking.',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SellerShipmentList()),
+              ),
+            ),
+            const SizedBox(height: 14),
+            _DashboardActionCard(
+              icon: Icons.notifications_outlined,
+              title: 'Orders',
+              description:
+                  'Review buyer requests and approve or reject orders.',
+              onTap: () => showSellerOrderInbox(context),
+            ),
             const SizedBox(height: 30),
 
             // ======================================================
@@ -408,22 +433,6 @@ class _DashboardActionCard extends StatelessWidget {
                 Icons.arrow_forward_ios_rounded,
                 size: 16,
                 color: Color(0xFFC99242),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SellerShipmentList(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.local_shipping),
-                label: const Text('Manage Shipments'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                ),
               ),
             ],
           ),
