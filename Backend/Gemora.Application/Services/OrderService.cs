@@ -2118,7 +2118,9 @@ public partial class OrderService : IOrderService
 
         Guid? actorId,
 
-        string? reason)
+        string? reason,
+
+        CancellationToken cancellationToken = default)
 
     {
 
@@ -2182,7 +2184,9 @@ public partial class OrderService : IOrderService
 
         await _context
 
-            .SaveChangesAsync();
+            .SaveChangesAsync(
+
+                cancellationToken);
 
     }
 

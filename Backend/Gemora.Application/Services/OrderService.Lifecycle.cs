@@ -38,17 +38,22 @@ public partial class OrderService
         return (await LoadOrderAsync(id))!;
     }
 
-    public async Task ExpireUnpaidAsync()
+    public async Task ExpireUnpaidAsync(
+        CancellationToken cancellationToken = default)
     {
-        await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        await using var transaction = await _context.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
         var now = DateTime.UtcNow;
         var expired = await _context.Orders.Where(o =>
             (o.Status == OrderStatuses.Confirmed || o.Status == OrderStatuses.AwaitingPayment) &&
-            o.PaymentDueAt != null && o.PaymentDueAt <= now && o.PaidAt == null).ToListAsync();
+            o.PaymentDueAt != null && o.PaymentDueAt <= now && o.PaidAt == null)
+            .ToListAsync(cancellationToken);
         foreach (var order in expired)
             await ChangeStatusAsync(order, OrderStatuses.Cancelled, null,
-                "Payment deadline expired. Payment was not completed within 3 hours; the gemstone is available again.");
-        await transaction.CommitAsync();
+                "Payment deadline expired. Payment was not completed within 3 hours; the gemstone is available again.",
+                cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     public async Task MarkMessageReadAsync(Guid id, Guid userId, bool seller, DateTime messageAt)

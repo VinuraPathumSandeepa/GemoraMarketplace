@@ -13,7 +13,9 @@ public sealed class OrderExpiryWorker(IServiceScopeFactory scopes, ILogger<Order
             try
             {
                 using var scope = scopes.CreateScope();
-                await scope.ServiceProvider.GetRequiredService<IOrderService>().ExpireUnpaidAsync();
+                await scope.ServiceProvider
+                    .GetRequiredService<IOrderService>()
+                    .ExpireUnpaidAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
