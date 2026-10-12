@@ -102,7 +102,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (success) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => VerifyEmailScreen(email: email)),
+        MaterialPageRoute(
+          builder: (_) => VerifyEmailScreen(
+            email: email,
+            initialEmailSent: authProvider.registrationEmailSent,
+          ),
+        ),
       );
 
       return;

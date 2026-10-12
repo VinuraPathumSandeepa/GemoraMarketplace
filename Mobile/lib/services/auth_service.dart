@@ -8,14 +8,17 @@ import '../models/user_model.dart';
 import 'token_storage_service.dart';
 
 class AuthService {
+  final http.Client _client;
   final TokenStorageService _tokenStorage = TokenStorageService();
+
+  AuthService({http.Client? client}) : _client = client ?? http.Client();
 
   // ==========================================
   // LOGIN
   // ==========================================
 
   Future<UserModel> login(String email, String password) async {
-    final response = await http
+    final response = await _client
         .post(
           Uri.parse(ApiConfig.login),
           headers: {'Content-Type': 'application/json'},
@@ -57,7 +60,7 @@ class AuthService {
   // REGISTER
   // ==========================================
 
-  Future<void> register({
+  Future<bool> register({
     required String fullName,
     required String email,
     required String phoneNumber,
@@ -66,7 +69,7 @@ class AuthService {
     required String password,
     required String role,
   }) async {
-    final response = await http.post(
+    final response = await _client.post(
       Uri.parse(ApiConfig.register),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -85,6 +88,8 @@ class AuthService {
     if (response.statusCode != 201) {
       throw Exception(responseData['message'] ?? 'Registration failed.');
     }
+
+    return responseData['verificationEmailSent'] != false;
   }
 
   // ==========================================
@@ -95,7 +100,7 @@ class AuthService {
     required String email,
     required String code,
   }) async {
-    final response = await http.post(
+    final response = await _client.post(
       Uri.parse(ApiConfig.verifyEmail),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email.trim(), 'code': code.trim()}),
@@ -113,7 +118,7 @@ class AuthService {
   // ==========================================
 
   Future<void> resendVerificationCode({required String email}) async {
-    final response = await http.post(
+    final response = await _client.post(
       Uri.parse(ApiConfig.resendVerificationCode),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email.trim()}),
@@ -139,7 +144,7 @@ class AuthService {
       throw Exception('Authentication token not found.');
     }
 
-    final response = await http
+    final response = await _client
         .get(
           Uri.parse(ApiConfig.currentUser),
           headers: {
