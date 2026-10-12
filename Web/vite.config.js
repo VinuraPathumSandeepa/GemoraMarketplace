@@ -8,6 +8,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
+    // These suites use node:test and run through the separate test:node script.
+    exclude: ['**/node_modules/**', '**/dist/**', 'src/services/authSession.test.js', 'src/utils/orderMessages.test.js'],
   },
   server: {
     proxy: {

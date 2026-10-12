@@ -120,6 +120,7 @@ function CreateGemListing() {
 
   const removeGemImage = () => {
     setGemImage(null);
+    setGemImagePreview("");
   };
 
   const removeCertificate = () => {
@@ -661,7 +662,7 @@ function CreateGemListing() {
                 </div>
 
 
-                {gemImagePreview ? (
+                {gemImage && gemImagePreview ? (
                   <div className="seller-create-image-preview">
 
                     <img

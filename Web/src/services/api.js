@@ -22,20 +22,19 @@ export const API_ORIGIN =
 export function resolveApiAssetUrl(
   value
 ) {
-  if (!value) {
+  if (typeof value !== "string" || !value.trim()) {
     return null;
   }
 
-  if (
-    value.startsWith("http://") ||
-    value.startsWith("https://")
-  ) {
-    return value;
+  const assetUrl = value.trim();
+
+  if (/^https?:\/\//i.test(assetUrl)) {
+    return assetUrl;
   }
 
-  return `${API_ORIGIN}${value.startsWith("/")
-      ? value
-      : `/${value}`
+  return `${API_ORIGIN}${assetUrl.startsWith("/")
+      ? assetUrl
+      : `/${assetUrl}`
     }`;
 }
 
