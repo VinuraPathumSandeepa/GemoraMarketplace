@@ -52,23 +52,45 @@ public sealed class SupabaseStorageClient
             throw new ArgumentNullException(nameof(options));
         }
 
-        if (string.IsNullOrWhiteSpace(options.ProjectUrl))
+        _projectUrl = options.ProjectUrl.TrimEnd('/');
+
+        _secretKey = options.ServiceRoleKey.Trim();
+
+        _httpClient = httpClient;
+
+        _httpClient.Timeout =
+            TimeSpan.FromSeconds(90);
+
+        // Storage is optional for endpoints that do not read or write files.
+        // Validate it lazily so a missing deployment secret cannot break
+        // unrelated routes such as authentication.
+        if (Uri.TryCreate(
+                _projectUrl,
+                UriKind.Absolute,
+                out var configuredProjectUri) &&
+            configuredProjectUri.Scheme == Uri.UriSchemeHttps)
+        {
+            _httpClient.BaseAddress = new Uri(
+                $"{_projectUrl}/storage/v1/"
+            );
+        }
+    }
+
+    private void EnsureConfigured()
+    {
+        if (string.IsNullOrWhiteSpace(_projectUrl))
         {
             throw new InvalidOperationException(
                 "Supabase Storage project URL is missing."
             );
         }
 
-        if (string.IsNullOrWhiteSpace(options.ServiceRoleKey))
+        if (string.IsNullOrWhiteSpace(_secretKey))
         {
             throw new InvalidOperationException(
                 "Supabase Storage secret API key is missing."
             );
         }
-
-        _projectUrl = options.ProjectUrl.TrimEnd('/');
-
-        _secretKey = options.ServiceRoleKey.Trim();
 
         // This implementation uses the NEW Supabase secret key.
 
@@ -102,14 +124,9 @@ public sealed class SupabaseStorageClient
             );
         }
 
-        _httpClient = httpClient;
-
-        _httpClient.BaseAddress = new Uri(
+        _httpClient.BaseAddress ??= new Uri(
             $"{_projectUrl}/storage/v1/"
         );
-
-        _httpClient.Timeout =
-            TimeSpan.FromSeconds(90);
     }
 
     // ============================================================
@@ -126,6 +143,8 @@ public sealed class SupabaseStorageClient
         HttpMethod method,
         string relativePath)
     {
+        EnsureConfigured();
+
         var request = new HttpRequestMessage(
             method,
             relativePath

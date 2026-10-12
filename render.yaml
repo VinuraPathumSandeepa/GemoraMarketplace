@@ -30,6 +30,12 @@ services:
       - key: CorsOrigins
         value: https://gemora-marketplace-web.onrender.com
 
+      - key: SupabaseStorage__ProjectUrl
+        sync: false
+
+      - key: SupabaseStorage__ServiceRoleKey
+        sync: false
+
       # ---- Set these in Render Dashboard as secret values ----
       # ConnectionStrings__DefaultConnection  (your PostgreSQL connection string)
       # Jwt__Key                              (your JWT secret key)
