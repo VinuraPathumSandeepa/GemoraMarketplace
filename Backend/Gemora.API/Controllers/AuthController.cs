@@ -113,7 +113,10 @@ public class AuthController : ControllerBase
                     result.Message,
 
                 requiresEmailVerification =
-                    true
+                    true,
+
+                verificationEmailSent =
+                    result.ErrorCode != "EMAIL_DELIVERY_FAILED"
             }
         );
     }
