@@ -16,7 +16,7 @@ export default function BuyerStats({
     {
       title: "Authorized Sellers",
       value:
-        stats?.authorizedSellers ?? 0,
+        stats?.authorizedSellers ?? "—",
       icon:
         <ShieldCheck size={22} />,
       subtitle:
@@ -26,7 +26,7 @@ export default function BuyerStats({
     {
       title: "Registered Buyers",
       value:
-        stats?.registeredBuyers ?? 0,
+        stats?.registeredBuyers ?? "—",
       icon:
         <Users size={22} />,
       subtitle:
@@ -36,7 +36,7 @@ export default function BuyerStats({
     {
       title: "Available Gems",
       value:
-        stats?.activeGemListings ?? 0,
+        stats?.activeGemListings ?? "—",
       icon:
         <Gem size={22} />,
       subtitle:
@@ -46,7 +46,7 @@ export default function BuyerStats({
     {
       title: "Successful Transactions",
       value:
-        stats?.successfulTransactions ?? 0,
+        stats?.successfulTransactions ?? "—",
       icon:
         <BadgeDollarSign size={22} />,
       subtitle:
