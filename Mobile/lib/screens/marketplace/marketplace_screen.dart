@@ -246,6 +246,20 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 
   void _handleBottomNavigation(int index) {
+    if (_hideWorkspaceForBuyer) {
+      switch (index) {
+        case 0:
+          _goHome();
+          return;
+        case 1:
+          _goExplore();
+          return;
+        case 2:
+          widget.onProfile?.call();
+          return;
+      }
+    }
+
     if (_showShipments && index == 4) {
       Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => const SellerShipmentList()));
@@ -859,6 +873,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   bool get _showShipments =>
       widget.isAuthenticated && widget.role?.trim().toLowerCase() == 'seller';
 
+  bool get _hideWorkspaceForBuyer =>
+      widget.isAuthenticated && widget.role?.trim().toLowerCase() == 'buyer';
+
   Widget _buildBottomNavigation() {
     return NavigationBar(
       selectedIndex: _bottomIndex,
@@ -876,17 +893,18 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           selectedIcon: Icon(Icons.diamond),
           label: 'Explore',
         ),
-        NavigationDestination(
-          icon: Icon(
-            widget.isAuthenticated
-                ? Icons.work_outline_rounded
-                : Icons.login_rounded,
+        if (!_hideWorkspaceForBuyer)
+          NavigationDestination(
+            icon: Icon(
+              widget.isAuthenticated
+                  ? Icons.work_outline_rounded
+                  : Icons.login_rounded,
+            ),
+            selectedIcon: Icon(
+              widget.isAuthenticated ? Icons.work_rounded : Icons.login_rounded,
+            ),
+            label: widget.isAuthenticated ? 'Workspace' : 'Account',
           ),
-          selectedIcon: Icon(
-            widget.isAuthenticated ? Icons.work_rounded : Icons.login_rounded,
-          ),
-          label: widget.isAuthenticated ? 'Workspace' : 'Account',
-        ),
         const NavigationDestination(
           icon: Icon(Icons.person_outline_rounded),
           selectedIcon: Icon(Icons.person),

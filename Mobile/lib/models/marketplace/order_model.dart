@@ -38,6 +38,13 @@ class OrderModel {
   final String? shippingCountryCode;
   final String? exportStatus;
   final String? exportRequestId;
+  final DateTime? paymentDueAt;
+  final DateTime? paidAt;
+  final String fulfillmentStatus;
+  final DateTime? handedOverAt;
+  final DateTime? deliveredAt;
+  final String? shipmentStatus;
+  final String? trackingNumber;
   final DateTime createdAt;
   final List<OrderHistoryItem> statusHistory;
 
@@ -55,12 +62,20 @@ class OrderModel {
     this.shippingCountryCode,
     this.exportStatus,
     this.exportRequestId,
+    this.paymentDueAt,
+    this.paidAt,
+    this.fulfillmentStatus = 'Pending',
+    this.handedOverAt,
+    this.deliveredAt,
+    this.shipmentStatus,
+    this.trackingNumber,
     required this.createdAt,
     required this.statusHistory,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     final history = json['statusHistory'];
+    final shipment = json['shipment'];
 
     return OrderModel(
       id: json['id']?.toString() ?? '',
@@ -76,6 +91,18 @@ class OrderModel {
       shippingCountryCode: _asNullableString(json['shippingCountryCode']),
       exportStatus: _asNullableString(json['exportStatus']),
       exportRequestId: _asNullableString(json['exportRequestId']),
+      paymentDueAt: _parseNullableDate(json['paymentDueAt']),
+      paidAt: _parseNullableDate(json['paidAt']),
+      fulfillmentStatus:
+          _asNullableString(json['fulfillmentStatus']) ?? 'Pending',
+      handedOverAt: _parseNullableDate(json['handedOverAt']),
+      deliveredAt: _parseNullableDate(json['deliveredAt']),
+      shipmentStatus: shipment is Map
+          ? _asNullableString(shipment['status'])
+          : null,
+      trackingNumber: shipment is Map
+          ? _asNullableString(shipment['trackingNumber'])
+          : null,
       createdAt: _parseDate(json['createdAt']),
       statusHistory: history is List
           ? history
@@ -105,4 +132,9 @@ double _asDouble(dynamic value) {
 DateTime _parseDate(dynamic value) {
   return DateTime.tryParse(value?.toString() ?? '') ??
       DateTime.fromMillisecondsSinceEpoch(0);
+}
+
+DateTime? _parseNullableDate(dynamic value) {
+  final text = value?.toString();
+  return text == null || text.isEmpty ? null : DateTime.tryParse(text);
 }

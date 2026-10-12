@@ -198,6 +198,51 @@ class MarketplaceService {
     return OrderModel.fromJson(decoded);
   }
 
+  Future<Map<String, dynamic>> createPaymentIntent(String orderId) async {
+    final response = await _post(
+      Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/payment/intent'),
+      headers: {
+        ...await _authenticatedHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'paymentMethod': 'Card'}),
+    );
+
+    _ensureSuccess(response, 'We could not start your card payment.');
+    final decoded = _decode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('The payment service returned an unexpected response.');
+    }
+    return decoded;
+  }
+
+  Future<OrderModel> confirmCardPayment({
+    required String orderId,
+    required String paymentIntentId,
+    required String paymentMethodToken,
+  }) async {
+    final response = await _post(
+      Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/payment/confirm'),
+      headers: {
+        ...await _authenticatedHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'paymentIntentId': paymentIntentId,
+        'paymentMethodToken': paymentMethodToken,
+        'paymentMethod': 'Card',
+      }),
+    );
+
+    _ensureSuccess(response, 'Your card payment could not be completed.');
+    final decoded = _decode(response.body);
+    final order = decoded is Map<String, dynamic> ? decoded['order'] : null;
+    if (order is! Map) {
+      throw Exception('The payment service returned an unexpected response.');
+    }
+    return OrderModel.fromJson(Map<String, dynamic>.from(order));
+  }
+
   Future<List<OrderModel>> getSellerOrders() async {
     final response = await _get(
       Uri.parse(ApiConfig.sellerOrders),

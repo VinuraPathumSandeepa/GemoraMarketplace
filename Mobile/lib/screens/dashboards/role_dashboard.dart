@@ -8,6 +8,7 @@ import '../../config/api_config.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/token_storage_service.dart';
 import '../marketplace/marketplace_screen.dart';
+import '../marketplace/my_orders_screen.dart';
 import 'admin_dashboard.dart';
 import 'buyer_dashboard.dart';
 import 'export_officer_dashboard.dart';
@@ -315,16 +316,45 @@ class _RoleDashboardState extends State<RoleDashboard> {
 
                   const SizedBox(height: 8),
 
-                  _ProfileActionTile(
-                    icon: Icons.work_outline_rounded,
-                    title: '$_cleanRole Workspace',
-                    subtitle: _workspaceSubtitle(),
-                    onTap: () {
-                      Navigator.pop(sheetContext);
+                  if (_normalizedRole == 'buyer') ...[
+                    _ProfileActionTile(
+                      icon: Icons.receipt_long_outlined,
+                      title: 'Orders',
+                      subtitle: 'Review, pay and track your purchases.',
+                      onTap: () {
+                        Navigator.pop(sheetContext);
 
-                      _openWorkspace();
-                    },
-                  ),
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const MyOrdersScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    _ProfileActionTile(
+                      icon: Icons.dashboard_outlined,
+                      title: 'Services',
+                      subtitle: 'Open your buyer services and activities.',
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+
+                        _openWorkspace();
+                      },
+                    ),
+                  ] else
+                    _ProfileActionTile(
+                      icon: Icons.work_outline_rounded,
+                      title: '$_cleanRole Workspace',
+                      subtitle: _workspaceSubtitle(),
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+
+                        _openWorkspace();
+                      },
+                    ),
 
                   const SizedBox(height: 8),
 
