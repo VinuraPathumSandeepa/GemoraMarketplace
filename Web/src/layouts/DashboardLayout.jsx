@@ -108,15 +108,6 @@ function DashboardLayout({ children }) {
               Dashboard
             </NavLink>
             <NavLink
-              to="/admin/gem-listings"
-              className={({ isActive }) => isActive ? "gemora-nav-link active" : "gemora-nav-link"}
-            >
-              Gem Listings
-            </NavLink>
-
-
-
-            <NavLink
               to="/seller/listings"
               className={({ isActive }) =>
                 isActive
