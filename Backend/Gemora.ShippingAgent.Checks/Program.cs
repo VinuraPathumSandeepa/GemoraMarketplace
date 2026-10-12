@@ -26,9 +26,10 @@ if (args.Contains("--live"))
 {
     var live = new GeminiShippingAgentProvider(new HttpClient(new LiveTransport()) { Timeout = Timeout.InfiniteTimeSpan }, Options.Create(new GeminiOptions
     {
-        ApiKey = Environment.GetEnvironmentVariable("Gemini__ApiKey") ?? "",
+        ShippingApiKey = Environment.GetEnvironmentVariable("Gemini__ShippingApiKey") ?? "",
         Model = Environment.GetEnvironmentVariable("Gemini__Model") ?? "gemini-3.8-flash",
         ShippingModel = Environment.GetEnvironmentVariable("Gemini__ShippingModel")
+            ?? ""
     }));
     try
     {
@@ -44,7 +45,7 @@ const string planJson = """
 """;
 string Final(string json) => JsonSerializer.Serialize(new { candidates = new[] { new { content = new { role = "model", parts = new[] { new { text = json } } } } } });
 GeminiShippingAgentProvider Provider(FakeTransport handler, string key = "test-key") => new(new HttpClient(handler),
-    Options.Create(new GeminiOptions { ApiKey = key, Model = "test-model" }));
+    Options.Create(new GeminiOptions { ShippingApiKey = key, Model = "test-model" }));
 void Assert(bool condition, string message) { if (!condition) throw new Exception(message); }
 async Task Reject(string name, Func<Task> action)
 {
@@ -68,7 +69,7 @@ Console.WriteLine("PASS: model tool selection, scoped evidence, synthesis and ex
 
 var fast = new FakeTransport([toolReply, Final(planJson)]);
 await new GeminiShippingAgentProvider(new HttpClient(fast), Options.Create(new GeminiOptions
-    { ApiKey = "test-key", Model = "gemini-3.8-flash", ShippingTimeoutSeconds = 120 }))
+    { ShippingApiKey = "test-key", Model = "gemini-3.8-flash", ShippingTimeoutSeconds = 120 }))
     .GenerateShippingPlanAsync(input);
 foreach (var body in fast.Bodies)
 {
@@ -83,7 +84,7 @@ Console.WriteLine("PASS: low-latency thinking applies to tool selection and fina
 var shippingOverride = new FakeTransport([toolReply, Final(planJson)]);
 var overrideOptions = new GeminiOptions
 {
-    ApiKey = "test-key", Model = "gemini-3.8-flash", ShippingModel = "gemini-3.5-flash-lite"
+    ShippingApiKey = "test-key", Model = "gemini-3.8-flash", ShippingModel = "gemini-3.5-flash-lite"
 };
 var overrideResult = await new GeminiShippingAgentProvider(new HttpClient(shippingOverride), Options.Create(overrideOptions))
     .GenerateShippingPlanAsync(input);

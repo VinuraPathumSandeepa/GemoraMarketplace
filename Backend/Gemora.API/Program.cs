@@ -354,52 +354,6 @@ builder.Services.Configure<
 );
 
 
-// Allow every Gemini feature to share one deployment credential while still
-// supporting a compliance-specific override when required.
-builder.Services.PostConfigure<
-    GeminiComplianceOptions
->(
-    options =>
-    {
-        if (string.IsNullOrWhiteSpace(options.ApiKey))
-        {
-            options.ApiKey =
-                builder.Configuration[
-                    $"{GeminiMarketplaceOptions.SectionName}:ApiKey"
-                ]
-                ?? builder.Configuration[
-                    $"{GeminiOptions.SectionName}:ApiKey"
-                ]
-                ?? string.Empty;
-        }
-
-
-        var configuredModel =
-            builder.Configuration[
-                $"{GeminiComplianceOptions.SectionName}:Model"
-            ];
-
-
-        if (string.IsNullOrWhiteSpace(configuredModel))
-        {
-            var sharedModel =
-                builder.Configuration[
-                    $"{GeminiMarketplaceOptions.SectionName}:Model"
-                ]
-                ?? builder.Configuration[
-                    $"{GeminiOptions.SectionName}:Model"
-                ];
-
-
-            if (!string.IsNullOrWhiteSpace(sharedModel))
-            {
-                options.Model = sharedModel;
-            }
-        }
-    }
-);
-
-
 builder.Services.AddHttpClient<
     IComplianceAiClient,
     GeminiComplianceAiClient
@@ -466,46 +420,6 @@ builder.Services.Configure<
 );
 
 
-// A single Gemini:* credential can power the whole application in production.
-// Keep GeminiMarketplace:* as the feature-specific override for local setups.
-builder.Services.PostConfigure<
-    GeminiMarketplaceOptions
->(
-    options =>
-    {
-        if (string.IsNullOrWhiteSpace(options.ApiKey))
-        {
-            options.ApiKey =
-                builder.Configuration[
-                    $"{GeminiOptions.SectionName}:ApiKey"
-                ]
-                ?? string.Empty;
-        }
-
-
-        var configuredModel =
-            builder.Configuration[
-                $"{GeminiMarketplaceOptions.SectionName}:Model"
-            ];
-
-
-        if (string.IsNullOrWhiteSpace(configuredModel))
-        {
-            var sharedModel =
-                builder.Configuration[
-                    $"{GeminiOptions.SectionName}:Model"
-                ];
-
-
-            if (!string.IsNullOrWhiteSpace(sharedModel))
-            {
-                options.Model = sharedModel;
-            }
-        }
-    }
-);
-
-
 builder.Services.AddHttpClient<
     IMarketplaceAiClient,
     GeminiMarketplaceAiClient
@@ -565,62 +479,6 @@ builder.Services.Configure<
     builder.Configuration.GetSection(
         GeminiOptions.SectionName
     )
-);
-
-
-// The marketplace and verification agents use the same Gemini provider.
-// Keep verification-specific Gemini:* values as the highest priority, while
-// allowing installations that already configured GeminiMarketplace:* to use
-// that shared credential and model. This avoids a false "provider
-// configuration" failure when only the marketplace section is populated.
-builder.Services.PostConfigure<
-    GeminiOptions
->(
-    options =>
-    {
-        if (
-            string.IsNullOrWhiteSpace(
-                options.ApiKey
-            )
-        )
-        {
-            options.ApiKey =
-                builder.Configuration[
-                    $"{GeminiMarketplaceOptions.SectionName}:ApiKey"
-                ]
-                ?? string.Empty;
-        }
-
-
-        var verificationModel =
-            builder.Configuration[
-                $"{GeminiOptions.SectionName}:Model"
-            ];
-
-
-        if (
-            string.IsNullOrWhiteSpace(
-                verificationModel
-            )
-        )
-        {
-            var sharedModel =
-                builder.Configuration[
-                    $"{GeminiMarketplaceOptions.SectionName}:Model"
-                ];
-
-
-            if (
-                !string.IsNullOrWhiteSpace(
-                    sharedModel
-                )
-            )
-            {
-                options.Model =
-                    sharedModel;
-            }
-        }
-    }
 );
 
 

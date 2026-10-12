@@ -60,13 +60,9 @@ public class GeminiComplianceAiClientTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_UsesSharedMarketplaceCredential_WhenComplianceKeyIsMissing()
+    public async Task AnalyzeAsync_DoesNotUseMarketplaceCredential_WhenComplianceKeyIsMissing()
     {
         var handler = new FakeHttpMessageHandler();
-        handler.QueueResponse(
-            HttpStatusCode.OK,
-            CreateValidGeminiResponseBody("Shared credential success")
-        );
 
         var client = CreateClient(
             handler,
@@ -83,9 +79,9 @@ public class GeminiComplianceAiClientTests
 
         var result = await client.AnalyzeAsync(CreateValidContext());
 
-        Assert.True(result.Success);
-        Assert.Single(handler.Requests);
-        Assert.True(handler.Requests[0].Headers.Contains("x-goog-api-key"));
+        Assert.False(result.Success);
+        Assert.Equal("AI_NOT_CONFIGURED", result.ErrorCode);
+        Assert.Empty(handler.Requests);
     }
 
     private static ComplianceAgentContextDto CreateValidContext()

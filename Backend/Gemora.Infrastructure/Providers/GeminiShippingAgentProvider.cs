@@ -20,13 +20,13 @@ public sealed class GeminiShippingAgentProvider(HttpClient client, IOptions<Gemi
         var configured = options.Value;
         var settings = new GeminiOptions
         {
-            ApiKey = configured.ApiKey,
+            ApiKey = configured.ShippingApiKey,
             Model = string.IsNullOrWhiteSpace(configured.ShippingModel)
                 ? configured.Model : configured.ShippingModel.Trim(),
             ShippingTimeoutSeconds = configured.ShippingTimeoutSeconds
         };
         if (string.IsNullOrWhiteSpace(settings.ApiKey) || string.IsNullOrWhiteSpace(settings.Model))
-            throw new InvalidOperationException("Gemini shipping agent is not configured. Set Gemini:ApiKey and Gemini:Model.");
+            throw new InvalidOperationException("Gemini shipping agent is not configured. Set Gemini:ShippingApiKey and Gemini:ShippingModel.");
         if (input.DeclaredValue <= 0 || string.IsNullOrWhiteSpace(input.Currency) ||
             string.IsNullOrWhiteSpace(input.OriginCountryCode) || string.IsNullOrWhiteSpace(input.DestinationCountryCode) ||
             EligibleServices(input).Length == 0)

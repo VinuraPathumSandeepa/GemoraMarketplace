@@ -4,8 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import DashboardLayout from "../../layouts/DashboardLayout";
 
 import gemListingService from "../../services/gemVerification/gemListingService";
-
-const API_ORIGIN = "https://gemora-api.onrender.com/api";
+import { resolveApiAssetUrl } from "../../services/api";
 
 const STATUS_CONFIG = {
   Draft: {
