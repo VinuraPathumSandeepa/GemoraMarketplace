@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
@@ -48,6 +48,32 @@ const STATUS_CONFIG = {
       "This listing was rejected during Gemologist verification.",
   },
 };
+
+function submissionErrorMessage(error) {
+  const status = error?.response?.status;
+  const message = error?.response?.data?.message;
+
+  if (typeof message === "string" && /gemstone image.*required/i.test(message)) {
+    return "A gemstone image is required before submission.";
+  }
+
+  switch (status) {
+    case 400:
+      return "Please review the listing details and try again.";
+    case 401:
+      return "Your session has expired. Please sign in again.";
+    case 403:
+      return "You do not have permission to submit this listing.";
+    case 404:
+      return "This listing could not be found. Return to My Listings and try again.";
+    case 409:
+      return "This listing can no longer be submitted. Refresh it to check its current status.";
+    default:
+      return error?.code === "ERR_NETWORK"
+        ? "Unable to reach the server. Check your connection and try again."
+        : "Unable to submit your listing. Please try again.";
+  }
+}
 
 // ============================================================
 // FILE URL - WORKS LOCALLY AND ON RENDER
@@ -107,6 +133,8 @@ function GemListingDetails() {
     useState(false);
 
   const [submitting, setSubmitting] = useState(false);
+
+  const submitRequestInFlight = useRef(false);
 
   const [deleting, setDeleting] = useState(false);
 
@@ -425,6 +453,17 @@ function GemListingDetails() {
   // ==========================================================
 
   const confirmSubmitForVerification = async () => {
+    if (submitRequestInFlight.current || !canSubmit) {
+      return;
+    }
+
+    if (!hasImage) {
+      setSubmitModalError("A gemstone image is required before submission.");
+      return;
+    }
+
+    submitRequestInFlight.current = true;
+
     try {
       setSubmitModalError("");
 
@@ -432,14 +471,13 @@ function GemListingDetails() {
 
       setSubmitting(true);
 
-      const response = await api.post(
-        `/GemListings/${id}/submit-verification`
-      );
+      const submittedListing = await gemListingService.submitListing(id);
 
-      console.log(
-        "Submit verification response:",
-        response.data
-      );
+      if (submittedListing?.status !== "PendingVerification") {
+        throw new Error("Submission response did not confirm Pending Review.");
+      }
+
+      setListing(submittedListing);
 
       setShowSubmitModal(false);
 
@@ -451,20 +489,15 @@ function GemListingDetails() {
           : "Listing submitted successfully. It is now waiting for Gemologist review."
       );
 
-      await loadListing();
     } catch (error) {
       console.error(
         "Submit verification failed:",
         error
       );
 
-      setSubmitModalError(
-        getErrorMessage(
-          error,
-          "The listing could not be submitted for verification."
-        )
-      );
+      setSubmitModalError(submissionErrorMessage(error));
     } finally {
+      submitRequestInFlight.current = false;
       setSubmitting(false);
     }
   };
@@ -1654,6 +1687,7 @@ function GemListingDetails() {
                   className="gem-submit-modal-confirm"
                   disabled={
                     !hasImage ||
+                    !canSubmit ||
                     submitting
                   }
                   onClick={

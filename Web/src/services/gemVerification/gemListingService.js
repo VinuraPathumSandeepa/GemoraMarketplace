@@ -38,7 +38,7 @@ const gemListingService = {
   // to the Gemologist verification workflow
   submitListing: async (id) => {
     const response = await api.post(
-      `/GemListings/${id}/submit`
+      `/GemListings/${id}/submit-verification`
     );
 
     return response.data;

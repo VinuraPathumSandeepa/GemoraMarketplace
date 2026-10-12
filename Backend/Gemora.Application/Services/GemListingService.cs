@@ -424,6 +424,13 @@ public class GemListingService : IGemListingService
             );
         }
 
+        if (string.IsNullOrWhiteSpace(listing.PrimaryImageUrl))
+        {
+            throw new InvalidOperationException(
+                "A gemstone image is required before submission."
+            );
+        }
+
         // --------------------------------------------------------
         // Update listing status
         // --------------------------------------------------------
