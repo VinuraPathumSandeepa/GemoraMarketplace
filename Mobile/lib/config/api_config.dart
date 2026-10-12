@@ -88,6 +88,10 @@ class ApiConfig {
 
   static const String myGemListings = '$baseUrl/GemListings/my';
 
+  static String get adminGemListings => '$baseUrl/admin/gem-listings';
+
+  static String adminGemListing(int id) => '$adminGemListings/$id';
+
   static const String createGemListing = '$baseUrl/GemListings';
 
   static String gemListing(int id) => '$baseUrl/GemListings/$id';
