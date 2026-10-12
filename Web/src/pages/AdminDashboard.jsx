@@ -1,10 +1,6 @@
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
-import AdminShipments from "./AdminShipments";
 
-<<<<<<< HEAD
-export default function AdminDashboard() {
-  return <DashboardLayout><AdminShipments /></DashboardLayout>;
-=======
 function AdminDashboard() {
   const navigate = useNavigate();
   return (
@@ -31,5 +27,6 @@ function AdminDashboard() {
       </div>
     </DashboardLayout>
   );
->>>>>>> origin/dev
 }
+
+export default AdminDashboard;
