@@ -1,0 +1,337 @@
+/* Dashboard specific design tokens and motion. Kept separate from legacy page CSS. */
+
+.seller-dashboard-backdrop {
+  min-height: 100%;
+  background: linear-gradient(180deg, #f5f7f3 0%, #fbf9f4 100%);
+}
+
+.seller-dashboard-refined {
+  max-width: 1320px;
+  padding: clamp(20px, 3vw, 42px);
+}
+
+.seller-dashboard-refined .seller-dashboard-hero {
+  min-height: 448px;
+  padding: clamp(32px, 5vw, 64px);
+  border: 1px solid rgb(222 199 148 / 15%);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 78% 39%, rgb(31 104 121 / 27%), transparent 34%),
+    radial-gradient(circle at 7% 0%, rgb(198 155 77 / 16%), transparent 36%),
+    linear-gradient(122deg, #0a211c 0%, #102d28 54%, #0a252b 100%);
+  box-shadow: 0 24px 64px rgb(5 31 27 / 16%);
+}
+
+.seller-dashboard-refined .seller-dashboard-hero::after {
+  width: 560px;
+  height: 560px;
+  top: -270px;
+  right: -210px;
+  border-color: rgb(226 196 129 / 10%);
+}
+
+.seller-dashboard-refined .seller-dashboard-hero-content {
+  width: min(56%, 600px);
+  max-width: 600px;
+}
+
+.seller-dashboard-refined .seller-dashboard-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 22px;
+  color: #e7c984;
+  letter-spacing: .18em;
+}
+
+.seller-hero-spark {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #e7c984;
+  box-shadow: 0 0 0 5px rgb(231 201 132 / 12%);
+}
+
+.seller-dashboard-refined .seller-dashboard-hero h1 {
+  font-size: clamp(2.7rem, 4.6vw, 4.7rem);
+  line-height: 1.04;
+  letter-spacing: -.055em;
+}
+
+.seller-dashboard-refined .seller-dashboard-hero h1 em {
+  color: #e7c984;
+  font-family: Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -.045em;
+}
+
+.seller-dashboard-refined .seller-dashboard-hero p {
+  max-width: 480px;
+  margin-top: 23px;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: rgb(255 255 255 / 82%);
+}
+
+.seller-dashboard-refined .seller-dashboard-hero-actions { margin-top: 30px; }
+
+.seller-dashboard-refined :is(.seller-dashboard-primary-button, .seller-dashboard-secondary-button) {
+  min-height: 49px;
+  padding: 0 20px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-size: .82rem;
+  white-space: nowrap;
+}
+
+.seller-dashboard-refined .seller-dashboard-primary-button { gap: 10px; }
+.seller-dashboard-refined .seller-dashboard-secondary-button { gap: 10px; }
+
+.seller-hero-footnote {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 27px;
+  color: rgb(242 224 184 / 82%);
+  font-size: .77rem;
+  line-height: 1.4;
+}
+
+.seller-dashboard-refined .seller-dashboard-hero-visual {
+  width: 420px;
+  height: 420px;
+  right: 2.5%;
+  opacity: 1;
+}
+
+.seller-dashboard-refined .seller-dashboard-gem-scene { position: relative; width: 100%; height: 100%; pointer-events: none; }
+
+.seller-dashboard-refined .seller-dashboard-gem-float {
+  animation: none;
+}
+
+.seller-dashboard-refined .seller-dashboard-gem-rotator {
+  width: min(68%, 286px);
+  height: min(68%, 286px);
+  transform-origin: center center;
+  animation: gemoraSapphireSpin 9s linear infinite;
+  filter: drop-shadow(0 0 22px rgb(77 164 255 / 70%)) drop-shadow(0 0 58px rgb(23 100 224 / 55%)) drop-shadow(0 26px 28px rgb(2 17 31 / 35%));
+}
+
+.seller-dashboard-refined .seller-dashboard-gem {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: none;
+}
+
+.seller-dashboard-refined .seller-dashboard-gem-glow {
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgb(63 150 255 / 55%) 0%, rgb(30 108 216 / 35%) 36%, rgb(7 65 153 / 12%) 62%, transparent 74%);
+  filter: blur(19px);
+  animation: gemoraSapphireGlow 3.6s ease-in-out infinite;
+}
+.seller-dashboard-refined .seller-dashboard-gem-ring { border-color: rgb(231 201 132 / 23%); }
+.seller-dashboard-refined .seller-dashboard-gem-ring-one { width: 340px; height: 340px; }
+.seller-dashboard-refined .seller-dashboard-gem-ring-two { width: 400px; height: 400px; }
+
+.seller-gem-label {
+  position: absolute;
+  left: 50%;
+  bottom: 48px;
+  transform: translateX(-50%);
+  color: rgb(240 223 180 / 70%);
+  font-size: .66rem;
+  font-weight: 700;
+  letter-spacing: .22em;
+  white-space: nowrap;
+}
+.seller-gem-label span { margin: 0 8px; color: #d7ae66; }
+
+@keyframes gemoraSapphireSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes gemoraSapphireGlow {
+  0%, 100% { opacity: .66; transform: translate(-50%, -50%) scale(.88); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+}
+
+.seller-dashboard-refined .seller-section-heading-modern {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 22px;
+  margin-bottom: 21px;
+}
+.seller-dashboard-refined .seller-section-heading-modern h2 { font-size: clamp(1.55rem, 2vw, 2rem); letter-spacing: -.035em; }
+.seller-dashboard-refined .seller-section-heading-modern p { margin: 8px 0 0; color: #62716b; font-size: .88rem; line-height: 1.5; }
+.seller-dashboard-refined .seller-stats-view-all { text-decoration: none; white-space: nowrap; }
+.seller-dashboard-refined .seller-stats-view-all svg { color: #b88638; }
+
+.seller-dashboard-refined .seller-stats-grid { gap: 14px; margin-top: 0; }
+.seller-dashboard-refined .seller-stat-card-modern {
+  min-height: 193px;
+  border-radius: 20px;
+  border-color: #e4e7df;
+  background: #fff;
+  box-shadow: 0 8px 30px rgb(18 41 33 / 5%);
+}
+.seller-dashboard-refined .seller-stat-card-modern::after { border-color: rgb(190 151 80 / 18%); }
+.seller-dashboard-refined .seller-stat-card-total { background: linear-gradient(145deg, #132c27, #1e443a); border-color: #2d5245; }
+.seller-dashboard-refined .seller-stat-card-modern .seller-stat-icon { color: #966b31; background: #f7f0e4; }
+.seller-dashboard-refined .seller-stat-card-total .seller-stat-icon { background: rgb(231 201 132 / 14%); color: #e7c984; }
+.seller-dashboard-refined .seller-stat-card-modern .seller-stat-number { font-size: clamp(2.4rem, 3vw, 3.1rem); }
+.seller-dashboard-refined .seller-stat-card-modern p { font-size: .77rem; line-height: 1.5; }
+.seller-dashboard-refined .seller-stat-card-total p { color: rgb(255 255 255 / 75%); }
+
+.seller-dashboard-refined .seller-workflow-grid { gap: 14px; }
+.seller-dashboard-refined .seller-workflow-card-modern {
+  min-height: 215px;
+  border-radius: 20px;
+  border-color: #e4e7df;
+  background: linear-gradient(155deg, #fff, #fafbf8);
+  box-shadow: 0 8px 28px rgb(18 41 33 / 4%);
+}
+.seller-dashboard-refined .seller-workflow-card-modern::before {
+  content: "";
+  position: absolute;
+  left: 24px;
+  top: 0;
+  width: 44px;
+  height: 3px;
+  background: #c99c50;
+  border-radius: 0 0 3px 3px;
+}
+.seller-dashboard-refined .seller-workflow-icon { width: 45px; height: 45px; background: #f4eee2; color: #92672e; }
+.seller-dashboard-refined .seller-workflow-card h3 { font-size: 1rem; }
+.seller-dashboard-refined .seller-workflow-card p { font-size: .79rem; line-height: 1.6; }
+
+.seller-dashboard-refined .seller-action-card-modern {
+  min-height: 118px;
+  text-decoration: none;
+  color: inherit;
+  border-color: #e4e7df;
+  border-radius: 20px;
+  box-shadow: 0 8px 28px rgb(18 41 33 / 4%);
+}
+.seller-dashboard-refined .seller-action-card-modern .seller-action-icon { width: 52px; height: 52px; background: #eef4ef; color: #225448; }
+.seller-action-copy { display: grid; gap: 5px; }
+.seller-action-copy strong { color: #1a3029; font-size: .95rem; }
+.seller-action-copy small { color: #68766e; font-size: .78rem; line-height: 1.5; }
+.seller-dashboard-refined .seller-verification-note { border-radius: 20px; background: linear-gradient(120deg, #f8f3e9, #fff); }
+.seller-dashboard-refined .seller-verification-note-icon { color: #a27432; }
+.seller-dashboard-refined .seller-verification-note p { font-size: .81rem; }
+.seller-dashboard-refined :is(a, button):focus-visible { outline: 3px solid #c99c50; outline-offset: 3px; }
+
+/* Buyer dashboard: show the film while keeping copy legible. */
+.gm-buyer .gm-dashboard .gm-welcome { padding-inline: 2px; }
+.gm-buyer .gm-dashboard .gm-welcome > span { color: var(--gm-label); font-size: .7rem; letter-spacing: .2em; }
+.gm-buyer .gm-dashboard .gm-welcome p { color: var(--gm-muted); font-size: .86rem; }
+.gm-buyer .gm-dashboard .gm-dashboard-hero.gm-video-hero {
+  display: block;
+  min-height: 550px;
+  border: 1px solid rgb(229 199 130 / 16%);
+  border-radius: 28px;
+  box-shadow: 0 24px 64px rgb(8 37 30 / 18%);
+}
+.gm-buyer .gm-dashboard .gm-hero-video { object-position: 58% center; }
+.gm-buyer .gm-dashboard .gm-hero-video-tint {
+  background: linear-gradient(90deg, rgb(5 28 24 / 88%) 0%, rgb(5 28 24 / 70%) 37%, rgb(5 28 24 / 13%) 82%), linear-gradient(0deg, rgb(5 28 24 / 45%), transparent 50%);
+}
+.gm-buyer .gm-dashboard .gm-video-hero .gm-hero-copy {
+  width: min(100%, 670px);
+  margin: 0;
+  padding: clamp(34px, 5vw, 66px);
+  background: none;
+  border: 0;
+  box-shadow: none;
+  display: flex;
+  min-height: 550px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+.gm-buyer .gm-dashboard .gm-hero-copy .gm-eyebrow { color: #edce8d; letter-spacing: .19em; font-size: .69rem; font-weight: 700; }
+.gm-buyer .gm-dashboard .gm-hero-copy h1 { margin-top: 18px; font-size: clamp(2.6rem, 4.3vw, 4.8rem); line-height: 1.04; letter-spacing: -.052em; text-shadow: 0 3px 22px rgb(0 0 0 / 22%); }
+.gm-buyer .gm-dashboard .gm-hero-copy h1 em { color: #edce8d; }
+.gm-buyer .gm-dashboard .gm-hero-copy p { max-width: 470px; margin-top: 21px; color: rgb(255 255 255 / 86%); font-size: .99rem; line-height: 1.7; }
+.gm-buyer .gm-dashboard .gm-hero-actions { margin-top: 29px; }
+.gm-buyer .gm-dashboard .gm-hero-trust { gap: 20px; margin-top: 28px; color: #e7c984; }
+.gm-buyer .gm-dashboard .gm-video-hero .gm-hero-caption {
+  position: absolute;
+  right: 28px;
+  bottom: 28px;
+  max-width: 210px;
+  background: rgb(8 37 30 / 72%);
+  border-radius: 16px;
+}
+.gm-buyer .gm-dashboard .gm-hero-caption span { color: #e7c984; }
+.gm-buyer .gm-dashboard .gm-hero-caption p { color: #fff; }
+.gm-buyer .gm-dashboard .gm-stat,
+.gm-buyer .gm-dashboard :is(.gm-quick-actions, .gm-profile-summary, .gm-recent-orders) {
+  border: 1px solid var(--gm-border);
+  border-radius: 22px;
+  box-shadow: 0 10px 36px rgb(8 37 30 / 5%);
+}
+.gm-buyer .gm-dashboard .gm-stat { display: block; min-height: 175px; padding: 24px; background: var(--gm-surface); }
+.gm-buyer .gm-dashboard .gm-stat-icon { display: grid; width: 43px; height: 43px; border-radius: 13px; color: var(--gm-green); background: var(--gm-soft); }
+.gm-buyer .gm-dashboard .gm-stat strong { font-size: 2.45rem; line-height: 1; }
+.gm-buyer .gm-dashboard .gm-stat h3 { font-size: .89rem; }
+.gm-buyer .gm-dashboard .gm-action-grid > :is(a, button) { border-radius: 14px; min-height: 64px; transition: transform .2s, border-color .2s, box-shadow .2s; }
+.gm-buyer .gm-dashboard .gm-action-grid > a:hover { transform: translateY(-3px); border-color: var(--gm-gold); box-shadow: 0 8px 20px rgb(8 37 30 / 8%); }
+.gm-buyer .gm-dashboard .gm-guide-grid article { border-radius: 20px; }
+
+@media (max-width: 1050px) {
+  .seller-dashboard-refined .seller-dashboard-hero-content { width: min(62%, 560px); }
+  .seller-dashboard-refined .seller-dashboard-hero-visual { width: 340px; height: 340px; right: -25px; opacity: .88; }
+  .seller-dashboard-refined .seller-dashboard-gem-ring-one { width: 280px; height: 280px; }
+  .seller-dashboard-refined .seller-dashboard-gem-ring-two { width: 325px; height: 325px; }
+}
+
+@media (max-width: 720px) {
+  .seller-dashboard-refined .seller-dashboard-hero { display: flex; flex-direction: column; align-items: stretch; min-height: 0; padding: 32px 26px 18px; }
+  .seller-dashboard-refined .seller-dashboard-hero-content { width: 100%; max-width: none; }
+  .seller-dashboard-refined .seller-dashboard-hero h1 { font-size: clamp(2.5rem, 9vw, 3.7rem); }
+  .seller-dashboard-refined .seller-dashboard-hero-visual { position: relative; top: auto; right: auto; align-self: center; width: min(100%, 300px); height: 285px; margin-top: 6px; transform: none; opacity: 1; }
+  .seller-dashboard-refined .seller-dashboard-gem-ring-one { width: 250px; height: 250px; }
+  .seller-dashboard-refined .seller-dashboard-gem-ring-two { width: 285px; height: 285px; }
+  .seller-dashboard-refined .seller-gem-label { bottom: 43px; }
+  .seller-dashboard-refined :is(.seller-stats-grid, .seller-workflow-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .seller-dashboard-refined .seller-section-heading-modern { align-items: start; flex-direction: column; }
+  .gm-buyer .gm-dashboard .gm-dashboard-hero.gm-video-hero { min-height: 610px; }
+  .gm-buyer .gm-dashboard .gm-video-hero .gm-hero-copy { min-height: 610px; padding: 76px 27px 140px; justify-content: center; }
+  .gm-buyer .gm-dashboard .gm-hero-video-tint { background: linear-gradient(90deg, rgb(5 28 24 / 76%), rgb(5 28 24 / 35%)), linear-gradient(0deg, rgb(5 28 24 / 65%), transparent 60%); }
+  .gm-buyer .gm-dashboard .gm-video-hero .gm-hero-caption { display: none; }
+}
+
+@media (max-width: 520px) {
+  .seller-dashboard-refined :is(.seller-stats-grid, .seller-workflow-grid, .seller-action-grid) { grid-template-columns: 1fr; }
+  .seller-dashboard-refined .seller-stat-card-modern { min-height: 150px; }
+  .seller-dashboard-refined .seller-workflow-card-modern { min-height: 0; }
+  .seller-dashboard-refined .seller-dashboard-hero-actions { align-items: stretch; }
+  .seller-dashboard-refined :is(.seller-dashboard-primary-button, .seller-dashboard-secondary-button) { width: 100%; }
+  .gm-buyer .gm-dashboard .gm-hero-copy h1 { font-size: clamp(2.4rem, 11vw, 3.6rem); }
+  .gm-buyer .gm-dashboard .gm-hero-copy p { font-size: .89rem; }
+  .gm-buyer .gm-dashboard .gm-hero-trust { gap: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seller-dashboard-refined :is(.seller-dashboard-gem-ring, .seller-stat-card-modern) { animation: none !important; }
+  .seller-dashboard-refined :is(.seller-stat-card-modern, .seller-workflow-card-modern, .seller-action-card-modern),
+  .gm-buyer .gm-dashboard .gm-action-grid > a { transition: none !important; }
+  .seller-dashboard-refined .seller-dashboard-gem-rotator {
+    animation: gemoraSapphireSpin 9s linear infinite !important;
+    animation-duration: 9s !important;
+    animation-iteration-count: infinite !important;
+  }
+  .seller-dashboard-refined .seller-dashboard-gem-glow {
+    animation: gemoraSapphireGlow 3.6s ease-in-out infinite !important;
+    animation-duration: 3.6s !important;
+    animation-iteration-count: infinite !important;
+  }
+}

@@ -48,6 +48,17 @@ public interface IExportComplianceService
         Guid exportRequestId,
         Guid documentId,
         CancellationToken cancellationToken = default);
+
+    Task<ExportRequestOperationResult> CreateExportRequestFromOrderAsync(
+        Guid userId,
+        Guid orderId);
+
+    Task<BuyerExportTrackingDto?> GetExportTrackingForOrderAsync(
+        Guid orderId,
+        Guid userId);
+
+    Task<List<BuyerExportTrackingDto>> GetBuyerExportTrackingListAsync(
+        Guid buyerId);
 }
 
 

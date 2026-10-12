@@ -44,6 +44,12 @@ const STATUS_CONFIG = {
       "This listing has completed the Gemologist verification workflow and has been approved.",
   },
 
+  Sold: {
+    label: "Sold",
+    className: "approved",
+    message: "An order has been placed for this gemstone. It is no longer available to other buyers.",
+  },
+
   Rejected: {
     label: "Rejected",
     className: "rejected",
@@ -651,6 +657,12 @@ function GemListingDetails() {
 
       description:
         "The listing has left Draft preparation and is now waiting for Gemologist review.",
+    };
+  } else if (status === "Sold") {
+    preparationStage = {
+      label: "Sold",
+      className: "complete",
+      description: statusConfig.message,
     };
   } else if (status === "Approved") {
     preparationStage = {
