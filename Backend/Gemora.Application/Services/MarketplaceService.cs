@@ -41,7 +41,10 @@ public class MarketplaceService : IMarketplaceService
                 query.Search))
         {
             var search =
-                query.Search.Trim();
+                query.Search.Trim()
+                    .Replace("\\", "\\\\")
+                    .Replace("%", "\\%")
+                    .Replace("_", "\\_");
 
             var pattern =
                 $"%{search}%";
@@ -50,15 +53,18 @@ public class MarketplaceService : IMarketplaceService
                 gems.Where(g =>
                     EF.Functions.ILike(
                         g.Title,
-                        pattern) ||
+                        pattern,
+                        "\\") ||
 
                     EF.Functions.ILike(
                         g.GemType,
-                        pattern) ||
+                        pattern,
+                        "\\") ||
 
                     EF.Functions.ILike(
                         g.Description,
-                        pattern));
+                        pattern,
+                        "\\"));
         }
 
 
@@ -261,6 +267,22 @@ public class MarketplaceService : IMarketplaceService
 
         var totalItems =
             await gems.CountAsync();
+
+        var offset = ((long)page - 1) * pageSize;
+
+        if (offset >= totalItems)
+        {
+            return new PagedMarketplaceResponseDto
+            {
+                Items = new List<MarketplaceGemResponseDto>(),
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = totalItems == 0
+                    ? 0
+                    : (int)Math.Ceiling(totalItems / (double)pageSize)
+            };
+        }
 
 
         // C2-BUG-002: Calculate the offset without int overflow.

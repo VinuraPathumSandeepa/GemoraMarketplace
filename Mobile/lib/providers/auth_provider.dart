@@ -4,11 +4,15 @@ import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
-  final AuthService _authService = AuthService();
+  final AuthService _authService;
+
+  AuthProvider({AuthService? authService})
+    : _authService = authService ?? AuthService();
 
   UserModel? _user;
   bool _isLoading = true;
   String? _errorMessage;
+  bool _registrationEmailSent = true;
 
   // ==========================================
   // GETTERS
@@ -19,6 +23,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   String? get errorMessage => _errorMessage;
+  bool get registrationEmailSent => _registrationEmailSent;
 
   bool get isAuthenticated => _user != null;
 
@@ -93,11 +98,12 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     _isLoading = true;
     _errorMessage = null;
+    _registrationEmailSent = true;
 
     notifyListeners();
 
     try {
-      await _authService.register(
+      _registrationEmailSent = await _authService.register(
         fullName: fullName.trim(),
         email: email.trim(),
         phoneNumber: phoneNumber.trim(),
