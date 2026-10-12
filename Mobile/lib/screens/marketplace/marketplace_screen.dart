@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../config/api_config.dart';
 import '../../models/marketplace/marketplace_gem.dart';
 import '../../services/marketplace_service.dart';
+import '../../widgets/gem_search_suggestions.dart';
 import '../../widgets/gemora_mark.dart';
 import '../onboarding/welcome_screen.dart';
 import 'my_orders_screen.dart';
@@ -38,11 +39,15 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
   final TextEditingController _searchController = TextEditingController();
 
+  final FocusNode _searchFocusNode = FocusNode();
+
   final ScrollController _scrollController = ScrollController();
 
   final GlobalKey _exploreSectionKey = GlobalKey();
 
   List<MarketplaceGem> _gems = [];
+
+  List<MarketplaceGem> _suggestionGems = [];
 
   bool _loading = true;
 
@@ -80,12 +85,19 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   void initState() {
     super.initState();
 
+    _searchFocusNode.addListener(_refreshSearchSuggestions);
+
     _loadGems();
+  }
+
+  void _refreshSearchSuggestions() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     _scrollController.dispose();
 
     super.dispose();
@@ -100,10 +112,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     }
 
     try {
-      final gems = await _service.getGems(
-        search: _searchController.text,
-        gemType: _selectedCategory,
-      );
+      final search = _searchController.text.trim();
+      final category = _selectedCategory;
+      final gems = await _service.getGems(search: search, gemType: category);
 
       if (!mounted) {
         return;
@@ -111,6 +122,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
       setState(() {
         _gems = gems;
+        if (search.isEmpty && category == 'All') {
+          _suggestionGems = gems;
+        }
       });
     } catch (error) {
       if (!mounted) {
@@ -135,6 +149,25 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       _bottomIndex = 1;
     });
 
+    _loadGems();
+  }
+
+  void _submitSearch([String? suggestion]) {
+    if (suggestion != null) {
+      _searchController.value = TextEditingValue(
+        text: suggestion,
+        selection: TextSelection.collapsed(offset: suggestion.length),
+      );
+    }
+    _searchFocusNode.unfocus();
+    setState(() => _bottomIndex = 1);
+    _loadGems();
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    _searchFocusNode.unfocus();
+    setState(() {});
     _loadGems();
   }
 
@@ -549,44 +582,59 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   Widget _buildSearch() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 20, 18, 0),
-      child: TextField(
-        controller: _searchController,
-        textInputAction: TextInputAction.search,
-        onSubmitted: (_) {
-          setState(() {
-            _bottomIndex = 1;
-          });
-
-          _loadGems();
-        },
-        decoration: InputDecoration(
-          hintText: 'Search gemstones...',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: IconButton(
-            onPressed: () {
-              setState(() {
-                _bottomIndex = 1;
-              });
-
-              _loadGems();
-            },
-            icon: const Icon(Icons.tune_rounded),
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(vertical: 16),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: _border),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: _border),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: _green),
-          ),
+      child: TextFieldTapRegion(
+        child: Column(
+          children: [
+            TextField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              textInputAction: TextInputAction.search,
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (_) => _submitSearch(),
+              decoration: InputDecoration(
+                hintText: 'Search gemstones...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_searchController.text.isNotEmpty)
+                      IconButton(
+                        tooltip: 'Clear search',
+                        onPressed: _clearSearch,
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    IconButton(
+                      tooltip: 'Search gemstones',
+                      onPressed: _submitSearch,
+                      icon: const Icon(Icons.arrow_forward_rounded),
+                    ),
+                  ],
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: _green),
+                ),
+              ),
+            ),
+            if (_searchFocusNode.hasFocus &&
+                _searchController.text.trim().isNotEmpty)
+              GemSearchSuggestions(
+                gems: _suggestionGems.isNotEmpty ? _suggestionGems : _gems,
+                query: _searchController.text,
+                onSelected: _submitSearch,
+              ),
+          ],
         ),
       ),
     );
@@ -791,11 +839,20 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                             ),
                           ),
                         ),
-                        const Icon(
-                          Icons.verified_rounded,
-                          color: Color(0xFF247A50),
-                          size: 16,
-                        ),
+                        gem.isAvailable
+                            ? const Icon(
+                                Icons.verified_rounded,
+                                color: Color(0xFF247A50),
+                                size: 16,
+                              )
+                            : const Text(
+                                'SOLD',
+                                style: TextStyle(
+                                  color: Color(0xFFA66536),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -945,6 +1002,8 @@ class _MarketplaceGemDetailsScreenState
 
   bool _ordering = false;
 
+  bool _soldByCurrentOrder = false;
+
   String? _error;
 
   static const Color _darkGreen = Color(0xFF08251E);
@@ -996,6 +1055,7 @@ class _MarketplaceGemDetailsScreenState
   String? _imageUrl(String? value) => ApiConfig.resolveImageUrl(value);
 
   void _buy() {
+    if (_gem?.isAvailable == false || _soldByCurrentOrder) return;
     if (!widget.isAuthenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1032,10 +1092,10 @@ class _MarketplaceGemDetailsScreenState
 
   void _showPurchaseConfirmation(MarketplaceGem gem) {
     String selectedCountry = 'LK';
-    final addressController =
-        TextEditingController(text: '120 Galle Road, Colombo 03');
-    final regionController =
-        TextEditingController(text: 'Western Province');
+    final addressController = TextEditingController(
+      text: '120 Galle Road, Colombo 03',
+    );
+    final regionController = TextEditingController(text: 'Western Province');
     final formKey = GlobalKey<FormState>();
 
     const countries = [
@@ -1105,8 +1165,7 @@ class _MarketplaceGemDetailsScreenState
               child: Container(
                 decoration: const BoxDecoration(
                   color: _cream,
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(24)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                 child: Form(
@@ -1260,8 +1319,8 @@ class _MarketplaceGemDetailsScreenState
                           ),
                           validator: (val) =>
                               (val == null || val.trim().isEmpty)
-                                  ? 'Shipping address is required'
-                                  : null,
+                              ? 'Shipping address is required'
+                              : null,
                         ),
                         const SizedBox(height: 14),
                         const Text(
@@ -1294,8 +1353,8 @@ class _MarketplaceGemDetailsScreenState
                           ),
                           validator: (val) =>
                               (val == null || val.trim().isEmpty)
-                                  ? 'Region is required'
-                                  : null,
+                              ? 'Region is required'
+                              : null,
                         ),
                         const SizedBox(height: 14),
                         Container(
@@ -1353,8 +1412,9 @@ class _MarketplaceGemDetailsScreenState
                                     : () => Navigator.pop(sheetContext),
                                 style: OutlinedButton.styleFrom(
                                   side: const BorderSide(color: _border),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -1377,18 +1437,20 @@ class _MarketplaceGemDetailsScreenState
                                         Navigator.pop(sheetContext);
                                         await _submitOrder(
                                           gemId: gem.id,
-                                          shippingAddress:
-                                              addressController.text.trim(),
-                                          shippingRegion:
-                                              regionController.text.trim(),
+                                          shippingAddress: addressController
+                                              .text
+                                              .trim(),
+                                          shippingRegion: regionController.text
+                                              .trim(),
                                           shippingCountryCode: selectedCountry,
                                         );
                                       },
                                 style: FilledButton.styleFrom(
                                   backgroundColor: _gold,
                                   foregroundColor: _darkGreen,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -1442,7 +1504,10 @@ class _MarketplaceGemDetailsScreenState
 
       if (!mounted) return;
 
-      setState(() => _ordering = false);
+      setState(() {
+        _ordering = false;
+        _soldByCurrentOrder = true;
+      });
 
       final isInternational = order.shippingCountryCode != 'LK';
 
@@ -1524,9 +1589,7 @@ class _MarketplaceGemDetailsScreenState
                   Navigator.pop(dialogContext);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const MyOrdersScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const MyOrdersScreen()),
                   );
                 },
                 style: FilledButton.styleFrom(
@@ -1577,6 +1640,7 @@ class _MarketplaceGemDetailsScreenState
 
   Widget _buildContent() {
     final gem = _gem!;
+    final isAvailable = gem.isAvailable && !_soldByCurrentOrder;
 
     final image = _imageUrl(gem.primaryImageUrl);
 
@@ -1708,10 +1772,15 @@ class _MarketplaceGemDetailsScreenState
           ],
         ),
         const SizedBox(height: 22),
+        if (!isAvailable)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Chip(label: Text('Sold')),
+          ),
         SizedBox(
           height: 54,
           child: FilledButton.icon(
-            onPressed: _ordering ? null : _buy,
+            onPressed: _ordering || !isAvailable ? null : _buy,
             style: FilledButton.styleFrom(
               backgroundColor: _gold,
               foregroundColor: _darkGreen,
@@ -1729,7 +1798,11 @@ class _MarketplaceGemDetailsScreenState
             label: Text(
               _ordering
                   ? 'Processing...'
-                  : (widget.isAuthenticated ? 'Buy Gemstone' : 'Sign In to Buy'),
+                  : !isAvailable
+                  ? 'Sold'
+                  : (widget.isAuthenticated
+                        ? 'Buy Gemstone'
+                        : 'Sign In to Buy'),
               style: const TextStyle(fontWeight: FontWeight.w800),
             ),
           ),
