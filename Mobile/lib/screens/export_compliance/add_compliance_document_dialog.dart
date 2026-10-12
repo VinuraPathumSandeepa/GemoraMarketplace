@@ -1,18 +1,17 @@
 import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../constants/compliance_constants.dart';
+import '../../constants/gemora_colors.dart';
 import '../../models/compliance_document_model.dart';
 import '../../services/export_compliance_service.dart';
 
 class AddComplianceDocumentDialog extends StatefulWidget {
   final String exportRequestId;
 
-  const AddComplianceDocumentDialog({
-    super.key,
-    required this.exportRequestId,
-  });
+  const AddComplianceDocumentDialog({super.key, required this.exportRequestId});
 
   @override
   State<AddComplianceDocumentDialog> createState() =>
@@ -24,7 +23,8 @@ class _AddComplianceDocumentDialogState
   final _formKey = GlobalKey<FormState>();
   final _exportService = ExportComplianceService();
 
-  String _selectedDocumentType = ComplianceConstants.supportedDocumentTypes.first;
+  String _selectedDocumentType =
+      ComplianceConstants.supportedDocumentTypes.first;
   final _numberController = TextEditingController();
   final _issuerController = TextEditingController();
 
@@ -121,7 +121,9 @@ class _AddComplianceDocumentDialogState
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate() || _isSaving) return;
 
-    if (_issueDate != null && _expiryDate != null && _expiryDate!.isBefore(_issueDate!)) {
+    if (_issueDate != null &&
+        _expiryDate != null &&
+        _expiryDate!.isBefore(_issueDate!)) {
       setState(() {
         _errorMessage = 'Expiry date cannot be earlier than issue date.';
       });
@@ -171,7 +173,7 @@ class _AddComplianceDocumentDialogState
       } catch (uploadErr) {
         if (!mounted) return;
         final uploadErrMsg = uploadErr.toString().replaceAll('Exception: ', '');
-        
+
         // Partial Failure Handling: metadata created, file upload failed
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -209,9 +211,13 @@ class _AddComplianceDocumentDialogState
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: GemoraColors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: const BorderSide(color: GemoraColors.border),
+      ),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(22),
         child: Form(
           key: _formKey,
           child: Column(
@@ -224,13 +230,16 @@ class _AddComplianceDocumentDialogState
                   const Text(
                     'Add Document',
                     style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
+                      color: GemoraColors.darkGreen,
                     ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
-                    onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                    onPressed: _isSaving
+                        ? null
+                        : () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
@@ -323,12 +332,25 @@ class _AddComplianceDocumentDialogState
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: _isSaving ? null : _selectIssueDate,
-                      icon: const Icon(Icons.calendar_today, size: 16),
+                      icon: const Icon(
+                        Icons.calendar_today,
+                        size: 15,
+                        color: GemoraColors.darkGold,
+                      ),
                       label: Text(
                         _issueDate == null
                             ? 'Issue Date'
                             : 'Issue: ${_issueDate!.toString().split(' ')[0]}',
-                        style: const TextStyle(fontSize: 12),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: GemoraColors.deepGreen,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: GemoraColors.border),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                     ),
                   ),
@@ -336,12 +358,25 @@ class _AddComplianceDocumentDialogState
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: _isSaving ? null : _selectExpiryDate,
-                      icon: const Icon(Icons.event, size: 16),
+                      icon: const Icon(
+                        Icons.event,
+                        size: 15,
+                        color: GemoraColors.darkGold,
+                      ),
                       label: Text(
                         _expiryDate == null
                             ? 'Expiry Date'
                             : 'Expiry: ${_expiryDate!.toString().split(' ')[0]}',
-                        style: const TextStyle(fontSize: 12),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: GemoraColors.deepGreen,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: GemoraColors.border),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                     ),
                   ),
@@ -351,11 +386,11 @@ class _AddComplianceDocumentDialogState
 
               // FILE SELECTION
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
+                  color: GemoraColors.cream,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: GemoraColors.border),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,8 +399,12 @@ class _AddComplianceDocumentDialogState
                       children: [
                         ElevatedButton.icon(
                           onPressed: _isSaving ? null : _pickFile,
-                          icon: const Icon(Icons.attach_file),
+                          icon: const Icon(Icons.attach_file, size: 16),
                           label: const Text('Select File'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: GemoraColors.darkGreen,
+                            foregroundColor: Colors.white,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -389,13 +428,19 @@ class _AddComplianceDocumentDialogState
                       const SizedBox(height: 4),
                       Text(
                         'Size: ${_formatFileSize(_selectedFileSize!)}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade700,
+                        ),
                       ),
                     ],
                     const SizedBox(height: 6),
                     Text(
                       'Allowed formats: PDF, JPG, JPEG, PNG | Max size: 10 MB',
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                   ],
                 ),
@@ -406,7 +451,12 @@ class _AddComplianceDocumentDialogState
               FilledButton(
                 onPressed: _isSaving ? null : _submitForm,
                 style: FilledButton.styleFrom(
+                  backgroundColor: GemoraColors.darkGreen,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: _isSaving
                     ? Row(

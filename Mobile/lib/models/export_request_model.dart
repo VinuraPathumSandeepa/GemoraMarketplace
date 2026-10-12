@@ -11,6 +11,9 @@ class ExportRequestModel {
   final DateTime? reviewedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? orderId;
+  final String? orderNumber;
+  final String? gemListingTitle;
 
   ExportRequestModel({
     required this.id,
@@ -25,6 +28,9 @@ class ExportRequestModel {
     this.reviewedAt,
     required this.createdAt,
     required this.updatedAt,
+    this.orderId,
+    this.orderNumber,
+    this.gemListingTitle,
   });
 
   factory ExportRequestModel.fromJson(Map<String, dynamic> json) {
@@ -51,6 +57,9 @@ class ExportRequestModel {
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'].toString()) ?? DateTime.now()
           : DateTime.now(),
+      orderId: json['orderId']?.toString(),
+      orderNumber: json['orderNumber']?.toString(),
+      gemListingTitle: json['gemListingTitle']?.toString(),
     );
   }
 
