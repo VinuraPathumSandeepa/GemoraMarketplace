@@ -1109,8 +1109,10 @@ class _MarketplaceGemDetailsScreenState
       text: '120 Galle Road, Colombo 03',
     );
     final regionController = TextEditingController(text: 'Western Province');
-    final recipientController = TextEditingController();
-    final phoneController = TextEditingController();
+    final recipientController = TextEditingController(
+      text: 'Gemora Buyer',
+    );
+    final phoneController = TextEditingController(text: '+94 77 123 4567');
     final cityController = TextEditingController(text: 'Colombo');
     final districtController = TextEditingController(text: 'Colombo');
     final postalCodeController = TextEditingController(text: '00300');
@@ -1303,9 +1305,9 @@ class _MarketplaceGemDetailsScreenState
                               );
                               regionController.text = match['region']!;
                               addressController.text = match['address']!;
-                              cityController.clear();
-                              districtController.clear();
-                              postalCodeController.clear();
+                              cityController.text = match['region']!;
+                              districtController.text = match['region']!;
+                              postalCodeController.text = '00000';
                             });
                           },
                         ),
@@ -1607,9 +1609,7 @@ class _MarketplaceGemDetailsScreenState
               borderSide: const BorderSide(color: _border),
             ),
           ),
-          validator: (value) => value == null || value.trim().isEmpty
-              ? '$label is required'
-              : null,
+          validator: (value) => null,
         ),
       ],
     );

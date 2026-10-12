@@ -216,14 +216,35 @@ class OrderModel {
       agreedPrice: _asDouble(json['agreedPrice']),
       currency: json['currency']?.toString() ?? '',
       status: json['status']?.toString() ?? '',
+      fulfillmentStatus: json['fulfillmentStatus']?.toString() ?? 'Pending',
+      paymentDueAt: DateTime.tryParse(json['paymentDueAt']?.toString() ?? ''),
+      paidAt: DateTime.tryParse(json['paidAt']?.toString() ?? ''),
+      handedOverAt: DateTime.tryParse(json['handedOverAt']?.toString() ?? ''),
+      deliveredAt: DateTime.tryParse(json['deliveredAt']?.toString() ?? ''),
+      deliveryDetails: json['deliveryDetails'] is Map
+          ? OrderDeliveryDetails.fromJson(
+              Map<String, dynamic>.from(json['deliveryDetails'] as Map),
+            )
+          : null,
+      shipment: json['shipment'] is Map
+          ? OrderShipment.fromJson(
+              Map<String, dynamic>.from(json['shipment'] as Map),
+            )
+          : null,
       shippingCountryCode: _asNullableString(json['shippingCountryCode']),
       exportStatus: _asNullableString(json['exportStatus']),
       exportRequestId: _asNullableString(json['exportRequestId']),
       createdAt: _parseDate(json['createdAt']),
       statusHistory: history is List
           ? history
-                .whereType<Map<String, dynamic>>()
-                .map(OrderHistoryItem.fromJson)
+                .whereType<Map>()
+                .map((e) => OrderHistoryItem.fromJson(Map<String, dynamic>.from(e)))
+                .toList()
+          : const [],
+      fulfillmentHistory: json['fulfillmentHistory'] is List
+          ? (json['fulfillmentHistory'] as List)
+                .whereType<Map>()
+                .map((e) => FulfillmentHistoryItem.fromJson(Map<String, dynamic>.from(e)))
                 .toList()
           : const [],
     );

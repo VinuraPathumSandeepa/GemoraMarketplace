@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { assert, test } from "vitest";
 import { latestOrderMessage } from "./orderMessages.js";
 
 test("shipping approval replaces the older payment notification", () => {

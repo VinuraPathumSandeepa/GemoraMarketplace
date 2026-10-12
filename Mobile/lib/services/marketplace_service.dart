@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
-import '../models/marketplace_gem_model.dart';
+import '../models/marketplace/marketplace_gem.dart';
 import '../models/marketplace/order_model.dart';
 import 'token_storage_service.dart';
 
@@ -14,26 +14,27 @@ class MarketplaceService {
 
   MarketplaceService({this.client, this.tokenLoader});
 
-  Future<http.Response> _get(Uri uri, {Map<String, String>? headers}) =>
-      client != null
-      ? client!.get(uri, headers: headers)
-      : http.get(uri, headers: headers);
+  Future<Map<String, String>> _authHeaders({bool isJson = false}) async {
+    final token = await (tokenLoader?.call() ?? _tokenStorage.getToken());
 
-  Future<http.Response> _post(
-    Uri uri, {
-    Map<String, String>? headers,
-    Object? body,
-  }) => client != null
-      ? client!.post(uri, headers: headers, body: body)
-      : http.post(uri, headers: headers, body: body);
+    final headers = <String, String>{
+      'Accept': 'application/json',
+      if (isJson) 'Content-Type': 'application/json',
+      if (token != null && token.trim().isNotEmpty)
+        'Authorization': 'Bearer ${token.trim()}',
+    };
 
-  Future<List<MarketplaceGemModel>> getGems({
+    return headers;
+  }
+
+  Future<List<MarketplaceGem>> getGems({
     String? search,
     String? gemType,
   }) async {
     final queryParameters = <String, String>{'page': '1', 'pageSize': '50'};
 
     final cleanSearch = search?.trim() ?? '';
+
     final cleanGemType = gemType?.trim() ?? '';
 
     if (cleanSearch.isNotEmpty) {
@@ -47,179 +48,335 @@ class MarketplaceService {
     final uri = Uri.parse('${ApiConfig.baseUrl}/marketplace/gems')
         .replace(queryParameters: queryParameters);
 
-    final response = await _get(
-      uri,
-      headers: const {'Accept': 'application/json'},
-    );
+    final httpClient = client;
+    final response = httpClient != null
+        ? await httpClient.get(
+            uri,
+            headers: const {'Accept': 'application/json'},
+          )
+        : await http.get(uri, headers: const {'Accept': 'application/json'});
 
     _ensureSuccess(response, 'We could not load the gemstone marketplace.');
 
     final decoded = _decode(response.body);
-    final items = decoded is Map<String, dynamic> ? decoded['items'] : decoded;
+    final dynamic responseItems = decoded is Map ? decoded['items'] : decoded;
 
-    if (items is! List) {
+    if (responseItems is! List) {
       throw Exception('The marketplace returned an unexpected response.');
     }
 
-    return items
+    return responseItems
         .whereType<Map>()
-        .map(
-          (item) =>
-              MarketplaceGemModel.fromJson(Map<String, dynamic>.from(item)),
-        )
+        .map((item) => MarketplaceGem.fromJson(Map<String, dynamic>.from(item)))
         .toList();
   }
 
-  Future<MarketplaceGemModel> getGem(int id) async {
-    final response = await _get(
-      Uri.parse('${ApiConfig.baseUrl}/marketplace/gems/$id'),
-      headers: const {'Accept': 'application/json'},
-    );
+  Future<MarketplaceGem> getGem(int id) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/Marketplace/gems/$id');
+    final httpClient = client;
+    final response = httpClient != null
+        ? await httpClient.get(
+            uri,
+            headers: const {'Accept': 'application/json'},
+          )
+        : await http.get(uri, headers: const {'Accept': 'application/json'});
 
-    _ensureSuccess(response, 'This gemstone is not currently available.');
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final decoded = jsonDecode(response.body);
 
-    final decoded = _decode(response.body);
+      if (decoded is! Map) {
+        throw Exception(
+          'The marketplace returned an unexpected gemstone response.',
+        );
+      }
 
-    if (decoded is! Map<String, dynamic>) {
-      throw Exception(
-        'The marketplace returned an unexpected gemstone response.',
-      );
+      return MarketplaceGem.fromJson(Map<String, dynamic>.from(decoded));
     }
 
-    return MarketplaceGemModel.fromJson(decoded);
+    throw Exception(
+      _errorMessage(response, 'This gemstone is not currently available.'),
+    );
   }
 
-  Future<Map<String, dynamic>> askAgent(
-    String message, {
-    String? conversationId,
-  }) async {
-    final response = await _post(
+  Future<List<MarketplaceGem>> getBuyerGems({String? search}) {
+    return getGems(search: search);
+  }
+
+  Future<Map<String, dynamic>> askAgent(String message) async {
+    final decoded = await _request(
       Uri.parse('${ApiConfig.baseUrl}/marketplace/agent/assist'),
-      headers: {
-        ...await _authenticatedHeaders(),
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'message': message.trim(),
-        'conversationId': ?conversationId,
-      }),
+      body: {'message': message.trim()},
+      fallback: 'Could not get response from AI assistant.',
     );
 
-    _ensureSuccess(response, 'The buyer assistant is unavailable.');
-
-    final decoded = _decode(response.body);
-
-    if (decoded is! Map<String, dynamic>) {
-      throw Exception('The buyer assistant returned an unexpected response.');
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
     }
 
-    return decoded;
-  }
-
-  Future<List<OrderModel>> getMyOrders() async {
-    final response = await _get(
-      Uri.parse('${ApiConfig.baseUrl}/orders/my'),
-      headers: await _authenticatedHeaders(),
-    );
-
-    _ensureSuccess(response, 'We could not load your orders.');
-
-    final decoded = _decode(response.body);
-
-    if (decoded is! List) {
-      throw Exception('The orders service returned an unexpected response.');
-    }
-
-    return decoded
-        .whereType<Map<String, dynamic>>()
-        .map(OrderModel.fromJson)
-        .toList();
+    throw Exception('The AI assistant returned an unexpected response format.');
   }
 
   Future<OrderModel> createOrder(
     int gemListingId, {
-    Map<String, dynamic>? deliveryDetails,
     String shippingAddress = 'Main Street',
     String shippingRegion = 'Western',
     String shippingCountryCode = 'LK',
     Map<String, dynamic>? deliveryDetails,
   }) async {
-    final response = await _post(
-      Uri.parse('${ApiConfig.baseUrl}/orders'),
-      headers: {
-        ...await _authenticatedHeaders(),
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'gemListingId': gemListingId,
-        'deliveryDetails': ?deliveryDetails,
-        if (deliveryDetails == null) ...{
-          'shippingAddress': shippingAddress.trim(),
-          'shippingRegion': shippingRegion.trim(),
-          'shippingCountryCode': shippingCountryCode.trim().toUpperCase(),
-        },
-      }),
-    );
+    final headers = await _authHeaders(isJson: true);
 
-    _ensureSuccess(response, 'We could not create the order.');
+    final payload = jsonEncode({
+      'gemListingId': gemListingId,
+      'shippingAddress': shippingAddress.trim(),
+      'shippingRegion': shippingRegion.trim(),
+      'shippingCountryCode': shippingCountryCode.trim().toUpperCase(),
+      'deliveryDetails': ?deliveryDetails,
+    });
 
-    final decoded = _decode(response.body);
+    final uri = Uri.parse('${ApiConfig.baseUrl}/orders');
+    final httpClient = client;
+    final response = httpClient != null
+        ? await httpClient.post(uri, headers: headers, body: payload)
+        : await http.post(uri, headers: headers, body: payload);
 
-    if (decoded is! Map<String, dynamic>) {
-      throw Exception('The order service returned an unexpected response.');
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is Map<String, dynamic>) {
+        return OrderModel.fromJson(decoded);
+      }
+
+      throw Exception('Order creation returned an invalid response.');
     }
 
-    return OrderModel.fromJson(decoded);
+    throw Exception(_errorMessage(response, 'Could not create order.'));
   }
 
-  Future<OrderModel> cancelOrder(
-    String orderId, {
-    String reason = 'Cancelled by buyer.',
-  }) async {
-    final response = await _post(
-      Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/cancel'),
-      headers: {
-        ...await _authenticatedHeaders(),
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({'reason': reason}),
-    );
+  Future<List<OrderModel>> getMyOrders() async {
+    final headers = await _authHeaders();
+    final uri = Uri.parse(ApiConfig.myOrders);
+    final response = client != null
+        ? await client!.get(uri, headers: headers)
+        : await http.get(uri, headers: headers);
 
-    _ensureSuccess(response, 'We could not cancel this order.');
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final decoded = jsonDecode(response.body);
 
-    final decoded = _decode(response.body);
+      if (decoded is List) {
+        return decoded
+            .whereType<Map<String, dynamic>>()
+            .map(OrderModel.fromJson)
+            .toList();
+      }
 
-    if (decoded is! Map<String, dynamic>) {
-      throw Exception('The order service returned an unexpected response.');
+      throw Exception('My orders returned an unexpected response.');
     }
 
-    return OrderModel.fromJson(decoded);
+    throw Exception(_errorMessage(response, 'Could not load your orders.'));
   }
 
   Future<List<OrderModel>> getSellerOrders() async {
-    final response = await _get(
-      Uri.parse(ApiConfig.sellerOrders),
-      headers: await _authenticatedHeaders(),
-    );
+    final headers = await _authHeaders();
 
-    _ensureSuccess(response, 'Could not load seller orders.');
-    final decoded = _decode(response.body);
-    if (decoded is! List) {
+    final uri = Uri.parse(ApiConfig.sellerOrders);
+    final response = client != null
+        ? await client!.get(uri, headers: headers)
+        : await http.get(uri, headers: headers);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final decoded = jsonDecode(response.body);
+
+      if (decoded is List) {
+        return decoded
+            .whereType<Map<String, dynamic>>()
+            .map(OrderModel.fromJson)
+            .toList();
+      }
+
       throw Exception('Seller orders returned an unexpected response.');
     }
-    return decoded
-        .whereType<Map>()
-        .map((item) => OrderModel.fromJson(Map<String, dynamic>.from(item)))
-        .toList();
+
+    throw Exception(_errorMessage(response, 'Could not load seller orders.'));
   }
 
-  Future<Map<String, String>> _authenticatedHeaders() async {
-    final token = await _tokenStorage.getToken();
+  Future<void> cancelOrder(dynamic orderId) async {
+    await _postOrderAction(
+      orderId,
+      'cancel',
+      fallback: 'Could not cancel order.',
+    );
+  }
 
-    return {
+  Future<OrderModel> approveOrder(String orderId) => _postOrderAction(
+    orderId,
+    'approve',
+    sellerRoute: true,
+    fallback: 'Could not approve this order.',
+  );
+
+  Future<OrderModel> rejectOrder(
+    String orderId, {
+    required String reason,
+    bool alreadySold = false,
+  }) => _postOrderAction(
+    orderId,
+    'reject',
+    sellerRoute: true,
+    body: {'reason': reason.trim(), 'alreadySold': alreadySold},
+    fallback: 'Could not reject this order.',
+  );
+
+  Future<OrderModel> startPreparing(String orderId) => _postOrderAction(
+    orderId,
+    'prepare',
+    fallback: 'Could not start preparing this order.',
+  );
+
+  Future<OrderModel> markReadyForDispatch(String orderId) => _postOrderAction(
+    orderId,
+    'ready-for-dispatch',
+    fallback: 'Could not mark this order ready for dispatch.',
+  );
+
+  Future<OrderModel> handOverToCourier(
+    String orderId, {
+    required String courierName,
+    required String trackingNumber,
+    String? trackingUrl,
+    DateTime? expectedDeliveryDate,
+    String? dispatchNote,
+  }) => _postOrderAction(
+    orderId,
+    'handover',
+    body: {
+      'courierName': courierName.trim(),
+      'trackingNumber': trackingNumber.trim(),
+      'trackingUrl': trackingUrl?.trim(),
+      'expectedDeliveryDate': expectedDeliveryDate?.toUtc().toIso8601String(),
+      'dispatchNote': dispatchNote?.trim(),
+    },
+    fallback: 'Could not hand this order over to the courier.',
+  );
+
+  Future<OrderModel> markInTransit(String orderId) => _postOrderAction(
+    orderId,
+    'in-transit',
+    fallback: 'Could not mark this order in transit.',
+  );
+
+  Future<OrderModel> markOutForDelivery(String orderId) => _postOrderAction(
+    orderId,
+    'out-for-delivery',
+    fallback: 'Could not mark this order out for delivery.',
+  );
+
+  Future<OrderModel> markDelivered(String orderId) => _postOrderAction(
+    orderId,
+    'delivered',
+    fallback: 'Could not mark this order delivered.',
+  );
+
+  Future<OrderModel> completeOrder(String orderId) => _postOrderAction(
+    orderId,
+    'complete',
+    body: {'reason': 'Buyer confirmed successful delivery.'},
+    fallback: 'Could not confirm delivery.',
+  );
+
+  Future<PaymentIntentModel> createPaymentIntent(String orderId) async {
+    final decoded = await _request(
+      Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/payment/intent'),
+      body: {'paymentMethod': 'Card'},
+      fallback: 'Could not start payment.',
+    );
+    if (decoded is Map) {
+      return PaymentIntentModel.fromJson(Map<String, dynamic>.from(decoded));
+    }
+    throw Exception('Payment setup returned an unexpected response.');
+  }
+
+  Future<OrderModel> confirmPayment(
+    String orderId, {
+    required String paymentIntentId,
+    required String paymentMethodToken,
+  }) async {
+    final decoded = await _request(
+      Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/payment/confirm'),
+      body: {
+        'paymentIntentId': paymentIntentId,
+        'paymentMethodToken': paymentMethodToken,
+        'paymentMethod': 'Card',
+      },
+      fallback: 'Could not confirm payment.',
+    );
+    if (decoded is Map && decoded['order'] is Map) {
+      return OrderModel.fromJson(
+        Map<String, dynamic>.from(decoded['order'] as Map),
+      );
+    }
+    throw Exception('Payment confirmation returned an unexpected response.');
+  }
+
+  Future<OrderModel> _postOrderAction(
+    dynamic orderId,
+    String action, {
+    Map<String, dynamic>? body,
+    bool sellerRoute = false,
+    required String fallback,
+  }) async {
+    final headers = await _authHeaders(isJson: true);
+    final path = sellerRoute ? 'seller/orders' : 'orders';
+    final uri = Uri.parse('${ApiConfig.baseUrl}/$path/$orderId/$action');
+    final payload = jsonEncode(body ?? <String, dynamic>{});
+    final response = client != null
+        ? await client!.post(uri, headers: headers, body: payload)
+        : await http.post(uri, headers: headers, body: payload);
+    _ensureSuccess(response, fallback);
+    final decoded = _decode(response.body);
+    if (decoded is Map) {
+      return OrderModel.fromJson(Map<String, dynamic>.from(decoded));
+    }
+    throw Exception('$fallback The server returned an invalid response.');
+  }
+
+  Future<dynamic> _request(
+    Uri uri, {
+    Map<String, dynamic>? body,
+    bool authenticated = true,
+    String? fallback,
+  }) async {
+    final headers = <String, String>{
       'Accept': 'application/json',
-      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
     };
+
+    if (authenticated) {
+      final token = await (tokenLoader?.call() ?? _tokenStorage.getToken());
+      if (token == null || token.trim().isEmpty) {
+        throw Exception('Please sign in to continue.');
+      }
+      headers['Authorization'] = 'Bearer ${token.trim()}';
+    }
+
+    final httpClient = client;
+    final response =
+        await (body == null
+                ? (httpClient?.get(uri, headers: headers) ??
+                      http.get(uri, headers: headers))
+                : (httpClient?.post(
+                        uri,
+                        headers: headers,
+                        body: jsonEncode(body),
+                      ) ??
+                      http.post(uri, headers: headers, body: jsonEncode(body))))
+            .timeout(const Duration(seconds: 60));
+
+    _ensureSuccess(
+      response,
+      fallback ?? 'The request failed (${response.statusCode}).',
+    );
+
+    return response.body.isEmpty ? null : _decode(response.body);
   }
 
   dynamic _decode(String body) {

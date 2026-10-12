@@ -205,33 +205,4 @@ class AuthService {
 
     return {};
   }
-
-  Future<http.Response> _post(
-    Uri uri, {
-    required Map<String, String> headers,
-    required String body,
-  }) async {
-    try {
-      return await http.post(uri, headers: headers, body: body);
-    } on http.ClientException {
-      throw Exception(
-        'Unable to connect to the Gemora API at ${ApiConfig.serverUrl}. '
-        'Start the backend API and try again.',
-      );
-    }
-  }
-
-  Future<http.Response> _get(
-    Uri uri, {
-    required Map<String, String> headers,
-  }) async {
-    try {
-      return await http.get(uri, headers: headers);
-    } on http.ClientException {
-      throw Exception(
-        'Unable to connect to the Gemora API at ${ApiConfig.serverUrl}. '
-        'Start the backend API and try again.',
-      );
-    }
-  }
 }

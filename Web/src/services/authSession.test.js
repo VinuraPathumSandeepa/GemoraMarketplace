@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
-import { beforeEach, test } from "node:test";
+// @vitest-environment node
+import { assert, beforeEach, test } from "vitest";
 import { clearAuthToken, getAuthToken, setAuthToken } from "./authSession.js";
 
 const storage = () => {

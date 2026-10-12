@@ -35,7 +35,6 @@ class MockMarketplaceService extends MarketplaceService {
   @override
   Future<OrderModel> createOrder(
     int gemListingId, {
-    Map<String, dynamic>? deliveryDetails,
     String shippingAddress = 'Main Street',
     String shippingRegion = 'Western',
     String shippingCountryCode = 'LK',

@@ -7,6 +7,8 @@ import '../export_compliance/my_export_requests_screen.dart';
 import '../seller/create_gem_listing_screen.dart';
 import '../seller/my_gem_listings_screen.dart';
 import '../seller/seller_orders_screen.dart';
+import '../shipments/seller_order_inbox.dart';
+import '../shipments/seller_shipment_list.dart';
 
 class SellerDashboard extends StatelessWidget {
   const SellerDashboard({super.key});
@@ -52,7 +54,6 @@ class SellerDashboard extends StatelessWidget {
             ),
           ],
         ),
-        actions: const [NotificationBell(), SizedBox(width: 8)],
       ),
 
       // ============================================================
