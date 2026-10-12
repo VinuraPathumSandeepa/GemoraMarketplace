@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import DashboardLayout from "../../layouts/DashboardLayout";
+import AdminLayout from "../../layouts/AdminLayout";
 import transactionService from "../../services/marketplace/transactionService";
 
 function TransactionDashboard() {
@@ -7,21 +7,24 @@ function TransactionDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [request, setRequest] = useState(0);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        setOrders(await transactionService.getAll());
-      } catch (e) {
-        console.error(e);
-        setError("Unable to load transactions.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
+    let active = true;
+    Promise.resolve().then(() => transactionService.getAll())
+      .then((response) => {
+        if (!Array.isArray(response)) throw new Error("Unexpected transaction response.");
+        if (active) { setOrders(response); setError(""); }
+      })
+      .catch((cause) => {
+        if (active) setError(cause.response?.status === 401 || cause.response?.status === 403
+          ? "Your session cannot access transactions. Sign in again or contact an administrator."
+          : "Unable to load transactions.");
+      })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [request]);
+  const retry = () => { setLoading(true); setError(""); setRequest((current) => current + 1); };
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -33,55 +36,25 @@ function TransactionDashboard() {
   }, [orders, search]);
 
   return (
-    <DashboardLayout title="Transaction Dashboard">
-      <div style={{ maxWidth: 1180, margin: "0 auto", padding: "12px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "center", marginBottom: 20 }}>
-          <div>
-            <h2 style={{ margin: 0 }}>Marketplace Transactions</h2>
-            <p style={{ marginTop: 6, opacity: 0.7 }}>Admin oversight for Component 2 orders and status.</p>
-          </div>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search order, gem, buyer..."
-            style={{ minWidth: 280, padding: "11px 13px", border: "1px solid #d8d8d8", borderRadius: 10 }}
-          />
+    <AdminLayout title="Transactions">
+      <section className="admin-transactions">
+        <div className="admin-transactions-header">
+          <div><p className="admin-section-eyebrow">MARKETPLACE · ORDERS</p><h1>Marketplace Transactions</h1><p>Review marketplace orders and their current status.</p></div>
+          <input className="admin-transactions-search" aria-label="Search transactions" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search order, gem, buyer..." />
         </div>
-
-        {loading && <p>Loading transactions...</p>}
-        {error && <p style={{ color: "crimson" }}>{error}</p>}
-
-        {!loading && !error && (
-          <div style={{ overflowX: "auto", background: "white", border: "1px solid #ececec", borderRadius: 14 }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ textAlign: "left", background: "#f7f7f8" }}>
-                  {['Order','Gem','Buyer','Seller','Amount','Status','Created'].map((h) => (
-                    <th key={h} style={{ padding: 14, borderBottom: "1px solid #e8e8e8" }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((o) => (
-                  <tr key={o.id}>
-                    <td style={{ padding: 14, borderBottom: "1px solid #f0f0f0" }}>{o.orderNumber}</td>
-                    <td style={{ padding: 14, borderBottom: "1px solid #f0f0f0" }}>{o.gemTitle}</td>
-                    <td style={{ padding: 14, borderBottom: "1px solid #f0f0f0" }}>{o.buyerName}</td>
-                    <td style={{ padding: 14, borderBottom: "1px solid #f0f0f0" }}>{o.sellerName}</td>
-                    <td style={{ padding: 14, borderBottom: "1px solid #f0f0f0" }}>{o.currency} {Number(o.agreedPrice).toLocaleString()}</td>
-                    <td style={{ padding: 14, borderBottom: "1px solid #f0f0f0" }}><strong>{o.status}</strong></td>
-                    <td style={{ padding: 14, borderBottom: "1px solid #f0f0f0" }}>{new Date(o.createdAt).toLocaleString()}</td>
-                  </tr>
-                ))}
-                {visible.length === 0 && (
-                  <tr><td colSpan="7" style={{ padding: 28, textAlign: "center" }}>No transactions found.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </DashboardLayout>
+        {loading && <div className="admin-transactions-state" role="status">Loading transactions...</div>}
+        {error && <div className="admin-transactions-state" role="alert">{error} <button type="button" onClick={retry}>Retry</button></div>}
+        {!loading && !error && <div className="admin-transactions-table"><table>
+          <thead><tr>{["Order", "Gem", "Buyer", "Seller", "Amount", "Status", "Created"].map((heading) => <th scope="col" key={heading}>{heading}</th>)}</tr></thead>
+          <tbody>{visible.map((order) => <tr key={order.id}>
+            <td>{order.orderNumber}</td><td>{order.gemTitle}</td><td>{order.buyerName}</td><td>{order.sellerName}</td>
+            <td>{order.currency} {Number(order.agreedPrice).toLocaleString()}</td><td><strong>{order.status}</strong></td>
+            <td>{order.createdAt ? new Date(order.createdAt).toLocaleString() : "—"}</td>
+          </tr>)}
+          {visible.length === 0 && <tr><td colSpan="7" className="admin-transactions-state">No transactions found.</td></tr>}</tbody>
+        </table></div>}
+      </section>
+    </AdminLayout>
   );
 }
 

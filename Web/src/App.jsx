@@ -45,6 +45,7 @@ import CreateShipment from "./pages/CreateShipment";
 import ShipmentDetail from "./pages/ShipmentDetail";
 import ShipmentDetailPage from "./pages/ShipmentDetailPage";
 import DashboardLayout from "./layouts/DashboardLayout";
+import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminShipments from "./pages/AdminShipments";
 import AdminShipmentDetail from "./pages/AdminShipmentDetail";
@@ -497,7 +498,7 @@ function App() {
           <RoleProtectedRoute
             allowedRoles={["Admin"]}
           >
-            <DashboardLayout><AdminShipments /></DashboardLayout>
+            <AdminLayout title="Shipment Dashboard"><AdminShipments /></AdminLayout>
           </RoleProtectedRoute>
         }
       />
@@ -508,7 +509,7 @@ function App() {
           <RoleProtectedRoute
             allowedRoles={["Admin"]}
           >
-            <DashboardLayout><AdminShipmentDetail /></DashboardLayout>
+            <AdminLayout title="Shipment details"><AdminShipmentDetail /></AdminLayout>
           </RoleProtectedRoute>
         }
       />

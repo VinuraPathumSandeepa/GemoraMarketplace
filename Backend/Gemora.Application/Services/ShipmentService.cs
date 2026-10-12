@@ -162,7 +162,11 @@ public class ShipmentService : IShipmentService
         {
             query = query.Where(s => s.SellerId == userId);
         }
-        // Admin sees all shipments
+        else if (userRole != "Admin")
+        {
+            throw new UnauthorizedAccessException("This role cannot view shipments.");
+        }
+        // Admin sees all shipments.
 
         var shipments = await query.ToListAsync();
         return shipments.Select(MapToResponseDto).ToList();

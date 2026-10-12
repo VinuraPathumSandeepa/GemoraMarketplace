@@ -30,6 +30,40 @@ services:
       - key: CorsOrigins
         value: https://gemora-marketplace-web.onrender.com
 
+      - key: SupabaseStorage__ProjectUrl
+        sync: false
+
+      - key: SupabaseStorage__ServiceRoleKey
+        sync: false
+
+      # Each AI feature has an independent credential.
+      - key: GeminiMarketplace__ApiKey
+        sync: false
+
+      - key: GeminiMarketplace__Model
+        value: gemini-3.5-flash
+
+      - key: Gemini__ApiKey
+        sync: false
+
+      - key: Gemini__Model
+        value: gemini-3.5-flash
+
+      - key: Gemini__ShippingApiKey
+        sync: false
+
+      - key: Gemini__ShippingModel
+        value: gemini-3.5-flash
+
+      - key: GeminiCompliance__ApiKey
+        sync: false
+
+      - key: GeminiCompliance__Model
+        value: gemini-3.5-flash
+
+      - key: GeminiCompliance__FallbackModel
+        value: gemini-3.5-flash
+
       # ---- Set these in Render Dashboard as secret values ----
       # ConnectionStrings__DefaultConnection  (your PostgreSQL connection string)
       # Jwt__Key                              (your JWT secret key)

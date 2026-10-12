@@ -482,62 +482,6 @@ builder.Services.Configure<
 );
 
 
-// The marketplace and verification agents use the same Gemini provider.
-// Keep verification-specific Gemini:* values as the highest priority, while
-// allowing installations that already configured GeminiMarketplace:* to use
-// that shared credential and model. This avoids a false "provider
-// configuration" failure when only the marketplace section is populated.
-builder.Services.PostConfigure<
-    GeminiOptions
->(
-    options =>
-    {
-        if (
-            string.IsNullOrWhiteSpace(
-                options.ApiKey
-            )
-        )
-        {
-            options.ApiKey =
-                builder.Configuration[
-                    $"{GeminiMarketplaceOptions.SectionName}:ApiKey"
-                ]
-                ?? string.Empty;
-        }
-
-
-        var verificationModel =
-            builder.Configuration[
-                $"{GeminiOptions.SectionName}:Model"
-            ];
-
-
-        if (
-            string.IsNullOrWhiteSpace(
-                verificationModel
-            )
-        )
-        {
-            var sharedModel =
-                builder.Configuration[
-                    $"{GeminiMarketplaceOptions.SectionName}:Model"
-                ];
-
-
-            if (
-                !string.IsNullOrWhiteSpace(
-                    sharedModel
-                )
-            )
-            {
-                options.Model =
-                    sharedModel;
-            }
-        }
-    }
-);
-
-
 // ============================================================
 // GEM VERIFICATION GEMINI HTTP CLIENT
 // ============================================================

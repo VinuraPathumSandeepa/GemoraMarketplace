@@ -10,6 +10,7 @@ COPY Gemora.API/Gemora.API.csproj Gemora.API/
 COPY Gemora.Application/Gemora.Application.csproj Gemora.Application/
 COPY Gemora.Domain/Gemora.Domain.csproj Gemora.Domain/
 COPY Gemora.Infrastructure/Gemora.Infrastructure.csproj Gemora.Infrastructure/
+COPY Gemora.Tests/Gemora.Tests.csproj Gemora.Tests/
 
 # Restore NuGet packages
 RUN dotnet restore

@@ -15,6 +15,10 @@ public class GeminiOptions
     // Falls back to Model when not configured
     public string ShippingModel { get; set; } = string.Empty;
 
+    // Shipping uses its own credential and never falls back to the
+    // gem-verification credential.
+    public string ShippingApiKey { get; set; } = string.Empty;
+
     // Total timeout for shipping agent requests
     public int ShippingTimeoutSeconds { get; set; } = 120;
 }

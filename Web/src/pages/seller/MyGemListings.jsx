@@ -8,8 +8,7 @@ import { matchesListingSearch } from "../../components/seller/listingSearchSugge
 import "../../styles/seller-listing-search.css";
 
 import gemListingService from "../../services/gemVerification/gemListingService";
-
-const API_ORIGIN = "https://gemora-api.onrender.com/api";
+import { resolveApiAssetUrl } from "../../services/api";
 
 const FILTERS = [
   { value: "All", label: "All" },
