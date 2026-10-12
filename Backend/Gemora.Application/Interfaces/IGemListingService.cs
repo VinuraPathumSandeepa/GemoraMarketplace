@@ -20,6 +20,10 @@ public interface IGemListingService
     Task<List<GemListingDto>> GetMyListingsAsync(
         Guid sellerId);
 
+    Task<List<GemListingDto>> GetAllForAdminAsync();
+
+    Task<bool> DeleteForAdminAsync(int id, Guid adminId);
+
 
     // ============================================================
     // GET ONE SELLER LISTING
