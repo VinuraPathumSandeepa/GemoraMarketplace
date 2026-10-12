@@ -73,6 +73,7 @@ import VerificationDetails from "./pages/gemologist/VerificationDetails";
 // ============================================================
 
 import TransactionDashboard from "./pages/admin/TransactionDashboard";
+import AdminGemListings from "./pages/admin/AdminGemListings";
 
 // ============================================================
 // ROUTE PROTECTION
@@ -478,6 +479,11 @@ function App() {
             <TransactionDashboard />
           </RoleProtectedRoute>
         }
+      />
+
+      <Route
+        path="/admin/gem-listings"
+        element={<RoleProtectedRoute allowedRoles={["Admin"]}><AdminGemListings /></RoleProtectedRoute>}
       />
 
 

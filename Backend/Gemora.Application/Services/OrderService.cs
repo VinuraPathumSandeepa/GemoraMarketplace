@@ -121,8 +121,7 @@ public partial class OrderService : IOrderService
                         o.Status != OrderStatuses.Refunded &&
 
                         o.Status != OrderStatuses.Failed &&
-                        o.Status != OrderStatuses.Rejected &&
-                        (o.Status != OrderStatuses.Pending || o.BuyerId == buyerId));
+                        o.Status != OrderStatuses.Rejected);
 
             if (hasActiveOrder)
 

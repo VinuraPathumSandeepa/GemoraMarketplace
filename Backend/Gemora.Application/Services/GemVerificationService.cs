@@ -27,7 +27,8 @@ public class GemVerificationService : IGemVerificationService
     {
         return await _context.GemVerifications
             .AsNoTracking()
-            .Where(v => v.Decision == "Pending")
+            .Where(v => v.Decision == "Pending" &&
+                v.GemListing.Status == GemListingStatuses.PendingVerification)
             .OrderBy(v => v.CreatedAt)
             .Select(v => new GemVerificationDto
             {

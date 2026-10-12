@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
+import 'admin_gem_listings_screen.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -30,10 +31,7 @@ class AdminDashboard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.admin_panel_settings_outlined,
-                size: 72,
-              ),
+              const Icon(Icons.admin_panel_settings_outlined, size: 72),
               const SizedBox(height: 20),
               Text(
                 'Welcome, ${user?.fullName ?? 'Admin'}',
@@ -44,18 +42,24 @@ class AdminDashboard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              Text(
-                'Email: ${user?.email ?? ''}',
-              ),
+              Text('Email: ${user?.email ?? ''}'),
               const SizedBox(height: 6),
               const Text('Role: Admin'),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AdminGemListingsScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.diamond_outlined),
+                label: const Text('Manage Gem Listings'),
+              ),
               const SizedBox(height: 30),
               const Text(
                 'Admin Dashboard',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
               ),
             ],
           ),
