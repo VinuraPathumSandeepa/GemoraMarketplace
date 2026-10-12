@@ -18,13 +18,8 @@ class AuthService {
   // ==========================================
 
   Future<UserModel> login(String email, String password) async {
-<<<<<<< HEAD
-    final response =
-        await _post(
-=======
     final response = await _client
         .post(
->>>>>>> origin/dev
           Uri.parse(ApiConfig.login),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'email': email.trim(), 'password': password}),
@@ -73,11 +68,7 @@ class AuthService {
     required String password,
     required String role,
   }) async {
-<<<<<<< HEAD
-    final response = await _post(
-=======
     final response = await _client.post(
->>>>>>> origin/dev
       Uri.parse(ApiConfig.register),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -108,11 +99,7 @@ class AuthService {
     required String email,
     required String code,
   }) async {
-<<<<<<< HEAD
-    final response = await _post(
-=======
     final response = await _client.post(
->>>>>>> origin/dev
       Uri.parse(ApiConfig.verifyEmail),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email.trim(), 'code': code.trim()}),
@@ -130,11 +117,7 @@ class AuthService {
   // ==========================================
 
   Future<void> resendVerificationCode({required String email}) async {
-<<<<<<< HEAD
-    final response = await _post(
-=======
     final response = await _client.post(
->>>>>>> origin/dev
       Uri.parse(ApiConfig.resendVerificationCode),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email.trim()}),
@@ -160,13 +143,8 @@ class AuthService {
       throw Exception('Authentication token not found.');
     }
 
-<<<<<<< HEAD
-    final response =
-        await _get(
-=======
     final response = await _client
         .get(
->>>>>>> origin/dev
           Uri.parse(ApiConfig.currentUser),
           headers: {
             'Content-Type': 'application/json',

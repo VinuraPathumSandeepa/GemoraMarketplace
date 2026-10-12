@@ -6,7 +6,8 @@ class AiBuyerAssistantScreen extends StatefulWidget {
   const AiBuyerAssistantScreen({super.key});
 
   @override
-  State<AiBuyerAssistantScreen> createState() => _AiBuyerAssistantScreenState();
+  State<AiBuyerAssistantScreen> createState() =>
+      _AiBuyerAssistantScreenState();
 }
 
 class _AiBuyerAssistantScreenState extends State<AiBuyerAssistantScreen> {
@@ -50,23 +51,21 @@ class _AiBuyerAssistantScreenState extends State<AiBuyerAssistantScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final summary = (_result?['summary'] ?? _result?['message'])?.toString();
-    final rawRecommendations = _result?['recommendations'];
-    final recommendations = rawRecommendations is List
-        ? rawRecommendations.whereType<Map>().toList()
-        : const <Map>[];
+    final message = _result?['message']?.toString();
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Text(
           'Buyer Assistance Agent',
-          style: Theme.of(context).textTheme.headlineSmall
+          style: Theme.of(context)
+              .textTheme
+              .headlineSmall
               ?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         const Text(
-          'Ask for gemstone options. The assistant recommends verified, currently eligible marketplace listings.',
+          'Ask about verified gemstones, marketplace listings, or your orders.',
         ),
         const SizedBox(height: 16),
         TextField(
@@ -76,38 +75,27 @@ class _AiBuyerAssistantScreenState extends State<AiBuyerAssistantScreen> {
           textInputAction: TextInputAction.newline,
           decoration: InputDecoration(
             hintText: 'Example: I want a blue sapphire under LKR 500,000',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
           ),
         ),
         const SizedBox(height: 12),
         FilledButton.icon(
           onPressed: _loading ? null : _ask,
           icon: const Icon(Icons.auto_awesome),
-          label: Text(_loading ? 'Checking marketplace...' : 'Ask assistant'),
+          label: Text(
+            _loading ? 'Checking marketplace...' : 'Ask assistant',
+          ),
         ),
-        if (summary != null && summary.isNotEmpty) ...[
+        if (message != null && message.isNotEmpty) ...[
           const SizedBox(height: 20),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Text(summary, style: const TextStyle(height: 1.5)),
+              child: Text(message, style: const TextStyle(height: 1.5)),
             ),
           ),
-        ],
-        if (recommendations.isNotEmpty) ...[
-          const SizedBox(height: 20),
-          ...recommendations.map((recommendation) {
-            final rawReasons = recommendation['reasons'];
-            final reasons = rawReasons is List
-                ? rawReasons.map((reason) => reason.toString()).join('\n')
-                : rawReasons?.toString() ?? '';
-            return Card(
-              child: ListTile(
-                title: Text(recommendation['title']?.toString() ?? ''),
-                subtitle: reasons.isEmpty ? null : Text(reasons),
-              ),
-            );
-          }),
         ],
       ],
     );

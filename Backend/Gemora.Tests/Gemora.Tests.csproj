@@ -26,4 +26,5 @@
     <ProjectReference Include="..\Gemora.Application\Gemora.Application.csproj" />
     <ProjectReference Include="..\Gemora.Infrastructure\Gemora.Infrastructure.csproj" />
   </ItemGroup>
+
 </Project>

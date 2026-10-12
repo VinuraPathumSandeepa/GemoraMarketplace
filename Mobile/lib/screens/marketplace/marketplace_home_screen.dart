@@ -23,14 +23,6 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
   @override
   void initState() {
     super.initState();
-<<<<<<< HEAD
-    _load();
-  }
-
-  @override
-  void dispose() {
-    _search.dispose();
-=======
     _searchFocusNode.addListener(_refreshSuggestions);
     _load();
   }
@@ -43,7 +35,6 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
   void dispose() {
     _search.dispose();
     _searchFocusNode.dispose();
->>>>>>> origin/dev
     super.dispose();
   }
 
@@ -55,10 +46,6 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
       _error = null;
     });
     try {
-<<<<<<< HEAD
-      final gems = await _service.getBuyerGems(search: _search.text.trim());
-      if (mounted) setState(() => _gems = gems);
-=======
       final search = _search.text.trim();
       final gems = await _service.getGems(search: search);
       if (mounted) {
@@ -69,7 +56,6 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
           }
         });
       }
->>>>>>> origin/dev
     } catch (e) {
       if (mounted) {
         setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
@@ -77,8 +63,6 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
-<<<<<<< HEAD
-=======
   }
 
   void _submitSearch([String? suggestion]) {
@@ -98,7 +82,6 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
     _searchFocusNode.unfocus();
     setState(() {});
     _load();
->>>>>>> origin/dev
   }
 
   @override
@@ -108,22 +91,6 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-<<<<<<< HEAD
-          TextField(
-            controller: _search,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _load(),
-            decoration: InputDecoration(
-              hintText: 'Search sapphire, ruby, color, cut...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: IconButton(
-                onPressed: _load,
-                icon: const Icon(Icons.arrow_forward),
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-=======
           TextFieldTapRegion(
             child: Column(
               children: [
@@ -164,7 +131,6 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
                     onSelected: _submitSearch,
                   ),
               ],
->>>>>>> origin/dev
             ),
           ),
           const SizedBox(height: 16),
@@ -236,13 +202,9 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
                 subtitle: Text(
                   '${g.gemType} • ${g.caratWeight} ct • ${g.currency} ${g.price.toStringAsFixed(0)}',
                 ),
-<<<<<<< HEAD
-                trailing: const Icon(Icons.chevron_right),
-=======
                 trailing: g.isAvailable
                     ? const Icon(Icons.chevron_right)
                     : const Chip(label: Text('Sold')),
->>>>>>> origin/dev
                 onTap: () async {
                   final changed = await Navigator.push<bool>(
                     context,

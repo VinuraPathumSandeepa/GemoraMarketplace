@@ -35,6 +35,7 @@ class MockMarketplaceService extends MarketplaceService {
   @override
   Future<OrderModel> createOrder(
     int gemListingId, {
+    Map<String, dynamic>? deliveryDetails,
     String shippingAddress = 'Main Street',
     String shippingRegion = 'Western',
     String shippingCountryCode = 'LK',
@@ -170,7 +171,6 @@ void main() {
           find.text('Domestic delivery: Export clearance not required'),
           findsOneWidget,
         );
-        await fillRecipient(tester);
 
         // Tap Place Order
         await tester.tap(find.text('Place Order'));
@@ -181,11 +181,6 @@ void main() {
         expect(mockService.lastShippingCountryCode, equals('LK'));
         expect(mockService.lastShippingAddress, isNotEmpty);
         expect(mockService.lastShippingRegion, isNotEmpty);
-        expect(mockService.lastDeliveryDetails?['recipientName'], 'Buyer Test');
-        expect(
-          mockService.lastDeliveryDetails?['recipientPhone'],
-          '+94 77 123 4567',
-        );
 
         // Verify success dialog
         expect(find.text('Order Created'), findsOneWidget);
@@ -220,7 +215,6 @@ void main() {
           ),
           findsOneWidget,
         );
-        await fillRecipient(tester);
 
         await tester.tap(find.text('Place Order'));
         await tester.pumpAndSettle();
@@ -259,7 +253,6 @@ void main() {
 
         await tester.tap(find.text('Buy Gemstone'));
         await tester.pumpAndSettle();
-        await fillRecipient(tester);
 
         // Tap Place Order once to start submission
         await tester.tap(find.text('Place Order'));

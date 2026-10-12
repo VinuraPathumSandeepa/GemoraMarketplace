@@ -216,7 +216,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 children: [
                   const SizedBox(height: 3),
                   Text(
-                    '${o.orderNumber}\n${o.currency} ${o.agreedPrice.toStringAsFixed(2)} • ${_statusLabel(o.status == 'Paid' ? o.fulfillmentStatus : o.status)}',
+                    '${o.orderNumber}\n${o.currency} ${o.agreedPrice.toStringAsFixed(2)} â€¢ ${o.status}',
                   ),
                   const SizedBox(height: 4),
                   Container(
@@ -256,7 +256,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                     leading: const Icon(Icons.circle, size: 10),
                     title: Text(h.newStatus),
                     subtitle: Text(
-                      '${h.changedByName}${h.reason == null ? '' : ' • ${h.reason}'}',
+                      '${h.changedByName}${h.reason == null ? '' : ' â€¢ ${h.reason}'}',
                     ),
                   ),
                 ),
@@ -294,17 +294,14 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                       FilledButton.tonalIcon(
                         icon: const Icon(Icons.flight_takeoff, size: 16),
                         label: const Text('Track Export'),
-                        onPressed: busy
-                            ? null
-                            : () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => BuyerExportTrackingScreen(
-                                      orderId: o.id,
-                                    ),
-                                  ),
-                                );
-                              },
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  BuyerExportTrackingScreen(orderId: o.id),
+                            ),
+                          );
+                        },
                       )
                     else
                       const SizedBox.shrink(),

@@ -18,9 +18,7 @@ class _NotificationBellState extends State<NotificationBell>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        context.read<NotificationProvider?>()?.refreshCount();
-      }
+      if (mounted) context.read<NotificationProvider>().refreshCount();
     });
   }
 
@@ -33,21 +31,17 @@ class _NotificationBellState extends State<NotificationBell>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      context.read<NotificationProvider?>()?.refreshCount();
+      context.read<NotificationProvider>().refreshCount();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final notificationProvider = context.watch<NotificationProvider?>();
-    final count = notificationProvider?.unreadCount ?? 0;
+    final count = context.watch<NotificationProvider>().unreadCount;
     return IconButton(
       tooltip: count == 0 ? 'Notifications' : 'Notifications, $count unread',
-      onPressed: notificationProvider == null
-          ? null
-          : () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-            ),
+      onPressed: () => Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const NotificationsScreen())),
       icon: SizedBox(
         width: 34,
         height: 34,

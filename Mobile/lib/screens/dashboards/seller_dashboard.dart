@@ -3,8 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../widgets/notification_bell.dart';
-import '../shipments/seller_shipment_list.dart';
-import '../shipments/seller_order_inbox.dart';
 import '../export_compliance/my_export_requests_screen.dart';
 import '../seller/create_gem_listing_screen.dart';
 import '../seller/my_gem_listings_screen.dart';
@@ -54,6 +52,7 @@ class SellerDashboard extends StatelessWidget {
             ),
           ],
         ),
+        actions: const [NotificationBell(), SizedBox(width: 8)],
       ),
 
       // ============================================================

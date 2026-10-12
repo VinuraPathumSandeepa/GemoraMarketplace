@@ -281,27 +281,6 @@ function App() {
           <NotificationsPage />
         </RoleProtectedRoute>
       } />
-      <Route path="/seller/shipments" element={
-        <RoleProtectedRoute allowedRoles={["Seller"]}>
-          <DashboardLayout><SellerShipments /></DashboardLayout>
-        </RoleProtectedRoute>
-      } />
-      <Route path="/seller/shipments/create" element={
-        <RoleProtectedRoute allowedRoles={["Seller"]}>
-          <DashboardLayout><CreateShipment /></DashboardLayout>
-        </RoleProtectedRoute>
-      } />
-      <Route path="/seller/shipments/:id" element={
-        <RoleProtectedRoute allowedRoles={["Seller"]}>
-          <DashboardLayout><ShipmentDetail /></DashboardLayout>
-        </RoleProtectedRoute>
-      } />
-      <Route path="/seller/shipments/:id/overview" element={
-        <RoleProtectedRoute allowedRoles={["Seller"]}>
-          <ShipmentDetailPage />
-        </RoleProtectedRoute>
-      } />
-
 
       {/* ======================================================
           COMPONENT 1 — SELLER: MY GEM LISTINGS
