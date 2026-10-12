@@ -256,7 +256,7 @@ function DashboardLayout({ children }) {
 
   return (
     <NotificationProvider key={user?.id}>
-    <div className={`gemora-app-shell${shipmentDashboard ? " shipment-dashboard-shell" : ""}`}>
+    <div className="gemora-app-shell">
 
       {/* ======================================================
           TOP NAVIGATION
@@ -317,6 +317,8 @@ function DashboardLayout({ children }) {
 
           <div className="gemora-user-area">
             {user?.role === "Seller" && <OrderInbox seller key={user?.userId || user?.id || user?.email} />}
+            {(user?.role === "Seller" || user?.role === "Gemologist") && <NotificationBell />}
+
             {(user?.role === "Seller" || user?.role === "Gemologist") && <NotificationBell />}
 
             {/* ROLE */}

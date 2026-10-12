@@ -9,13 +9,7 @@ import "../../styles/seller-listing-search.css";
 
 import gemListingService from "../../services/gemVerification/gemListingService";
 
-import {
-  resolveApiAssetUrl,
-} from "../../services/api";
-
-// ============================================================
-// STATUS FILTERS
-// ============================================================
+const API_ORIGIN = "https://gemora-api.onrender.com/api";
 
 const FILTERS = [
   { value: "All", label: "All" },

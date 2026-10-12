@@ -159,6 +159,9 @@ public class MarketplaceService : IMarketplaceService
                 EF.Functions.ILike(g.GemType, pattern, "\\") ||
                 EF.Functions.ILike(g.Description, pattern, "\\"));
         }
+
+
+
         // =====================================================
         // PRICE RANGE
         // =====================================================
@@ -285,6 +288,7 @@ public class MarketplaceService : IMarketplaceService
         }
 
 
+
         // C2-BUG-002: Calculate the offset without int overflow.
         long offset = ((long)page - 1L) * pageSize;
 
@@ -303,6 +307,9 @@ public class MarketplaceService : IMarketplaceService
                         totalItems / (double)pageSize)
             };
         }
+
+
+
         // =====================================================
         // RESULTS
         // =====================================================

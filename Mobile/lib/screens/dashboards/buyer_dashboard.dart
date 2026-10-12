@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../widgets/notification_bell.dart';
-import '../../widgets/glass_capsule_navigation.dart';
 import 'buyer_overview_screen.dart';
 import '../marketplace/ai_buyer_assistant_screen.dart';
 import '../marketplace/buyer_export_tracking_screen.dart';
@@ -31,6 +30,12 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
     AiBuyerAssistantScreen(),
     MyOrdersScreen(),
     BuyerOverviewScreen(),
+  ];
+  final _titles = const [
+    'Marketplace',
+    'AI Buyer Assistant',
+    'My Orders',
+    'Buyer Workspace',
   ];
 
   @override
@@ -85,9 +90,9 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
             selectedIcon: Icons.receipt_long,
             label: 'Orders',
           ),
-          GlassCapsuleDestination(
-            icon: Icons.dashboard_outlined,
-            selectedIcon: Icons.dashboard,
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
             label: 'Services',
           ),
         ],
