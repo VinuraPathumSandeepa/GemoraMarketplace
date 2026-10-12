@@ -9,31 +9,34 @@ export default function BuyerHero() {
   useEffect(() => {
     const media = video.current;
     if (!media) return;
-    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let visible = false;
+    let visible = true;
     let disposed = false;
-    const shouldPlay = () => !disposed && visible && !document.hidden && !preference.matches;
+    const shouldPlay = () => !disposed && visible && !document.hidden;
     const syncPlayback = () => {
       if (!shouldPlay()) media.pause();
-      else media.play().then(() => {
-        if (!shouldPlay()) media.pause();
-      }).catch(() => { /* Keep the poster when autoplay is blocked. */ });
+      else {
+        const attempt = media.play();
+        attempt?.then(() => {
+          if (!shouldPlay()) media.pause();
+        }).catch(() => {});
+      }
     };
-    const observer = new IntersectionObserver(([entry]) => {
+    const observer = typeof IntersectionObserver === "undefined" ? null : new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
       syncPlayback();
-    });
-    observer.observe(media);
-    preference.addEventListener("change", syncPlayback);
+    }, { threshold: 0.15 });
+    if (observer) {
+      visible = false;
+      observer.observe(media);
+    } else syncPlayback();
     document.addEventListener("visibilitychange", syncPlayback);
     return () => {
       disposed = true;
-      observer.disconnect();
-      preference.removeEventListener("change", syncPlayback);
+      observer?.disconnect();
       document.removeEventListener("visibilitychange", syncPlayback);
       media.pause();
     };
-  }, []);
+  }, [failed]);
 
   return (
     <section className="gm-dashboard-hero gm-video-hero">
@@ -43,6 +46,7 @@ export default function BuyerHero() {
           className="gm-hero-video"
           src="/videos/buyerside.mp4"
           poster="/images/gems/hero-poster.webp"
+          autoPlay
           muted
           loop
           playsInline
@@ -54,9 +58,9 @@ export default function BuyerHero() {
       )}
       <div className="gm-hero-video-tint" aria-hidden="true" />
       <div className="gm-hero-copy">
-        <span className="gm-eyebrow">FROM THE HEART OF CEYLON</span>
-        <h1>Extraordinary gems.<br /><em>Meaningful discoveries.</em></h1>
-        <p>A place to discover Sri Lankan gemstones, understand their story, and find a stone to call your own.</p>
+        <span className="gm-eyebrow">THE GEMORA COLLECTION · SRI LANKA</span>
+        <h1>Discover a gem<br /><em>worth keeping.</em></h1>
+        <p>Explore thoughtfully selected Ceylon gemstones, understand the details, and choose with confidence.</p>
         <div className="gm-hero-actions">
           <Link className="gm-button" to="/buyer/marketplace">Explore the collection <ArrowRight size={18} /></Link>
           <Link className="gm-hero-secondary" to="/buyer/orders">View my orders</Link>
@@ -66,9 +70,7 @@ export default function BuyerHero() {
           <span><ShieldCheck size={16} />Details before decisions</span>
         </div>
       </div>
-      <div className="gm-hero-art">
-        <div className="gm-hero-caption"><span>THE GEMORA EDIT</span><p>Nature's finest.<br />Yours to discover.</p></div>
-      </div>
+      <div className="gm-hero-caption"><span>THE GEMORA EDIT</span><p>Distinctive by nature.<br />Chosen by you.</p></div>
     </section>
   );
 }
