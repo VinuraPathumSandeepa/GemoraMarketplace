@@ -5,8 +5,10 @@ import '../../models/marketplace/marketplace_gem.dart';
 import '../../services/marketplace_service.dart';
 import '../../widgets/gem_search_suggestions.dart';
 import '../../widgets/gemora_mark.dart';
+import '../../widgets/glass_capsule_navigation.dart';
 import '../onboarding/welcome_screen.dart';
 import 'my_orders_screen.dart';
+import '../shipments/seller_shipment_list.dart';
 
 class MarketplaceScreen extends StatefulWidget {
   final bool isAuthenticated;
@@ -280,6 +282,11 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 
   void _handleBottomNavigation(int index) {
+    if (_showShipments && index == 4) {
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const SellerShipmentList()));
+      return;
+    }
     switch (index) {
       case 0:
         _goHome();
@@ -390,6 +397,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
       backgroundColor: _cream,
       body: SafeArea(
         child: RefreshIndicator(
@@ -929,39 +937,44 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     );
   }
 
+  bool get _showShipments =>
+      widget.isAuthenticated && widget.role?.trim().toLowerCase() == 'seller';
+
   Widget _buildBottomNavigation() {
-    return NavigationBar(
+    return GlassCapsuleNavigation(
       selectedIndex: _bottomIndex,
       onDestinationSelected: _handleBottomNavigation,
-      backgroundColor: Colors.white,
-      indicatorColor: const Color(0xFFF1E7D5),
       destinations: [
-        const NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home_rounded),
+        const GlassCapsuleDestination(
+          icon: Icons.home_outlined,
+          selectedIcon: Icons.home_rounded,
           label: 'Home',
         ),
-        const NavigationDestination(
-          icon: Icon(Icons.diamond_outlined),
-          selectedIcon: Icon(Icons.diamond),
+        const GlassCapsuleDestination(
+          icon: Icons.diamond_outlined,
+          selectedIcon: Icons.diamond,
           label: 'Explore',
         ),
-        NavigationDestination(
-          icon: Icon(
-            widget.isAuthenticated
-                ? Icons.work_outline_rounded
-                : Icons.login_rounded,
-          ),
-          selectedIcon: Icon(
-            widget.isAuthenticated ? Icons.work_rounded : Icons.login_rounded,
-          ),
+        GlassCapsuleDestination(
+          icon: widget.isAuthenticated
+              ? Icons.work_outline_rounded
+              : Icons.login_rounded,
+          selectedIcon: widget.isAuthenticated
+              ? Icons.work_rounded
+              : Icons.login_rounded,
           label: widget.isAuthenticated ? 'Workspace' : 'Account',
         ),
-        const NavigationDestination(
-          icon: Icon(Icons.person_outline_rounded),
-          selectedIcon: Icon(Icons.person),
+        const GlassCapsuleDestination(
+          icon: Icons.person_outline_rounded,
+          selectedIcon: Icons.person,
           label: 'Profile',
         ),
+        if (_showShipments)
+          const GlassCapsuleDestination(
+            icon: Icons.local_shipping_outlined,
+            selectedIcon: Icons.local_shipping,
+            label: 'My Shipments',
+          ),
       ],
     );
   }
@@ -1090,12 +1103,17 @@ class _MarketplaceGemDetailsScreenState
     _showPurchaseConfirmation(gem);
   }
 
-  void _showPurchaseConfirmation(MarketplaceGem gem) {
+  Future<void> _showPurchaseConfirmation(MarketplaceGem gem) async {
     String selectedCountry = 'LK';
     final addressController = TextEditingController(
       text: '120 Galle Road, Colombo 03',
     );
     final regionController = TextEditingController(text: 'Western Province');
+    final recipientController = TextEditingController();
+    final phoneController = TextEditingController();
+    final cityController = TextEditingController(text: 'Colombo');
+    final districtController = TextEditingController(text: 'Colombo');
+    final postalCodeController = TextEditingController(text: '00300');
     final formKey = GlobalKey<FormState>();
 
     const countries = [
@@ -1149,7 +1167,7 @@ class _MarketplaceGemDetailsScreenState
       },
     ];
 
-    showModalBottomSheet<void>(
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1285,6 +1303,9 @@ class _MarketplaceGemDetailsScreenState
                               );
                               regionController.text = match['region']!;
                               addressController.text = match['address']!;
+                              cityController.clear();
+                              districtController.clear();
+                              postalCodeController.clear();
                             });
                           },
                         ),
@@ -1355,6 +1376,38 @@ class _MarketplaceGemDetailsScreenState
                               (val == null || val.trim().isEmpty)
                               ? 'Region is required'
                               : null,
+                        ),
+                        const SizedBox(height: 14),
+                        _purchaseField(
+                          controller: recipientController,
+                          label: 'Recipient Name',
+                          hint: 'Name of the person receiving the package',
+                        ),
+                        const SizedBox(height: 14),
+                        _purchaseField(
+                          controller: phoneController,
+                          label: 'Recipient Phone',
+                          hint: '+94 77 123 4567',
+                          keyboardType: TextInputType.phone,
+                        ),
+                        const SizedBox(height: 14),
+                        _purchaseField(
+                          controller: cityController,
+                          label: 'City / Town',
+                          hint: 'Colombo',
+                        ),
+                        const SizedBox(height: 14),
+                        _purchaseField(
+                          controller: districtController,
+                          label: 'District',
+                          hint: 'Colombo',
+                        ),
+                        const SizedBox(height: 14),
+                        _purchaseField(
+                          controller: postalCodeController,
+                          label: 'Postal Code',
+                          hint: '00300',
+                          keyboardType: TextInputType.number,
                         ),
                         const SizedBox(height: 14),
                         Container(
@@ -1443,6 +1496,26 @@ class _MarketplaceGemDetailsScreenState
                                           shippingRegion: regionController.text
                                               .trim(),
                                           shippingCountryCode: selectedCountry,
+                                          deliveryDetails: {
+                                            'recipientName': recipientController
+                                                .text
+                                                .trim(),
+                                            'recipientPhone': phoneController
+                                                .text
+                                                .trim(),
+                                            'addressLine1': addressController
+                                                .text
+                                                .trim(),
+                                            'city': cityController.text.trim(),
+                                            'district': districtController.text
+                                                .trim(),
+                                            'region': regionController.text
+                                                .trim(),
+                                            'postalCode': postalCodeController
+                                                .text
+                                                .trim(),
+                                            'countryCode': selectedCountry,
+                                          },
                                         );
                                       },
                                 style: FilledButton.styleFrom(
@@ -1484,6 +1557,62 @@ class _MarketplaceGemDetailsScreenState
         );
       },
     );
+
+    // The route's closing animation still owns the form for a short time.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    addressController.dispose();
+    regionController.dispose();
+    recipientController.dispose();
+    phoneController.dispose();
+    cityController.dispose();
+    districtController.dispose();
+    postalCodeController.dispose();
+  }
+
+  Widget _purchaseField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    TextInputType? keyboardType,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: _text,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            hintText: hint,
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 12,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _border),
+            ),
+          ),
+          validator: (value) => value == null || value.trim().isEmpty
+              ? '$label is required'
+              : null,
+        ),
+      ],
+    );
   }
 
   Future<void> _submitOrder({
@@ -1491,6 +1620,7 @@ class _MarketplaceGemDetailsScreenState
     required String shippingAddress,
     required String shippingRegion,
     required String shippingCountryCode,
+    required Map<String, dynamic> deliveryDetails,
   }) async {
     setState(() => _ordering = true);
 
@@ -1500,6 +1630,7 @@ class _MarketplaceGemDetailsScreenState
         shippingAddress: shippingAddress,
         shippingRegion: shippingRegion,
         shippingCountryCode: shippingCountryCode,
+        deliveryDetails: deliveryDetails,
       );
 
       if (!mounted) return;

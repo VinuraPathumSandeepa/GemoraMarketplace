@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../models/marketplace/marketplace_gem.dart';
 import '../../services/marketplace_service.dart';
 import '../../widgets/gem_search_suggestions.dart';

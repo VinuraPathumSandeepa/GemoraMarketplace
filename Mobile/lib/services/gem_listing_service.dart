@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:file_selector/file_selector.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -226,10 +226,10 @@ class GemListingService {
 
   Future<GemListingModel> uploadGemImage({
     required int id,
-    required String filePath,
+    required XFile file,
   }) async {
     final prepared = await _prepareUpload(
-      filePath: filePath,
+      file: file,
       type: _UploadType.gemImage,
     );
 
@@ -277,10 +277,10 @@ class GemListingService {
 
   Future<GemListingModel> uploadCertificate({
     required int id,
-    required String filePath,
+    required XFile file,
   }) async {
     final prepared = await _prepareUpload(
-      filePath: filePath,
+      file: file,
       type: _UploadType.certificate,
     );
 
@@ -360,17 +360,9 @@ class GemListingService {
   // ============================================================
 
   Future<_PreparedUpload> _prepareUpload({
-    required String filePath,
+    required XFile file,
     required _UploadType type,
   }) async {
-    final file = File(filePath);
-
-    if (!await file.exists()) {
-      throw Exception(
-        'The selected file could not be found. Please select it again.',
-      );
-    }
-
     final bytes = await file.readAsBytes();
 
     if (bytes.isEmpty) {

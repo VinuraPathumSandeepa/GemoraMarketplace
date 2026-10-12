@@ -18,6 +18,7 @@ class MockMarketplaceService extends MarketplaceService {
   String? lastShippingAddress;
   String? lastShippingRegion;
   String? lastShippingCountryCode;
+  Map<String, dynamic>? lastDeliveryDetails;
 
   MockMarketplaceService({
     required this.gemToReturn,
@@ -34,15 +35,18 @@ class MockMarketplaceService extends MarketplaceService {
   @override
   Future<OrderModel> createOrder(
     int gemListingId, {
+    Map<String, dynamic>? deliveryDetails,
     String shippingAddress = 'Main Street',
     String shippingRegion = 'Western',
     String shippingCountryCode = 'LK',
+    Map<String, dynamic>? deliveryDetails,
   }) async {
     createOrderCallCount++;
     lastGemListingId = gemListingId;
     lastShippingAddress = shippingAddress;
     lastShippingRegion = shippingRegion;
     lastShippingCountryCode = shippingCountryCode;
+    lastDeliveryDetails = deliveryDetails;
 
     if (delayCompleter != null) {
       await delayCompleter!.future;
@@ -65,7 +69,9 @@ class MockMarketplaceService extends MarketplaceService {
           currency: gemToReturn.currency,
           status: 'Pending',
           shippingCountryCode: shippingCountryCode,
-          exportStatus: shippingCountryCode == 'LK' ? 'NotRequired' : 'NotStarted',
+          exportStatus: shippingCountryCode == 'LK'
+              ? 'NotRequired'
+              : 'NotStarted',
           createdAt: DateTime.now(),
           statusHistory: [],
         );
@@ -114,9 +120,20 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
   }
 
+  Future<void> fillRecipient(WidgetTester tester) async {
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(2), 'Buyer Test');
+    await tester.enterText(fields.at(3), '+94 77 123 4567');
+    await tester.enterText(fields.at(4), 'Colombo');
+    await tester.enterText(fields.at(5), 'Colombo');
+    await tester.enterText(fields.at(6), '00300');
+    await tester.pump();
+  }
+
   group('Marketplace Gem Purchase Flow Tests', () {
-    testWidgets('5. Buy button does not show old placeholder text',
-        (WidgetTester tester) async {
+    testWidgets('5. Buy button does not show old placeholder text', (
+      WidgetTester tester,
+    ) async {
       prepareTester(tester);
 
       final mockService = MockMarketplaceService(gemToReturn: testGem);
@@ -136,107 +153,127 @@ void main() {
       expect(find.text('Confirm Purchase'), findsOneWidget);
     });
 
-    testWidgets('6 & 12. Domestic purchase flow creates domestic order with countryCode LK',
-        (WidgetTester tester) async {
-      prepareTester(tester);
+    testWidgets(
+      '6 & 12. Domestic purchase flow creates domestic order with countryCode LK',
+      (WidgetTester tester) async {
+        prepareTester(tester);
 
-      final mockService = MockMarketplaceService(gemToReturn: testGem);
+        final mockService = MockMarketplaceService(gemToReturn: testGem);
 
-      await tester.pumpWidget(createWidget(service: mockService));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(createWidget(service: mockService));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Buy Gemstone'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Buy Gemstone'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Confirm Purchase'), findsOneWidget);
-      expect(find.text('Domestic delivery: Export clearance not required'), findsOneWidget);
+        expect(find.text('Confirm Purchase'), findsOneWidget);
+        expect(
+          find.text('Domestic delivery: Export clearance not required'),
+          findsOneWidget,
+        );
 
-      // Tap Place Order
-      await tester.tap(find.text('Place Order'));
-      await tester.pumpAndSettle();
+        // Tap Place Order
+        await tester.tap(find.text('Place Order'));
+        await tester.pumpAndSettle();
 
-      expect(mockService.createOrderCallCount, equals(1));
-      expect(mockService.lastGemListingId, equals(40));
-      expect(mockService.lastShippingCountryCode, equals('LK'));
-      expect(mockService.lastShippingAddress, isNotEmpty);
-      expect(mockService.lastShippingRegion, isNotEmpty);
+        expect(mockService.createOrderCallCount, equals(1));
+        expect(mockService.lastGemListingId, equals(40));
+        expect(mockService.lastShippingCountryCode, equals('LK'));
+        expect(mockService.lastShippingAddress, isNotEmpty);
+        expect(mockService.lastShippingRegion, isNotEmpty);
 
-      // Verify success dialog
-      expect(find.text('Order Created'), findsOneWidget);
-      expect(find.textContaining('GEM-A1B2C3D4'), findsOneWidget);
-      expect(find.text('View My Orders'), findsOneWidget);
-    });
+        // Verify success dialog
+        expect(find.text('Order Created'), findsOneWidget);
+        expect(find.textContaining('GEM-A1B2C3D4'), findsOneWidget);
+        expect(find.text('View My Orders'), findsOneWidget);
+      },
+    );
 
-    testWidgets('11. International purchase selects US and creates order with countryCode US',
-        (WidgetTester tester) async {
-      prepareTester(tester);
+    testWidgets(
+      '11. International purchase selects US and creates order with countryCode US',
+      (WidgetTester tester) async {
+        prepareTester(tester);
 
-      final mockService = MockMarketplaceService(gemToReturn: testGem);
+        final mockService = MockMarketplaceService(gemToReturn: testGem);
 
-      await tester.pumpWidget(createWidget(service: mockService));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(createWidget(service: mockService));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Buy Gemstone'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Buy Gemstone'));
+        await tester.pumpAndSettle();
 
-      // Open Dropdown to pick United States
-      await tester.tap(find.byType(DropdownButtonFormField<String>));
-      await tester.pumpAndSettle();
+        // Open Dropdown to pick United States
+        await tester.tap(find.byType(DropdownButtonFormField<String>));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('United States (International - US)').last);
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('United States (International - US)').last);
+        await tester.pumpAndSettle();
 
-      expect(find.text('International delivery: Export clearance required (Component 4)'), findsOneWidget);
+        expect(
+          find.text(
+            'International delivery: Export clearance required (Component 4)',
+          ),
+          findsOneWidget,
+        );
 
-      await tester.tap(find.text('Place Order'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Place Order'));
+        await tester.pumpAndSettle();
 
-      expect(mockService.createOrderCallCount, equals(1));
-      expect(mockService.lastShippingCountryCode, equals('US'));
-      expect(mockService.lastShippingRegion, equals('California'));
-      expect(mockService.lastShippingAddress, equals('742 Evergreen Terrace, Springfield'));
+        expect(mockService.createOrderCallCount, equals(1));
+        expect(mockService.lastShippingCountryCode, equals('US'));
+        expect(mockService.lastShippingRegion, equals('California'));
+        expect(
+          mockService.lastShippingAddress,
+          equals('742 Evergreen Terrace, Springfield'),
+        );
 
-      expect(find.text('Order Created'), findsOneWidget);
-      expect(
-        find.textContaining('Export clearance is required for this international order'),
-        findsOneWidget,
-      );
-    });
+        expect(find.text('Order Created'), findsOneWidget);
+        expect(
+          find.textContaining(
+            'Export clearance is required for this international order',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
 
-    testWidgets('7. Loading state prevents duplicate order taps during submission',
-        (WidgetTester tester) async {
-      prepareTester(tester);
+    testWidgets(
+      '7. Loading state prevents duplicate order taps during submission',
+      (WidgetTester tester) async {
+        prepareTester(tester);
 
-      final completer = Completer<void>();
-      final mockService = MockMarketplaceService(
-        gemToReturn: testGem,
-        delayCompleter: completer,
-      );
+        final completer = Completer<void>();
+        final mockService = MockMarketplaceService(
+          gemToReturn: testGem,
+          delayCompleter: completer,
+        );
 
-      await tester.pumpWidget(createWidget(service: mockService));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(createWidget(service: mockService));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Buy Gemstone'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Buy Gemstone'));
+        await tester.pumpAndSettle();
 
-      // Tap Place Order once to start submission
-      await tester.tap(find.text('Place Order'));
-      await tester.pump(); // Start async work without settling
+        // Tap Place Order once to start submission
+        await tester.tap(find.text('Place Order'));
+        await tester.pump(); // Start async work without settling
 
-      expect(mockService.createOrderCallCount, equals(1));
+        expect(mockService.createOrderCallCount, equals(1));
 
-      // During async submission, duplicate taps cannot trigger another order
-      expect(mockService.createOrderCallCount, equals(1));
+        // During async submission, duplicate taps cannot trigger another order
+        expect(mockService.createOrderCallCount, equals(1));
 
-      // Complete order
-      completer.complete();
-      await tester.pumpAndSettle();
+        // Complete order
+        completer.complete();
+        await tester.pumpAndSettle();
 
-      expect(mockService.createOrderCallCount, equals(1));
-    });
+        expect(mockService.createOrderCallCount, equals(1));
+      },
+    );
 
-    testWidgets('9. API failure displays friendly error message',
-        (WidgetTester tester) async {
+    testWidgets('9. API failure displays friendly error message', (
+      WidgetTester tester,
+    ) async {
       prepareTester(tester);
 
       final mockService = MockMarketplaceService(
@@ -249,16 +286,21 @@ void main() {
 
       await tester.tap(find.text('Buy Gemstone'));
       await tester.pumpAndSettle();
+      await fillRecipient(tester);
 
       await tester.tap(find.text('Place Order'));
       await tester.pumpAndSettle();
 
-      expect(find.text('This gemstone is no longer available.'), findsOneWidget);
+      expect(
+        find.text('This gemstone is no longer available.'),
+        findsOneWidget,
+      );
       expect(find.text('Order Created'), findsNothing);
     });
 
-    testWidgets('10. Required shipping validation prevents empty submission',
-        (WidgetTester tester) async {
+    testWidgets('10. Required shipping validation prevents empty submission', (
+      WidgetTester tester,
+    ) async {
       prepareTester(tester);
 
       final mockService = MockMarketplaceService(gemToReturn: testGem);
@@ -281,27 +323,33 @@ void main() {
       expect(mockService.createOrderCallCount, equals(0));
     });
 
-    testWidgets('8. Non-buyer role is informed that Buyer account is required',
-        (WidgetTester tester) async {
-      prepareTester(tester);
+    testWidgets(
+      '8. Non-buyer role is informed that Buyer account is required',
+      (WidgetTester tester) async {
+        prepareTester(tester);
 
-      final mockService = MockMarketplaceService(gemToReturn: testGem);
+        final mockService = MockMarketplaceService(gemToReturn: testGem);
 
-      await tester.pumpWidget(createWidget(
-        service: mockService,
-        isAuthenticated: true,
-        role: 'seller',
-      ));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          createWidget(
+            service: mockService,
+            isAuthenticated: true,
+            role: 'seller',
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Buy Gemstone'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Buy Gemstone'));
+        await tester.pumpAndSettle();
 
-      expect(
-        find.text('Seller accounts can browse the marketplace, but purchasing requires a Buyer account.'),
-        findsOneWidget,
-      );
-      expect(mockService.createOrderCallCount, equals(0));
-    });
+        expect(
+          find.text(
+            'Seller accounts can browse the marketplace, but purchasing requires a Buyer account.',
+          ),
+          findsOneWidget,
+        );
+        expect(mockService.createOrderCallCount, equals(0));
+      },
+    );
   });
 }

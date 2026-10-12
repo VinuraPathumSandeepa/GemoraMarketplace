@@ -28,6 +28,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
   String? _error;
   List<OrderModel> _orders = [];
   final Set<dynamic> _startingExport = {};
+  final Set<String> _busyOrders = {};
 
   static const Color _darkEmerald = Color(0xFF08251E);
   static const Color _gold = Color(0xFFC99242);
@@ -94,6 +95,302 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
     } finally {
       if (mounted) setState(() => _startingExport.remove(order.id));
     }
+  }
+
+  Future<void> _sellerAction(
+    OrderModel order,
+    Future<OrderModel> Function() action,
+    String successMessage,
+  ) async {
+    if (_busyOrders.contains(order.id)) return;
+    setState(() => _busyOrders.add(order.id));
+    try {
+      await action();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(successMessage),
+            backgroundColor: const Color(0xFF2E7D32),
+          ),
+        );
+        await _load();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: Colors.red.shade800,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busyOrders.remove(order.id));
+    }
+  }
+
+  Future<void> _reject(OrderModel order) async {
+    final reason = TextEditingController();
+    final form = GlobalKey<FormState>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reject order request'),
+        content: Form(
+          key: form,
+          child: TextFormField(
+            controller: reason,
+            maxLength: 1000,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Reason for the buyer',
+              border: OutlineInputBorder(),
+            ),
+            validator: (value) => value == null || value.trim().isEmpty
+                ? 'Please enter a reason'
+                : null,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Back'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (form.currentState!.validate()) Navigator.pop(context, true);
+            },
+            child: const Text('Reject order'),
+          ),
+        ],
+      ),
+    );
+    final value = reason.text.trim();
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    reason.dispose();
+    if (confirmed == true && mounted) {
+      await _sellerAction(
+        order,
+        () => _marketplaceService.rejectOrder(order.id, reason: value),
+        'Order request rejected.',
+      );
+    }
+  }
+
+  Future<void> _handover(OrderModel order) async {
+    final courier = TextEditingController();
+    final tracking = TextEditingController();
+    final note = TextEditingController();
+    final form = GlobalKey<FormState>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        scrollable: true,
+        title: const Text('Hand over to rider'),
+        content: Form(
+          key: form,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: courier,
+                decoration: const InputDecoration(labelText: 'Courier / rider'),
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Courier name is required'
+                    : null,
+              ),
+              TextFormField(
+                controller: tracking,
+                decoration: const InputDecoration(labelText: 'Tracking number'),
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Tracking number is required'
+                    : null,
+              ),
+              TextFormField(
+                controller: note,
+                decoration: const InputDecoration(labelText: 'Dispatch note'),
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Back'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (form.currentState!.validate()) Navigator.pop(context, true);
+            },
+            child: const Text('Confirm handover'),
+          ),
+        ],
+      ),
+    );
+    final courierName = courier.text.trim();
+    final trackingNumber = tracking.text.trim();
+    final dispatchNote = note.text.trim();
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    courier.dispose();
+    tracking.dispose();
+    note.dispose();
+    if (confirmed == true && mounted) {
+      await _sellerAction(
+        order,
+        () => _marketplaceService.handOverToCourier(
+          order.id,
+          courierName: courierName,
+          trackingNumber: trackingNumber,
+          dispatchNote: dispatchNote,
+        ),
+        'Order handed over to the rider.',
+      );
+    }
+  }
+
+  Widget _buildLifecycleActions(OrderModel order) {
+    final busy = _busyOrders.contains(order.id);
+    final buttons = <Widget>[];
+    if (order.status == 'Pending') {
+      buttons.addAll([
+        FilledButton.icon(
+          onPressed: busy
+              ? null
+              : () => _sellerAction(
+                  order,
+                  () => _marketplaceService.approveOrder(order.id),
+                  'Order approved. The buyer can now pay.',
+                ),
+          icon: const Icon(Icons.check_circle_outline, size: 18),
+          label: const Text('Approve'),
+        ),
+        OutlinedButton(
+          onPressed: busy ? null : () => _reject(order),
+          child: const Text('Reject'),
+        ),
+      ]);
+    } else if (order.status == 'Paid' && order.fulfillmentStatus == 'Pending') {
+      buttons.add(
+        FilledButton.icon(
+          onPressed: busy
+              ? null
+              : () => _sellerAction(
+                  order,
+                  () => _marketplaceService.startPreparing(order.id),
+                  'Gemstone preparation started.',
+                ),
+          icon: const Icon(Icons.inventory_2_outlined, size: 18),
+          label: const Text('Start preparing'),
+        ),
+      );
+    } else if (order.fulfillmentStatus == 'Preparing') {
+      buttons.add(
+        FilledButton.icon(
+          onPressed: busy
+              ? null
+              : () => _sellerAction(
+                  order,
+                  () => _marketplaceService.markReadyForDispatch(order.id),
+                  'Order is ready for dispatch.',
+                ),
+          icon: const Icon(Icons.inventory_outlined, size: 18),
+          label: const Text('Ready for dispatch'),
+        ),
+      );
+    } else if (order.fulfillmentStatus == 'ReadyForDispatch') {
+      buttons.add(
+        FilledButton.icon(
+          onPressed: busy ? null : () => _handover(order),
+          icon: const Icon(Icons.delivery_dining_outlined, size: 18),
+          label: const Text('Hand over to rider'),
+        ),
+      );
+    } else if (order.fulfillmentStatus == 'HandedOverToCourier') {
+      buttons.add(
+        FilledButton(
+          onPressed: busy
+              ? null
+              : () => _sellerAction(
+                  order,
+                  () => _marketplaceService.markInTransit(order.id),
+                  'Shipment is in transit.',
+                ),
+          child: const Text('Mark in transit'),
+        ),
+      );
+    } else if (order.fulfillmentStatus == 'InTransit') {
+      buttons.add(
+        FilledButton(
+          onPressed: busy
+              ? null
+              : () => _sellerAction(
+                  order,
+                  () => _marketplaceService.markOutForDelivery(order.id),
+                  'Shipment is out for delivery.',
+                ),
+          child: const Text('Out for delivery'),
+        ),
+      );
+    } else if (order.fulfillmentStatus == 'OutForDelivery') {
+      buttons.add(
+        FilledButton.icon(
+          onPressed: busy
+              ? null
+              : () => _sellerAction(
+                  order,
+                  () => _marketplaceService.markDelivered(order.id),
+                  'Order marked delivered. Waiting for buyer confirmation.',
+                ),
+          icon: const Icon(Icons.task_alt, size: 18),
+          label: const Text('Mark delivered'),
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F7F5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFD8E5DF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Order & Delivery Workflow',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            'Order: ${_formatStatusLabel(order.status)} · Delivery: ${_formatStatusLabel(order.fulfillmentStatus)}',
+          ),
+          if (order.shipment != null) ...[
+            const SizedBox(height: 5),
+            Text(
+              '${order.shipment!.courierName} · ${order.shipment!.trackingNumber}',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ],
+          if (buttons.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(spacing: 8, runSpacing: 8, children: buttons),
+          ] else ...[
+            const SizedBox(height: 8),
+            const Text(
+              'No seller action is required at this stage.',
+              style: TextStyle(color: Colors.black54),
+            ),
+          ],
+          if (busy) ...[
+            const SizedBox(height: 10),
+            const LinearProgressIndicator(),
+          ],
+        ],
+      ),
+    );
   }
 
   Color _getStatusColor(String? status) {
@@ -272,6 +569,8 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                       color: _gold,
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  _buildLifecycleActions(order),
                   const Divider(height: 24),
                   Container(
                     width: double.infinity,

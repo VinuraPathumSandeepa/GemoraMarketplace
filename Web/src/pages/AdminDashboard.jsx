@@ -23,6 +23,13 @@ function AdminDashboard() {
           >
             Manage Gem Listings
           </button>
+          <button
+            type="button"
+            onClick={() => navigate("/admin/shipments")}
+            style={{ padding: "12px 18px", borderRadius: 10, border: 0, cursor: "pointer" }}
+          >
+            Manage Shipments
+          </button>
         </div>
       </div>
     </DashboardLayout>

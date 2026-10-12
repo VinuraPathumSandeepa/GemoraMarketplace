@@ -1,17 +1,32 @@
+import 'package:flutter/foundation.dart';
+
 class ApiConfig {
   // ============================================================
   // SERVER CONFIGURATION
   // ============================================================
 
-  // Local development backend URL.
-  // Defaults to standard Android emulator loopback (10.0.2.2).
-  // For ChromeOS ARC / adb-reverse, pass `--dart-define=API_SERVER_URL=http://127.0.0.1:5198`.
-  static const String serverUrl = String.fromEnvironment(
+  // Override at build time with, for example:
+  // `--dart-define=API_SERVER_URL=https://api.example.com`.
+  static const String _configuredServerUrl = String.fromEnvironment(
     'API_SERVER_URL',
-    defaultValue: 'http://10.0.2.2:5198',
   );
 
-  static const String baseUrl = '$serverUrl/api';
+  // Android emulators reach the host through 10.0.2.2. Browsers and desktop
+  // builds run on the host, so they use localhost by default.
+  static String get serverUrl {
+    final configuredUrl = _configuredServerUrl.trim();
+    if (configuredUrl.isNotEmpty) {
+      return configuredUrl.replaceFirst(RegExp(r'/+$'), '');
+    }
+
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      return 'http://localhost:5198';
+    }
+
+    return 'http://10.0.2.2:5198';
+  }
+
+  static String get baseUrl => '$serverUrl/api';
 
   // ============================================================
   // IMAGE URL RESOLVER
@@ -36,39 +51,39 @@ class ApiConfig {
   // AUTH ENDPOINTS
   // ============================================================
 
-  static const String login = '$baseUrl/Auth/login';
+  static String get login => '$baseUrl/Auth/login';
 
-  static const String register = '$baseUrl/Auth/register';
+  static String get register => '$baseUrl/Auth/register';
 
-  static const String verifyEmail = '$baseUrl/Auth/verify-email';
+  static String get verifyEmail => '$baseUrl/Auth/verify-email';
 
-  static const String resendVerificationCode =
+  static String get resendVerificationCode =>
       '$baseUrl/Auth/resend-verification-code';
 
-  static const String currentUser = '$baseUrl/Auth/me';
+  static String get currentUser => '$baseUrl/Auth/me';
 
   // ============================================================
   // NOTIFICATION ENDPOINTS
   // ============================================================
 
-  static const String notifications = '$baseUrl/Notifications';
+  static String get notifications => '$baseUrl/Notifications';
 
-  static const String notificationUnreadCount =
+  static String get notificationUnreadCount =>
       '$baseUrl/Notifications/unread-count';
 
   static String markNotificationRead(String notificationId) =>
       '$baseUrl/Notifications/$notificationId/read';
 
-  static const String markAllNotificationsRead =
+  static String get markAllNotificationsRead =>
       '$baseUrl/Notifications/read-all';
 
   // ============================================================
   // EXPORT COMPLIANCE ENDPOINTS
   // ============================================================
 
-  static const String exportRequests = '$baseUrl/ExportRequests';
+  static String get exportRequests => '$baseUrl/ExportRequests';
 
-  static const String myExportRequests = '$baseUrl/ExportRequests/my';
+  static String get myExportRequests => '$baseUrl/ExportRequests/my';
 
   static String exportRequestFromOrder(dynamic orderId) =>
       '$exportRequests/from-order/$orderId';
@@ -76,16 +91,17 @@ class ApiConfig {
   static String orderExportTracking(dynamic orderId) =>
       '$baseUrl/orders/$orderId/export-tracking';
 
-  static const String myExportTracking = '$baseUrl/export-tracking/my';
+  static String get myExportTracking => '$baseUrl/export-tracking/my';
 
-  static const String myOrders = '$baseUrl/orders/my';
-  static const String sellerOrders = '$baseUrl/seller/orders';
+  static String get myOrders => '$baseUrl/orders/my';
+
+  static String get sellerOrders => '$baseUrl/seller/orders';
 
   // ============================================================
   // GEM LISTING ENDPOINTS
   // ============================================================
 
-  static const String myGemListings = '$baseUrl/GemListings/my';
+  static String get myGemListings => '$baseUrl/GemListings/my';
 
   static String get adminGemListings => '$baseUrl/admin/gem-listings';
 
@@ -111,7 +127,7 @@ class ApiConfig {
   // GEM VERIFICATION ENDPOINTS
   // ============================================================
 
-  static const String pendingGemVerifications =
+  static String get pendingGemVerifications =>
       '$baseUrl/GemVerifications/pending';
 
   static String gemVerification(int verificationId) =>

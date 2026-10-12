@@ -1,3 +1,5 @@
+import '../config/api_config.dart';
+
 class MarketplaceGemModel {
   final int id;
 
@@ -20,6 +22,11 @@ class MarketplaceGemModel {
   final String? certificateNumber;
   final String? certificateAuthority;
 
+  final String countryCode;
+  final String region;
+
+  final bool isAvailable;
+
   final String status;
 
   final DateTime? createdAt;
@@ -40,9 +47,12 @@ class MarketplaceGemModel {
     required this.primaryImageUrl,
     required this.certificateNumber,
     required this.certificateAuthority,
-    required this.status,
-    required this.createdAt,
-    required this.updatedAt,
+    required this.countryCode,
+    required this.region,
+    required this.isAvailable,
+    this.status = '',
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory MarketplaceGemModel.fromJson(Map<String, dynamic> json) {
@@ -61,6 +71,9 @@ class MarketplaceGemModel {
       primaryImageUrl: _nullableString(json['primaryImageUrl']),
       certificateNumber: _nullableString(json['certificateNumber']),
       certificateAuthority: _nullableString(json['certificateAuthority']),
+      countryCode: json['countryCode']?.toString() ?? '',
+      region: json['region']?.toString() ?? '',
+      isAvailable: _toBool(json['isAvailable']),
       status: json['status']?.toString() ?? '',
       createdAt: _toDateTime(json['createdAt']),
       updatedAt: _toDateTime(json['updatedAt']),
@@ -69,6 +82,18 @@ class MarketplaceGemModel {
 
   bool get isCertified {
     return certificateNumber != null || certificateAuthority != null;
+  }
+
+  String? get resolvedImageUrl => ApiConfig.resolveImageUrl(primaryImageUrl);
+
+  static bool _toBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+      if (normalized == 'true') return true;
+      if (normalized == 'false') return false;
+    }
+    return true;
   }
 
   static int _toInt(dynamic value) {

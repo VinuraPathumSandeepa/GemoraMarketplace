@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -38,6 +38,10 @@ class _CreateGemListingScreenState extends State<CreateGemListingScreen> {
 
   XFile? _selectedCertificate;
   int? _selectedCertificateSize;
+
+  int? _draftListingId;
+  bool _gemImageUploaded = false;
+  bool _certificateUploaded = false;
 
   bool _saving = false;
 
@@ -146,6 +150,7 @@ class _CreateGemListingScreenState extends State<CreateGemListingScreen> {
       setState(() {
         _selectedGemImage = file;
         _selectedGemImageSize = fileSize;
+        _gemImageUploaded = false;
       });
     } catch (_) {
       _showError('Could not select the gemstone image.');
@@ -197,6 +202,7 @@ class _CreateGemListingScreenState extends State<CreateGemListingScreen> {
       setState(() {
         _selectedCertificate = file;
         _selectedCertificateSize = fileSize;
+        _certificateUploaded = false;
       });
     } catch (_) {
       _showError('Could not select the certificate.');
@@ -248,37 +254,70 @@ class _CreateGemListingScreenState extends State<CreateGemListingScreen> {
     });
 
     try {
-      GemListingModel listing = await _listingService.createListing(
-        title: _titleController.text,
-        gemType: _gemTypeController.text,
-        description: _descriptionController.text,
-        caratWeight: double.parse(_caratController.text.trim()),
-        color: _colorController.text,
-        clarity: _clarityController.text,
-        cut: _cutController.text,
-        price: double.parse(_priceController.text.trim()),
-        currency: _currency,
-        certificateNumber: _certificateNumberController.text,
-        certificateAuthority: _certificateAuthorityController.text,
-      );
+      final int? existingDraftId = _draftListingId;
 
-      if (_selectedGemImage != null) {
-        listing = await _listingService.uploadGemImage(
-          id: listing.id,
-          filePath: _selectedGemImage!.path,
+      late GemListingModel listing;
+
+      if (existingDraftId == null) {
+        listing = await _listingService.createListing(
+          title: _titleController.text,
+          gemType: _gemTypeController.text,
+          description: _descriptionController.text,
+          caratWeight: double.parse(_caratController.text.trim()),
+          color: _colorController.text,
+          clarity: _clarityController.text,
+          cut: _cutController.text,
+          price: double.parse(_priceController.text.trim()),
+          currency: _currency,
+          certificateNumber: _certificateNumberController.text,
+          certificateAuthority: _certificateAuthorityController.text,
         );
+
+        _draftListingId = listing.id;
+      } else {
+        await _listingService.updateListing(
+          id: existingDraftId,
+          title: _titleController.text,
+          gemType: _gemTypeController.text,
+          description: _descriptionController.text,
+          caratWeight: double.parse(_caratController.text.trim()),
+          color: _colorController.text,
+          clarity: _clarityController.text,
+          cut: _cutController.text,
+          price: double.parse(_priceController.text.trim()),
+          currency: _currency,
+          certificateNumber: _certificateNumberController.text,
+          certificateAuthority: _certificateAuthorityController.text,
+        );
+
+        listing = await _listingService.getListing(existingDraftId);
       }
 
-      if (_selectedCertificate != null) {
+      if (_selectedGemImage != null && !_gemImageUploaded) {
+        listing = await _listingService.uploadGemImage(
+          id: listing.id,
+          file: _selectedGemImage!,
+        );
+
+        _gemImageUploaded = true;
+      }
+
+      if (_selectedCertificate != null && !_certificateUploaded) {
         listing = await _listingService.uploadCertificate(
           id: listing.id,
-          filePath: _selectedCertificate!.path,
+          file: _selectedCertificate!,
         );
+
+        _certificateUploaded = true;
       }
 
       if (!mounted) {
         return;
       }
+
+      _draftListingId = null;
+      _gemImageUploaded = false;
+      _certificateUploaded = false;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -531,7 +570,7 @@ class _CreateGemListingScreenState extends State<CreateGemListingScreen> {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: _border),
                 ),
-                child: const Row(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Icon(Icons.info_outline_rounded, color: _gold),
@@ -540,7 +579,9 @@ class _CreateGemListingScreenState extends State<CreateGemListingScreen> {
 
                     Expanded(
                       child: Text(
-                        'The listing is created as Draft first. Gemora then uploads the selected gemstone image and certificate.',
+                        _draftListingId == null
+                            ? 'The listing is created as Draft first. Gemora then uploads the selected gemstone image and certificate.'
+                            : 'Draft #$_draftListingId is saved. Try again to finish its uploads; Gemora will continue this draft instead of creating another one.',
                         style: TextStyle(
                           color: _darkEmerald,
                           height: 1.5,
@@ -576,7 +617,11 @@ class _CreateGemListingScreenState extends State<CreateGemListingScreen> {
                         )
                       : const Icon(Icons.add_circle_outline),
                   label: Text(
-                    _saving ? 'Creating & Uploading...' : 'Create Gem Listing',
+                    _saving
+                        ? 'Saving & Uploading...'
+                        : _draftListingId == null
+                        ? 'Create Gem Listing'
+                        : 'Retry Upload',
                     style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
@@ -653,15 +698,14 @@ class _CreateGemListingScreenState extends State<CreateGemListingScreen> {
             borderRadius: BorderRadius.circular(16),
           ),
           clipBehavior: Clip.antiAlias,
-          child: Image.file(
-            File(image.path),
-            fit: BoxFit.contain,
-            errorBuilder:
-                (BuildContext context, Object error, StackTrace? stackTrace) {
-                  return const Center(
-                    child: Icon(Icons.diamond_outlined, size: 60, color: _gold),
-                  );
-                },
+          child: FutureBuilder<Uint8List>(
+            future: image.readAsBytes(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              return Image.memory(snapshot.data!, fit: BoxFit.contain);
+            },
           ),
         ),
 

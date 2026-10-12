@@ -145,6 +145,23 @@ public class MarketplaceService : IMarketplaceService
         }
 
 
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var search = query.Search.Trim()
+                .Replace("\\", "\\\\")
+                .Replace("%", "\\%")
+                .Replace("_", "\\_");
+
+            var pattern = $"%{search}%";
+
+            gems = gems.Where(g =>
+                EF.Functions.ILike(g.Title, pattern, "\\") ||
+                EF.Functions.ILike(g.GemType, pattern, "\\") ||
+                EF.Functions.ILike(g.Description, pattern, "\\"));
+        }
+
+
+
         // =====================================================
         // PRICE RANGE
         // =====================================================
@@ -269,6 +286,7 @@ public class MarketplaceService : IMarketplaceService
                     : (int)Math.Ceiling(totalItems / (double)pageSize)
             };
         }
+
 
 
         // =====================================================
