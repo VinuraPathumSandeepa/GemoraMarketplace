@@ -45,7 +45,10 @@ public class GeminiComplianceAiClient : IComplianceAiClient
         // 1. Resolve API Key safely
         var apiKey = !string.IsNullOrWhiteSpace(_options.ApiKey)
             ? _options.ApiKey
-            : (_configuration["GeminiCompliance:ApiKey"] ?? _configuration["Gemini:ApiKey"] ?? string.Empty);
+            : (_configuration["GeminiCompliance:ApiKey"]
+                ?? _configuration["GeminiMarketplace:ApiKey"]
+                ?? _configuration["Gemini:ApiKey"]
+                ?? string.Empty);
 
         if (string.IsNullOrWhiteSpace(apiKey))
         {

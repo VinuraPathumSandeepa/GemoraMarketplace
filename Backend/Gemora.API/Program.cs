@@ -354,6 +354,52 @@ builder.Services.Configure<
 );
 
 
+// Allow every Gemini feature to share one deployment credential while still
+// supporting a compliance-specific override when required.
+builder.Services.PostConfigure<
+    GeminiComplianceOptions
+>(
+    options =>
+    {
+        if (string.IsNullOrWhiteSpace(options.ApiKey))
+        {
+            options.ApiKey =
+                builder.Configuration[
+                    $"{GeminiMarketplaceOptions.SectionName}:ApiKey"
+                ]
+                ?? builder.Configuration[
+                    $"{GeminiOptions.SectionName}:ApiKey"
+                ]
+                ?? string.Empty;
+        }
+
+
+        var configuredModel =
+            builder.Configuration[
+                $"{GeminiComplianceOptions.SectionName}:Model"
+            ];
+
+
+        if (string.IsNullOrWhiteSpace(configuredModel))
+        {
+            var sharedModel =
+                builder.Configuration[
+                    $"{GeminiMarketplaceOptions.SectionName}:Model"
+                ]
+                ?? builder.Configuration[
+                    $"{GeminiOptions.SectionName}:Model"
+                ];
+
+
+            if (!string.IsNullOrWhiteSpace(sharedModel))
+            {
+                options.Model = sharedModel;
+            }
+        }
+    }
+);
+
+
 builder.Services.AddHttpClient<
     IComplianceAiClient,
     GeminiComplianceAiClient
@@ -417,6 +463,46 @@ builder.Services.Configure<
     builder.Configuration.GetSection(
         GeminiMarketplaceOptions.SectionName
     )
+);
+
+
+// A single Gemini:* credential can power the whole application in production.
+// Keep GeminiMarketplace:* as the feature-specific override for local setups.
+builder.Services.PostConfigure<
+    GeminiMarketplaceOptions
+>(
+    options =>
+    {
+        if (string.IsNullOrWhiteSpace(options.ApiKey))
+        {
+            options.ApiKey =
+                builder.Configuration[
+                    $"{GeminiOptions.SectionName}:ApiKey"
+                ]
+                ?? string.Empty;
+        }
+
+
+        var configuredModel =
+            builder.Configuration[
+                $"{GeminiMarketplaceOptions.SectionName}:Model"
+            ];
+
+
+        if (string.IsNullOrWhiteSpace(configuredModel))
+        {
+            var sharedModel =
+                builder.Configuration[
+                    $"{GeminiOptions.SectionName}:Model"
+                ];
+
+
+            if (!string.IsNullOrWhiteSpace(sharedModel))
+            {
+                options.Model = sharedModel;
+            }
+        }
+    }
 );
 
 

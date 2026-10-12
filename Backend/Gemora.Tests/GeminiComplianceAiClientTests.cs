@@ -41,15 +41,51 @@ public class GeminiComplianceAiClientTests
         }
     }
 
-    private static GeminiComplianceAiClient CreateClient(FakeHttpMessageHandler handler, GeminiComplianceOptions options)
+    private static GeminiComplianceAiClient CreateClient(
+        FakeHttpMessageHandler handler,
+        GeminiComplianceOptions options,
+        IDictionary<string, string?>? configuration = null)
     {
         var httpClient = new HttpClient(handler);
         var optionsMock = Options.Create(options);
         var configBuilder = new ConfigurationBuilder();
+        if (configuration != null)
+        {
+            configBuilder.AddInMemoryCollection(configuration);
+        }
         var config = configBuilder.Build();
         var logger = NullLogger<GeminiComplianceAiClient>.Instance;
 
         return new GeminiComplianceAiClient(httpClient, optionsMock, config, logger);
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_UsesSharedMarketplaceCredential_WhenComplianceKeyIsMissing()
+    {
+        var handler = new FakeHttpMessageHandler();
+        handler.QueueResponse(
+            HttpStatusCode.OK,
+            CreateValidGeminiResponseBody("Shared credential success")
+        );
+
+        var client = CreateClient(
+            handler,
+            new GeminiComplianceOptions
+            {
+                Model = "gemini-3.5-flash",
+                FallbackModel = "gemini-3.5-flash"
+            },
+            new Dictionary<string, string?>
+            {
+                ["GeminiMarketplace:ApiKey"] = "shared-fake-api-key"
+            }
+        );
+
+        var result = await client.AnalyzeAsync(CreateValidContext());
+
+        Assert.True(result.Success);
+        Assert.Single(handler.Requests);
+        Assert.True(handler.Requests[0].Headers.Contains("x-goog-api-key"));
     }
 
     private static ComplianceAgentContextDto CreateValidContext()

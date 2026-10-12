@@ -36,6 +36,14 @@ services:
       - key: SupabaseStorage__ServiceRoleKey
         sync: false
 
+      # One shared Gemini credential powers marketplace assistance,
+      # gem verification, shipping risk analysis, and export compliance.
+      - key: Gemini__ApiKey
+        sync: false
+
+      - key: Gemini__Model
+        value: gemini-3.5-flash
+
       # ---- Set these in Render Dashboard as secret values ----
       # ConnectionStrings__DefaultConnection  (your PostgreSQL connection string)
       # Jwt__Key                              (your JWT secret key)
