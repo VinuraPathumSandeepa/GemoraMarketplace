@@ -948,6 +948,18 @@ public class ShipmentServiceTests : IDisposable
         Assert.True(results.Count >= 2, "Admin should see at least 2 shipments");
     }
 
+    [Theory]
+    [InlineData("Gemologist")]
+    [InlineData("ExportOfficer")]
+    [InlineData("")]
+    public async Task GetUserShipmentsAsync_ForUnsupportedRole_ShouldReject(string role)
+    {
+        await CreateTestShipmentAsync();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _shipmentService.GetUserShipmentsAsync(Guid.NewGuid(), role));
+    }
+
     [Fact]
     public async Task GetTrackingEventsAsync_ShouldReturnChronologicalEvents()
     {

@@ -149,6 +149,7 @@ public class ShipmentsController : ControllerBase
     /// Get authenticated user's shipments
     /// </summary>
     [HttpGet("my")]
+    [Authorize(Roles = "Buyer,Seller,Admin")]
     public async Task<IActionResult> GetMyShipments()
     {
         try
@@ -158,6 +159,10 @@ public class ShipmentsController : ControllerBase
 
             var results = await _shipmentService.GetUserShipmentsAsync(userId, userRole);
             return Ok(results);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
         }
         catch (Exception ex)
         {
