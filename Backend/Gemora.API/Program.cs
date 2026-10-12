@@ -1,4 +1,5 @@
 using System.Text;
+using System.Security.Claims;
 
 using Gemora.API.Middleware;
 using Gemora.API.Services;
@@ -19,10 +20,93 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Npgsql;
 
 
 var builder =
     WebApplication.CreateBuilder(args);
+
+// Explicit maintenance command: reset only the existing administrator and exit
+// before schema preparation, seeding, or starting the HTTP server.
+if (args.Contains("--reset-admin-password", StringComparer.Ordinal))
+{
+    var resetConnection = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Database connection string 'DefaultConnection' is not configured.");
+    var resetPassword = builder.Configuration["SeedUsers:AdminPassword"];
+    if (string.IsNullOrWhiteSpace(resetPassword))
+        throw new InvalidOperationException("SeedUsers:AdminPassword is not configured.");
+
+    var resetOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+        .UseNpgsql(resetConnection).Options;
+    await using var resetContext = new ApplicationDbContext(resetOptions);
+    var administrator = await resetContext.Users.SingleOrDefaultAsync(
+        user => user.Email.ToLower() == "admin@gemora.com" && user.Role == "Admin")
+        ?? throw new InvalidOperationException("The existing admin@gemora.com administrator was not found.");
+
+    administrator.PasswordHash = BCrypt.Net.BCrypt.HashPassword(resetPassword);
+    await resetContext.SaveChangesAsync();
+    await resetContext.Entry(administrator).ReloadAsync();
+    if (!BCrypt.Net.BCrypt.Verify(resetPassword, administrator.PasswordHash))
+        throw new InvalidOperationException("Administrator password verification failed.");
+
+    Console.WriteLine("Administrator password reset and verified. Sign in with the configured SeedUsers:AdminPassword.");
+    return;
+}
+
+// Explicit maintenance command: reset only the existing Gemologist and exit.
+// Normal database seeding intentionally preserves existing credentials.
+if (args.Contains("--reset-gemologist-password", StringComparer.Ordinal))
+{
+    var resetConnection = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Database connection string 'DefaultConnection' is not configured.");
+    var resetPassword = builder.Configuration["SeedUsers:GemologistPassword"];
+    if (string.IsNullOrWhiteSpace(resetPassword))
+        throw new InvalidOperationException("SeedUsers:GemologistPassword is not configured.");
+
+    var resetOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+        .UseNpgsql(resetConnection).Options;
+    await using var resetContext = new ApplicationDbContext(resetOptions);
+    var gemologist = await resetContext.Users.SingleOrDefaultAsync(
+        user => user.Email.ToLower() == "gemologist@gemora.com" && user.Role == "Gemologist")
+        ?? throw new InvalidOperationException("The existing gemologist@gemora.com account was not found.");
+
+    gemologist.PasswordHash = BCrypt.Net.BCrypt.HashPassword(resetPassword);
+    await resetContext.SaveChangesAsync();
+    await resetContext.Entry(gemologist).ReloadAsync();
+    if (!BCrypt.Net.BCrypt.Verify(resetPassword, gemologist.PasswordHash))
+        throw new InvalidOperationException("Gemologist password verification failed.");
+
+    Console.WriteLine("Gemologist password reset and verified. Sign in with the configured SeedUsers:GemologistPassword.");
+    return;
+}
+
+
+// Explicit maintenance command: reset only the existing Export Officer and
+// exit. Normal database seeding intentionally preserves existing credentials.
+if (args.Contains("--reset-export-officer-password", StringComparer.Ordinal))
+{
+    var resetConnection = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Database connection string 'DefaultConnection' is not configured.");
+    var resetPassword = builder.Configuration["SeedUsers:ExportOfficerPassword"];
+    if (string.IsNullOrWhiteSpace(resetPassword))
+        throw new InvalidOperationException("SeedUsers:ExportOfficerPassword is not configured.");
+
+    var resetOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+        .UseNpgsql(resetConnection).Options;
+    await using var resetContext = new ApplicationDbContext(resetOptions);
+    var exportOfficer = await resetContext.Users.SingleOrDefaultAsync(
+        user => user.Email.ToLower() == "export@gemora.com" && user.Role == "ExportOfficer")
+        ?? throw new InvalidOperationException("The existing export@gemora.com Export Officer account was not found.");
+
+    exportOfficer.PasswordHash = BCrypt.Net.BCrypt.HashPassword(resetPassword);
+    await resetContext.SaveChangesAsync();
+    await resetContext.Entry(exportOfficer).ReloadAsync();
+    if (!BCrypt.Net.BCrypt.Verify(resetPassword, exportOfficer.PasswordHash))
+        throw new InvalidOperationException("Export Officer password verification failed.");
+
+    Console.WriteLine("Export Officer password reset and verified. Sign in with export@gemora.com and the configured SeedUsers:ExportOfficerPassword.");
+    return;
+}
 
 
 // ============================================================
@@ -232,6 +316,30 @@ builder.Services.AddScoped<
     ComplianceWorkflowService
 >();
 
+// Secure shipping and insurance
+builder.Services.AddScoped<
+    Gemora.Application.Services.IShipmentService,
+    ShipmentService>();
+builder.Services.AddScoped<
+    Gemora.Application.Services.IShippingAgentService,
+    ShippingAgentService>();
+
+// Academic courier sandbox: generates simulated references without calling a courier API.
+builder.Services.AddScoped<
+    Gemora.Domain.Interfaces.IShippingProviderAdapter,
+    Gemora.Infrastructure.Adapters.MockShippingProviderAdapter>(sp =>
+        new Gemora.Infrastructure.Adapters.MockShippingProviderAdapter(
+            sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Gemora.Infrastructure.Adapters.MockShippingProviderAdapter>>(),
+            maxRetryAttempts: 3, timeoutSeconds: 30, simulateFailures: false));
+
+// Real shipping agent: model-selected read-only tools followed by validated JSON output.
+builder.Services.AddHttpClient<
+    Gemora.Domain.Interfaces.ILlmProvider,
+    Gemora.Infrastructure.Providers.GeminiShippingAgentProvider>(client =>
+{
+    // The provider enforces one bounded timeout for the entire multi-call run.
+    client.Timeout = Timeout.InfiniteTimeSpan;
+});
 
 // ============================================================
 // COMPONENT 4 - GEMINI COMPLIANCE AI
@@ -371,6 +479,62 @@ builder.Services.Configure<
     builder.Configuration.GetSection(
         GeminiOptions.SectionName
     )
+);
+
+
+// The marketplace and verification agents use the same Gemini provider.
+// Keep verification-specific Gemini:* values as the highest priority, while
+// allowing installations that already configured GeminiMarketplace:* to use
+// that shared credential and model. This avoids a false "provider
+// configuration" failure when only the marketplace section is populated.
+builder.Services.PostConfigure<
+    GeminiOptions
+>(
+    options =>
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                options.ApiKey
+            )
+        )
+        {
+            options.ApiKey =
+                builder.Configuration[
+                    $"{GeminiMarketplaceOptions.SectionName}:ApiKey"
+                ]
+                ?? string.Empty;
+        }
+
+
+        var verificationModel =
+            builder.Configuration[
+                $"{GeminiOptions.SectionName}:Model"
+            ];
+
+
+        if (
+            string.IsNullOrWhiteSpace(
+                verificationModel
+            )
+        )
+        {
+            var sharedModel =
+                builder.Configuration[
+                    $"{GeminiMarketplaceOptions.SectionName}:Model"
+                ];
+
+
+            if (
+                !string.IsNullOrWhiteSpace(
+                    sharedModel
+                )
+            )
+            {
+                options.Model =
+                    sharedModel;
+            }
+        }
+    }
 );
 
 
@@ -517,22 +681,38 @@ builder.Services.AddScoped<
 
 
 // ============================================================
-// GEM VERIFICATION HYBRID FILE STORAGE
+// GEM VERIFICATION FILE STORAGE
 //
-// New gemstone images:
-//     Supabase public storage
+// Development:
+//     Local storage keeps localhost uploads independent from
+//     external Supabase availability and configuration.
 //
-// New certificates:
-//     Supabase private storage
+// Non-development:
+//     Hybrid storage writes new evidence to Supabase and keeps
+//     legacy /uploads/... references readable.
 //
-// Legacy /uploads/... paths:
-//     Local storage
+// Both implementations preserve the same IFileStorageService
+// contract, so listing and verification functions are unchanged.
 // ============================================================
 
-builder.Services.AddScoped<
-    Gemora.Domain.Interfaces.IFileStorageService,
-    HybridFileStorageService
->();
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddScoped<
+        Gemora.Domain.Interfaces.IFileStorageService
+    >(
+        serviceProvider =>
+            serviceProvider.GetRequiredService<
+                Gemora.Infrastructure.Services.LocalFileStorageService
+            >()
+    );
+}
+else
+{
+    builder.Services.AddScoped<
+        Gemora.Domain.Interfaces.IFileStorageService,
+        HybridFileStorageService
+    >();
+}
 
 
 // ============================================================
@@ -657,6 +837,40 @@ builder.Services
     .AddJwtBearer(
         options =>
         {
+            options.Events = new JwtBearerEvents
+            {
+                OnTokenValidated = async context =>
+                {
+                    var identity = context.Principal?.Identity as ClaimsIdentity;
+                    if (identity == null || !Guid.TryParse(
+                        identity.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId))
+                    {
+                        context.Fail("Invalid user identity.");
+                        return;
+                    }
+
+                    // Match authorization to /Auth/me, including role changes
+                    // made after this token was issued.
+                    var db = context.HttpContext.RequestServices
+                        .GetRequiredService<ApplicationDbContext>();
+                    var role = await db.Users.AsNoTracking()
+                        .Where(user => user.Id == userId)
+                        .Select(user => user.Role)
+                        .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
+                    if (string.IsNullOrWhiteSpace(role))
+                    {
+                        context.Fail("Account no longer exists or has no role.");
+                        return;
+                    }
+
+                    foreach (var claim in identity.FindAll(identity.RoleClaimType).ToList())
+                    {
+                        identity.RemoveClaim(claim);
+                    }
+                    identity.AddClaim(new Claim(identity.RoleClaimType, role));
+                }
+            };
+
             options.TokenValidationParameters =
                 new TokenValidationParameters
                 {
@@ -672,11 +886,11 @@ builder.Services
                     ValidateIssuerSigningKey =
                         true,
 
-                    ValidIssuer =
-                        jwtIssuer,
+                // Expected issuer
+                ValidIssuer = jwtIssuer,
 
-                    ValidAudience =
-                        jwtAudience,
+                // Expected audience
+                ValidAudience = jwtAudience,
 
                     IssuerSigningKey =
                         new SymmetricSecurityKey(
@@ -692,16 +906,16 @@ builder.Services
     );
 
 
-// ============================================================
-// AUTHORIZATION
-// ============================================================
+// ======================================================
+// 6. AUTHORIZATION
+// ======================================================
 
 builder.Services.AddAuthorization();
 
 
-// ============================================================
-// SWAGGER
-// ============================================================
+// ======================================================
+// 8. SWAGGER / OPENAPI
+// ======================================================
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -769,10 +983,8 @@ builder.Services.AddSwaggerGen(
 
                     Array.Empty<string>()
                 }
-            }
-        );
-    }
-);
+            });
+    });
 
 
 // ============================================================
@@ -838,6 +1050,8 @@ using (
             dbContext,
             builder.Configuration
         );
+
+        await ShipmentOrderProgress.ReconcileExistingAsync(dbContext);
     }
     catch (Exception ex)
     {
@@ -919,18 +1133,15 @@ app.Use(
         var requestPath =
             context.Request.Path.Value;
 
-
         if (
             !string.IsNullOrWhiteSpace(
                 requestPath
-            )
-            &&
+            ) &&
             (
                 requestPath.Equals(
                     "/uploads/certificates",
                     StringComparison.OrdinalIgnoreCase
-                )
-                ||
+                ) ||
                 requestPath.StartsWith(
                     "/uploads/certificates/",
                     StringComparison.OrdinalIgnoreCase

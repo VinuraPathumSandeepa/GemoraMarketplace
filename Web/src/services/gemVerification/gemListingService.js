@@ -51,12 +51,7 @@ const gemListingService = {
 
     const response = await api.post(
       `/GemListings/${id}/image`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
+      formData
     );
 
     return response.data;
@@ -69,12 +64,7 @@ const gemListingService = {
 
     const response = await api.post(
       `/GemListings/${id}/certificate`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
+      formData
     );
 
     return response.data;

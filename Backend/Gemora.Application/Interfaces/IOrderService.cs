@@ -5,7 +5,7 @@ namespace Gemora.Application.Interfaces;
 public interface IOrderService
 {
     Task<OrderResponseDto> RejectAsync(Guid id, Guid sellerId, string? reason, bool alreadySold);
-    Task ExpireUnpaidAsync();
+    Task ExpireUnpaidAsync(CancellationToken cancellationToken = default);
     Task MarkMessageReadAsync(Guid id, Guid userId, bool seller, DateTime messageAt);
 
     Task<OrderResponseDto> CreateAsync(

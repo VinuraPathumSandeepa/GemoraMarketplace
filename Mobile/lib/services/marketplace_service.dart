@@ -10,8 +10,9 @@ import 'token_storage_service.dart';
 class MarketplaceService {
   final TokenStorageService _tokenStorage = TokenStorageService();
   final http.Client? client;
+  final Future<String?> Function()? tokenLoader;
 
-  MarketplaceService({this.client});
+  MarketplaceService({this.client, this.tokenLoader});
 
   Future<http.Response> _get(Uri uri, {Map<String, String>? headers}) =>
       client != null
@@ -141,6 +142,7 @@ class MarketplaceService {
     String shippingAddress = 'Main Street',
     String shippingRegion = 'Western',
     String shippingCountryCode = 'LK',
+    Map<String, dynamic>? deliveryDetails,
   }) async {
     final response = await _post(
       Uri.parse('${ApiConfig.baseUrl}/orders'),

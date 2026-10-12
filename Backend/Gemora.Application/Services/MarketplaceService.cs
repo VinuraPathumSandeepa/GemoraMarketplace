@@ -21,10 +21,7 @@ public class MarketplaceService : IMarketplaceService
     // =========================================================
     // MARKETPLACE SEARCH
     //
-    // ONLY:
-    // Approved + currently purchasable gemstones.
-    //
-    // Pending requests remain public; seller approval reserves the unique gemstone.
+    // Keep unavailable gems visible with a Sold badge.
     // =========================================================
 
     public async Task<PagedMarketplaceResponseDto>
@@ -32,7 +29,7 @@ public class MarketplaceService : IMarketplaceService
             MarketplaceSearchQueryDto query)
     {
         var gems =
-            AvailableListings();
+            PublicListings();
 
 
         // =====================================================
@@ -44,7 +41,10 @@ public class MarketplaceService : IMarketplaceService
                 query.Search))
         {
             var search =
-                query.Search.Trim();
+                query.Search.Trim()
+                    .Replace("\\", "\\\\")
+                    .Replace("%", "\\%")
+                    .Replace("_", "\\_");
 
             var pattern =
                 $"%{search}%";
@@ -53,15 +53,18 @@ public class MarketplaceService : IMarketplaceService
                 gems.Where(g =>
                     EF.Functions.ILike(
                         g.Title,
-                        pattern) ||
+                        pattern,
+                        "\\") ||
 
                     EF.Functions.ILike(
                         g.GemType,
-                        pattern) ||
+                        pattern,
+                        "\\") ||
 
                     EF.Functions.ILike(
                         g.Description,
-                        pattern));
+                        pattern,
+                        "\\"));
         }
 
 
@@ -268,6 +271,22 @@ public class MarketplaceService : IMarketplaceService
         var totalItems =
             await gems.CountAsync();
 
+        var offset = ((long)page - 1) * pageSize;
+
+        if (offset >= totalItems)
+        {
+            return new PagedMarketplaceResponseDto
+            {
+                Items = new List<MarketplaceGemResponseDto>(),
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = totalItems == 0
+                    ? 0
+                    : (int)Math.Ceiling(totalItems / (double)pageSize)
+            };
+        }
+
 
 
         // C2-BUG-002: Calculate the offset without int overflow.
@@ -353,10 +372,13 @@ public class MarketplaceService : IMarketplaceService
                         SellerName =
                             g.Seller.FullName,
 
-                        // AvailableListings()
-                        // guarantees this.
                         IsAvailable =
-                            true
+                            g.Status == GemListingStatuses.Approved &&
+                            !g.Orders.Any(o =>
+                                o.Status != OrderStatuses.Rejected &&
+                                o.Status != OrderStatuses.Cancelled &&
+                                o.Status != OrderStatuses.Refunded &&
+                                o.Status != OrderStatuses.Failed)
                     })
                 .ToListAsync();
 
@@ -394,14 +416,14 @@ public class MarketplaceService : IMarketplaceService
     //
     // My Orders → View Gem
     //
-    // therefore GetById uses ApprovedListings(),
+    // therefore GetById uses PublicListings(),
     // not AvailableListings().
     // =========================================================
 
     public async Task<MarketplaceGemResponseDto?>
         GetByIdAsync(int id)
     {
-        return await ApprovedListings()
+        return await PublicListings()
 
             .Where(g =>
                 g.Id == id)
@@ -459,20 +481,12 @@ public class MarketplaceService : IMarketplaceService
 
 
                     IsAvailable =
+                        g.Status == GemListingStatuses.Approved &&
                         !g.Orders.Any(o =>
-                    o.Status != OrderStatuses.Pending && o.Status != OrderStatuses.Rejected &&
-
-                            o.Status !=
-                                OrderStatuses
-                                    .Cancelled &&
-
-                            o.Status !=
-                                OrderStatuses
-                                    .Refunded &&
-
-                            o.Status !=
-                                OrderStatuses
-                                    .Failed)
+                            o.Status != OrderStatuses.Rejected &&
+                            o.Status != OrderStatuses.Cancelled &&
+                            o.Status != OrderStatuses.Refunded &&
+                            o.Status != OrderStatuses.Failed)
                 })
 
             .FirstOrDefaultAsync();
@@ -480,22 +494,21 @@ public class MarketplaceService : IMarketplaceService
 
 
     // =========================================================
-    // APPROVED LISTINGS
+    // PUBLIC LISTINGS
     //
     // Used for:
     // - historical / order gem details
     // =========================================================
 
     private IQueryable<GemListing>
-        ApprovedListings()
+        PublicListings()
     {
         return _context
             .GemListings
             .AsNoTracking()
             .Where(g =>
-                g.Status ==
-                    GemListingStatuses
-                        .Approved);
+                g.Status == GemListingStatuses.Approved ||
+                g.Status == GemListingStatuses.Sold);
     }
 
 
@@ -515,11 +528,12 @@ public class MarketplaceService : IMarketplaceService
     private IQueryable<GemListing>
         AvailableListings()
     {
-        return ApprovedListings()
+        return PublicListings()
 
             .Where(g =>
+                g.Status == GemListingStatuses.Approved &&
                 !g.Orders.Any(o =>
-                    o.Status != OrderStatuses.Pending && o.Status != OrderStatuses.Rejected &&
+                    o.Status != OrderStatuses.Rejected &&
 
                     o.Status !=
                         OrderStatuses

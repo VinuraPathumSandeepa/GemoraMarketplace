@@ -8,18 +8,29 @@ import '../models/user_model.dart';
 import 'token_storage_service.dart';
 
 class AuthService {
+  final http.Client _client;
   final TokenStorageService _tokenStorage = TokenStorageService();
+
+  AuthService({http.Client? client}) : _client = client ?? http.Client();
 
   // ==========================================
   // LOGIN
   // ==========================================
 
   Future<UserModel> login(String email, String password) async {
-    final response = await _post(
-      Uri.parse(ApiConfig.login),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email.trim(), 'password': password}),
-    );
+    final response = await _client
+        .post(
+          Uri.parse(ApiConfig.login),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email.trim(), 'password': password}),
+        ).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            throw TimeoutException(
+              'Connection timed out (10s). Unable to reach server at ${ApiConfig.baseUrl}.',
+            );
+          },
+        );
 
     final responseData = _decodeResponse(response.body);
 
@@ -48,7 +59,7 @@ class AuthService {
   // REGISTER
   // ==========================================
 
-  Future<void> register({
+  Future<bool> register({
     required String fullName,
     required String email,
     required String phoneNumber,
@@ -57,7 +68,7 @@ class AuthService {
     required String password,
     required String role,
   }) async {
-    final response = await _post(
+    final response = await _client.post(
       Uri.parse(ApiConfig.register),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -76,6 +87,8 @@ class AuthService {
     if (response.statusCode != 201) {
       throw Exception(responseData['message'] ?? 'Registration failed.');
     }
+
+    return responseData['verificationEmailSent'] != false;
   }
 
   // ==========================================
@@ -86,7 +99,7 @@ class AuthService {
     required String email,
     required String code,
   }) async {
-    final response = await _post(
+    final response = await _client.post(
       Uri.parse(ApiConfig.verifyEmail),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email.trim(), 'code': code.trim()}),
@@ -104,7 +117,7 @@ class AuthService {
   // ==========================================
 
   Future<void> resendVerificationCode({required String email}) async {
-    final response = await _post(
+    final response = await _client.post(
       Uri.parse(ApiConfig.resendVerificationCode),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email.trim()}),
@@ -130,13 +143,21 @@ class AuthService {
       throw Exception('Authentication token not found.');
     }
 
-    final response = await _get(
-      Uri.parse(ApiConfig.currentUser),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+    final response = await _client
+        .get(
+          Uri.parse(ApiConfig.currentUser),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        ).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            throw TimeoutException(
+              'Connection timed out (10s). Unable to load current user at ${ApiConfig.baseUrl}.',
+            );
+          },
+        );
 
     if (response.statusCode != 200) {
       throw Exception('Unable to load current user.');
@@ -191,13 +212,7 @@ class AuthService {
     required String body,
   }) async {
     try {
-      return await http
-          .post(uri, headers: headers, body: body)
-          .timeout(const Duration(seconds: 10));
-    } on TimeoutException {
-      throw TimeoutException(
-        'Connection timed out (10s). Unable to reach server at ${ApiConfig.baseUrl}.',
-      );
+      return await http.post(uri, headers: headers, body: body);
     } on http.ClientException {
       throw Exception(
         'Unable to connect to the Gemora API at ${ApiConfig.serverUrl}. '
@@ -211,13 +226,7 @@ class AuthService {
     required Map<String, String> headers,
   }) async {
     try {
-      return await http
-          .get(uri, headers: headers)
-          .timeout(const Duration(seconds: 10));
-    } on TimeoutException {
-      throw TimeoutException(
-        'Connection timed out (10s). Unable to load data from ${ApiConfig.baseUrl}.',
-      );
+      return await http.get(uri, headers: headers);
     } on http.ClientException {
       throw Exception(
         'Unable to connect to the Gemora API at ${ApiConfig.serverUrl}. '

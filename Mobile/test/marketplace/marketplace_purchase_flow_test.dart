@@ -18,6 +18,7 @@ class MockMarketplaceService extends MarketplaceService {
   String? lastShippingAddress;
   String? lastShippingRegion;
   String? lastShippingCountryCode;
+  Map<String, dynamic>? lastDeliveryDetails;
 
   MockMarketplaceService({
     required this.gemToReturn,
@@ -38,12 +39,14 @@ class MockMarketplaceService extends MarketplaceService {
     String shippingAddress = 'Main Street',
     String shippingRegion = 'Western',
     String shippingCountryCode = 'LK',
+    Map<String, dynamic>? deliveryDetails,
   }) async {
     createOrderCallCount++;
     lastGemListingId = gemListingId;
     lastShippingAddress = shippingAddress;
     lastShippingRegion = shippingRegion;
     lastShippingCountryCode = shippingCountryCode;
+    lastDeliveryDetails = deliveryDetails;
 
     if (delayCompleter != null) {
       await delayCompleter!.future;
@@ -115,6 +118,16 @@ void main() {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
+  }
+
+  Future<void> fillRecipient(WidgetTester tester) async {
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(2), 'Buyer Test');
+    await tester.enterText(fields.at(3), '+94 77 123 4567');
+    await tester.enterText(fields.at(4), 'Colombo');
+    await tester.enterText(fields.at(5), 'Colombo');
+    await tester.enterText(fields.at(6), '00300');
+    await tester.pump();
   }
 
   group('Marketplace Gem Purchase Flow Tests', () {
@@ -273,6 +286,7 @@ void main() {
 
       await tester.tap(find.text('Buy Gemstone'));
       await tester.pumpAndSettle();
+      await fillRecipient(tester);
 
       await tester.tap(find.text('Place Order'));
       await tester.pumpAndSettle();

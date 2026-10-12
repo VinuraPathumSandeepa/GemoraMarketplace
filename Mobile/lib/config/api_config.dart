@@ -5,15 +5,25 @@ class ApiConfig {
   // SERVER CONFIGURATION
   // ============================================================
 
-  // An explicit URL supports physical devices and adb-reverse. Otherwise,
-  // select the appropriate local address for the current platform.
+  // Override at build time with, for example:
+  // `--dart-define=API_SERVER_URL=https://api.example.com`.
+  static const String _configuredServerUrl = String.fromEnvironment(
+    'API_SERVER_URL',
+  );
+
+  // Android emulators reach the host through 10.0.2.2. Browsers and desktop
+  // builds run on the host, so they use localhost by default.
   static String get serverUrl {
-    const configured = String.fromEnvironment('API_SERVER_URL');
-    if (configured.isNotEmpty) return configured;
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
-      return 'https://gemora-api.onrender.com';
+    final configuredUrl = _configuredServerUrl.trim();
+    if (configuredUrl.isNotEmpty) {
+      return configuredUrl.replaceFirst(RegExp(r'/+$'), '');
     }
-    return 'https://gemora-api.onrender.com';
+
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      return 'http://localhost:5198';
+    }
+
+    return 'http://10.0.2.2:5198';
   }
 
   static String get baseUrl => '$serverUrl/api';
@@ -93,7 +103,11 @@ class ApiConfig {
 
   static String get myGemListings => '$baseUrl/GemListings/my';
 
-  static String get createGemListing => '$baseUrl/GemListings';
+  static String get adminGemListings => '$baseUrl/admin/gem-listings';
+
+  static String adminGemListing(int id) => '$adminGemListings/$id';
+
+  static const String createGemListing = '$baseUrl/GemListings';
 
   static String gemListing(int id) => '$baseUrl/GemListings/$id';
 

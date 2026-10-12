@@ -26,6 +26,15 @@ class SellerDashboard extends StatelessWidget {
         backgroundColor: const Color(0xFF08251E),
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          const NotificationBell(),
+          IconButton(
+            tooltip: 'Orders',
+            onPressed: () => showSellerOrderInbox(context),
+            icon: const Icon(Icons.notifications_outlined),
+          ),
+          const SizedBox(width: 8),
+        ],
         title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -160,6 +169,23 @@ class SellerDashboard extends StatelessWidget {
             ),
 
             const SizedBox(height: 30),
+            _DashboardActionCard(
+              icon: Icons.local_shipping_outlined,
+              title: 'My Shipments',
+              description: 'Manage your gemstone deliveries, shipping plans, insurance, and tracking.',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SellerShipmentList()),
+              ),
+            ),
+            const SizedBox(height: 14),
+            _DashboardActionCard(
+              icon: Icons.notifications_outlined,
+              title: 'Orders',
+              description:
+                  'Review buyer requests and approve or reject orders.',
+              onTap: () => showSellerOrderInbox(context),
+            ),
+            const SizedBox(height: 30),
 
             // ======================================================
             // EXPORT COMPLIANCE
@@ -207,9 +233,7 @@ class SellerDashboard extends StatelessWidget {
               description: 'Manage buyer orders and initiate export compliance clearance.',
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const SellerOrdersScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const SellerOrdersScreen()),
                 );
               },
             ),

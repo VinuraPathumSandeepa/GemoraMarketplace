@@ -97,7 +97,7 @@ public class GemListingService : IGemListingService
     {
         return await _context.GemListings
             .AsNoTracking()
-            .Where(g => g.SellerId == sellerId)
+            .Where(g => g.SellerId == sellerId && g.Status != GemListingStatuses.Deleted)
             .OrderByDescending(g => g.CreatedAt)
             .Select(g => new GemListingDto
             {
@@ -123,11 +123,85 @@ public class GemListingService : IGemListingService
                 CertificateAuthority = g.CertificateAuthority,
                 CertificateUrl = g.CertificateUrl,
 
-                Status = g.Status,
+                Status = g.Status == GemListingStatuses.Approved &&
+                    g.Orders.Any(o => o.Status != OrderStatuses.Rejected &&
+                        o.Status != OrderStatuses.Cancelled &&
+                        o.Status != OrderStatuses.Refunded &&
+                        o.Status != OrderStatuses.Failed)
+                    ? GemListingStatuses.Sold : g.Status,
                 CreatedAt = g.CreatedAt,
                 UpdatedAt = g.UpdatedAt
             })
             .ToListAsync();
+    }
+
+    public async Task<List<GemListingDto>> GetAllForAdminAsync()
+    {
+        return await _context.GemListings
+            .AsNoTracking()
+            .Where(g => g.Status != GemListingStatuses.Deleted)
+            .OrderByDescending(g => g.CreatedAt)
+            .Select(g => new GemListingDto
+            {
+                Id = g.Id,
+                SellerId = g.SellerId,
+                SellerName = g.Seller.FullName,
+                Title = g.Title,
+                GemType = g.GemType,
+                Price = g.Price,
+                Currency = g.Currency,
+                PrimaryImageUrl = g.PrimaryImageUrl,
+                Status = g.Status == GemListingStatuses.Approved &&
+                    g.Orders.Any(o => o.Status != OrderStatuses.Rejected &&
+                        o.Status != OrderStatuses.Cancelled &&
+                        o.Status != OrderStatuses.Refunded &&
+                        o.Status != OrderStatuses.Failed)
+                    ? GemListingStatuses.Sold : g.Status,
+                CreatedAt = g.CreatedAt,
+                UpdatedAt = g.UpdatedAt
+            })
+            .ToListAsync();
+    }
+
+    // Archive a listing rather than removing order or verification history.
+    public async Task<bool> DeleteForAdminAsync(int id, Guid adminId)
+    {
+        var listing = await _context.GemListings
+            .FirstOrDefaultAsync(g => g.Id == id && g.Status != GemListingStatuses.Deleted);
+        if (listing == null) return false;
+
+        await using var transaction = _context.Database.IsRelational()
+            ? await _context.Database.BeginTransactionAsync()
+            : null;
+        var now = DateTime.UtcNow;
+        var pendingOrders = await _context.Orders
+            .Where(o => o.GemListingId == id && o.Status == OrderStatuses.Pending)
+            .ToListAsync();
+        var savedItems = await _context.WishlistItems
+            .Where(item => item.GemListingId == id)
+            .ToListAsync();
+        _context.WishlistItems.RemoveRange(savedItems);
+        foreach (var order in pendingOrders)
+        {
+            order.Status = OrderStatuses.Rejected;
+            order.UpdatedAt = now;
+            order.BuyerMessageAt = now;
+            _context.OrderStatusHistories.Add(new OrderStatusHistory
+            {
+                OrderId = order.Id,
+                PreviousStatus = OrderStatuses.Pending,
+                NewStatus = OrderStatuses.Rejected,
+                ChangedByUserId = adminId,
+                Reason = "The listing was removed by an administrator.",
+                CreatedAt = now
+            });
+        }
+
+        listing.Status = GemListingStatuses.Deleted;
+        listing.UpdatedAt = now;
+        await _context.SaveChangesAsync();
+        if (transaction != null) await transaction.CommitAsync();
+        return true;
     }
 
     // ============================================================
@@ -143,7 +217,8 @@ public class GemListingService : IGemListingService
             .AsNoTracking()
             .Where(g =>
                 g.Id == id &&
-                g.SellerId == sellerId)
+                g.SellerId == sellerId &&
+                g.Status != GemListingStatuses.Deleted)
             .Select(g => new GemListingDto
             {
                 Id = g.Id,
@@ -169,7 +244,12 @@ public class GemListingService : IGemListingService
                 CertificateAuthority = g.CertificateAuthority,
                 CertificateUrl = g.CertificateUrl,
 
-                Status = g.Status,
+                Status = g.Status == GemListingStatuses.Approved &&
+                    g.Orders.Any(o => o.Status != OrderStatuses.Rejected &&
+                        o.Status != OrderStatuses.Cancelled &&
+                        o.Status != OrderStatuses.Refunded &&
+                        o.Status != OrderStatuses.Failed)
+                    ? GemListingStatuses.Sold : g.Status,
                 CreatedAt = g.CreatedAt,
                 UpdatedAt = g.UpdatedAt
             })

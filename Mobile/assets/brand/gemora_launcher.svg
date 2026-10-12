@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Gemora gemstone mark">
+  <rect width="100" height="100" fill="#08251E"/>
+  <path d="M27 24H73L85 40 50 82 15 40Z" fill="#E4BC74" fill-opacity=".13" stroke="#E4BC74" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M15 40H85M27 24L37 40 50 82M73 24L63 40 50 82M37 40H63" fill="none" stroke="#E4BC74" stroke-opacity=".76" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M79 12V21M74.5 16.5H83.5" fill="none" stroke="#E4BC74" stroke-width="2.4" stroke-linecap="round"/>
+</svg>

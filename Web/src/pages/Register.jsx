@@ -5,6 +5,7 @@ import {
 } from "react-router-dom";
 
 import api from "../services/api";
+import "../styles/Register.css";
 
 
 // ============================================================
@@ -93,67 +94,26 @@ const countries = [
 function Register() {
   const navigate = useNavigate();
 
-  // ============================================================
-  // FORM STATE
-  // ============================================================
-
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
-
-    phoneDialCode: "+94",
     phoneNumber: "",
-
+    phoneDialCode: "+94",
     countryCode: "LK",
     region: "",
-
     password: "",
     confirmPassword: "",
-
     role: "Buyer",
   });
 
-
-  // ============================================================
-  // PASSWORD VISIBILITY
-  // ============================================================
-
-  const [
-    showPassword,
-    setShowPassword,
-  ] = useState(false);
-
-  const [
-    showConfirmPassword,
-    setShowConfirmPassword,
-  ] = useState(false);
-
-
-  // ============================================================
-  // PAGE STATE
-  // ============================================================
-
-  const [error, setError] =
-    useState("");
-
-  const [success, setSuccess] =
-    useState("");
-
-  const [submitting, setSubmitting] =
-    useState(false);
-
-
-  // ============================================================
-  // NORMAL INPUT CHANGE
-  // ============================================================
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (event) => {
-    const {
-      name,
-      value,
-    } = event.target;
-
-    setError("");
+    const { name, value } = event.target;
 
     setFormData((previous) => ({
       ...previous,
@@ -353,57 +313,29 @@ function Register() {
     setError("");
     setSuccess("");
 
-
-    const validationError =
-      validateForm();
-
-
+    const validationError = validateForm();
     if (validationError) {
       setError(validationError);
       return;
     }
 
+    const payload = {
+      fullName: formData.fullName.trim(),
+      email: formData.email.trim(),
+      phoneNumber: buildPhoneNumber(),
+      countryCode: formData.countryCode,
+      region: formData.region.trim(),
+      password: formData.password,
+      role: formData.role,
+    };
 
     setSubmitting(true);
 
-
     try {
-      const payload = {
-        fullName:
-          formData.fullName.trim(),
-
-        email:
-          formData.email
-            .trim()
-            .toLowerCase(),
-
-        phoneNumber:
-          buildPhoneNumber(),
-
-        countryCode:
-          formData.countryCode,
-
-        region:
-          formData.region.trim(),
-
-        password:
-          formData.password,
-
-        role:
-          formData.role,
-      };
-
-
-      const response =
-        await api.post(
-          "/Auth/register",
-          payload
-        );
-
+      await api.post("/Auth/register", payload);
 
       setSuccess(
-        response.data?.message ||
-          "Account created successfully. Check your email for the verification code."
+        "Registration successful. Redirecting to email verification..."
       );
 
 
@@ -430,6 +362,22 @@ function Register() {
           "Registration failed. Please check your information and try again."
       );
 
+      console.error("Registration failed:", error);
+
+      // Show detailed validation errors from backend
+      if (error.response?.status === 409) {
+        setError("An account with this email already exists. Please use a different email or try logging in.");
+      } else if (error.response?.data?.errors) {
+        const errorMessages = Object.entries(error.response.data.errors)
+          .map(([field, messages]) => `${field}: ${messages.join(", ")}`)
+          .join("\n");
+        setError(errorMessages);
+      } else {
+        setError(
+          error.response?.data?.message ||
+            "Registration failed. Please check your input and try again."
+        );
+      }
     } finally {
       setSubmitting(false);
     }
@@ -476,10 +424,7 @@ function Register() {
             Join Gemora
           </h2>
 
-          <p>
-            Create a Buyer or Seller account
-            and verify your email to continue.
-          </p>
+        <p>Gem Marketplace Management System</p>
 
         </div>
 

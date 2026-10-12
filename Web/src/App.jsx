@@ -1,7 +1,7 @@
 import {
-  Routes,
-  Route,
   Navigate,
+  Route,
+  Routes,
 } from "react-router-dom";
 
 // ============================================================
@@ -40,7 +40,15 @@ import NotificationsPage from "./pages/NotificationsPage";
 // ============================================================
 
 import SellerDashboard from "./pages/SellerDashboard";
+import SellerShipments from "./pages/SellerShipments";
+import CreateShipment from "./pages/CreateShipment";
+import ShipmentDetail from "./pages/ShipmentDetail";
+import ShipmentDetailPage from "./pages/ShipmentDetailPage";
+import DashboardLayout from "./layouts/DashboardLayout";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminShipments from "./pages/AdminShipments";
+import AdminShipmentDetail from "./pages/AdminShipmentDetail";
+import AdminAIDashboard from "./pages/AdminAIDashboard";
 import GemologistDashboard from "./pages/GemologistDashboard";
 import ExportOfficerDashboard from "./pages/ExportOfficerDashboard";
 
@@ -65,6 +73,7 @@ import VerificationDetails from "./pages/gemologist/VerificationDetails";
 // ============================================================
 
 import TransactionDashboard from "./pages/admin/TransactionDashboard";
+import AdminGemListings from "./pages/admin/AdminGemListings";
 
 // ============================================================
 // ROUTE PROTECTION
@@ -335,6 +344,18 @@ function App() {
 
           Example:
           /seller/listings/10
+
+          Supports:
+
+          - View listing information
+          - View gemstone image
+          - Upload/replace gemstone image
+          - View certificate
+          - Upload/replace certificate
+          - Navigate to Edit
+          - Submit for verification
+          - Resubmit after ChangesRequested
+          - Delete Draft
           ====================================================== */}
 
       <Route
@@ -439,6 +460,48 @@ function App() {
         }
       />
 
+      <Route
+        path="/admin/gem-listings"
+        element={<RoleProtectedRoute allowedRoles={["Admin"]}><AdminGemListings /></RoleProtectedRoute>}
+      />
+
+
+      {/* ======================================================
+          ADMIN SHIPMENT MANAGEMENT
+          ====================================================== */}
+
+      <Route
+        path="/admin/shipments"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Admin"]}
+          >
+            <DashboardLayout><AdminShipments /></DashboardLayout>
+          </RoleProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/shipments/:id"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Admin"]}
+          >
+            <DashboardLayout><AdminShipmentDetail /></DashboardLayout>
+          </RoleProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/ai-dashboard"
+        element={
+          <RoleProtectedRoute
+            allowedRoles={["Admin"]}
+          >
+            <AdminAIDashboard />
+          </RoleProtectedRoute>
+        }
+      />
 
       {/* ======================================================
           EXPORT OFFICER DASHBOARD
@@ -459,8 +522,8 @@ function App() {
       {/* ======================================================
           UNKNOWN ROUTES
 
-          Unknown URLs redirect through /dashboard.
-          Dashboard.jsx then performs role-based routing.
+          Invalid URLs redirect through /dashboard.
+          Dashboard.jsx then handles role-based redirection.
           ====================================================== */}
 
       <Route
@@ -476,5 +539,6 @@ function App() {
     </Routes>
   );
 }
+
 
 export default App;

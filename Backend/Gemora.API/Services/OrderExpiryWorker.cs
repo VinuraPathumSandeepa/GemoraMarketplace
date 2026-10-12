@@ -8,17 +8,35 @@ public sealed class OrderExpiryWorker(IServiceScopeFactory scopes, ILogger<Order
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
-        do
+        while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 using var scope = scopes.CreateScope();
-                await scope.ServiceProvider.GetRequiredService<IOrderService>().ExpireUnpaidAsync();
+                await scope.ServiceProvider
+                    .GetRequiredService<IOrderService>()
+                    .ExpireUnpaidAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                return;
             }
             catch (Exception exception)
             {
                 logger.LogError(exception, "Unable to expire unpaid orders; will retry on the next sweep.");
             }
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
+
+            try
+            {
+                if (!await timer.WaitForNextTickAsync(stoppingToken))
+                {
+                    return;
+                }
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                return;
+            }
+        }
     }
 }

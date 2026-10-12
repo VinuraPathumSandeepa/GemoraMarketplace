@@ -2987,7 +2987,7 @@ button:disabled {
   display: grid;
 
   grid-template-columns:
-    repeat(5, minmax(0, 1fr));
+    repeat(6, minmax(0, 1fr));
 
   overflow: hidden;
 
@@ -3537,6 +3537,11 @@ button:disabled {
   box-shadow:
     0 0 8px
     rgba(114, 207, 156, 0.65);
+}
+
+.seller-listing-status.status-Sold .seller-listing-status-dot {
+  background: #e7a760;
+  box-shadow: 0 0 8px rgba(231, 167, 96, 0.7);
 }
 
 .seller-listing-status.status-ChangesRequested

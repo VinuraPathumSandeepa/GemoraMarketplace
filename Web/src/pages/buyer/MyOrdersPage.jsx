@@ -1,4 +1,5 @@
 import { PaymentDeadline } from "../../components/OrderInbox";
+import { latestOrderMessage } from "../../utils/orderMessages";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
@@ -496,6 +497,7 @@ function PremiumOrderCard({
         <CurrentOrderMessage
           status={status}
           fulfillmentStatus={fulfillmentStatus}
+          shippingApproved={latestOrderMessage(order).label === "Shipping approved"}
         />
 
 
@@ -556,7 +558,7 @@ function PremiumOrderCard({
                   <PackageCheck size={18} />
                   {completing
                     ? "Confirming..."
-                    : "Confirm Delivery"}
+                    : "Confirm receipt"}
                 </button>
               )}
 
@@ -872,6 +874,7 @@ function OrderStatus({
 function CurrentOrderMessage({
   status,
   fulfillmentStatus,
+  shippingApproved,
 }) {
 
   if (status === "Paid") {
@@ -883,7 +886,7 @@ function CurrentOrderMessage({
       },
       Preparing: {
         icon: <Gem size={18} />,
-        title: "Gemstone is being prepared",
+        title: shippingApproved ? "Shipping plan approved" : "Gemstone is being prepared",
         text: "The seller is securely preparing your gemstone for dispatch.",
       },
       ReadyForDispatch: {
@@ -1118,7 +1121,7 @@ function OrderProgress({
     Pending: 1,
     Confirmed: 2,
     AwaitingPayment: 2,
-    Paid: 4,
+    Paid: fulfillmentStatus === "Delivered" ? 5 : 4,
     Completed: 5,
   };
 
@@ -1188,9 +1191,7 @@ function OrderProgress({
           const stageNumber =
             index + 1;
 
-          const completed =
-            stageNumber <=
-            current;
+          const completed = stageNumber < current || status === "Completed";
 
           const active =
             stageNumber ===

@@ -21,6 +21,8 @@ public class AuthService : IAuthService
     private const int OtpExpiryMinutes = 10;
     private const int OtpResendCooldownSeconds = 60;
     private const int MaxOtpAttempts = 5;
+    private const string ExportOfficerEmail = "export@gemora.com";
+    private const string ExportOfficerLoginAlias = "exportofficer@gemora.com";
 
 
     // ============================================================
@@ -256,6 +258,11 @@ public class AuthService : IAuthService
         }
         catch
         {
+            // The code never reached the user. Invalidate it so resend can
+            // issue a replacement immediately instead of enforcing cooldown.
+            verification.UsedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
             return new AuthResult
             {
                 Success = true,
@@ -536,7 +543,8 @@ public class AuthService : IAuthService
                 .Where(
                     v =>
                         v.UserId ==
-                        user.Id
+                        user.Id &&
+                        v.UsedAt == null
                 )
                 .OrderByDescending(
                     v =>
@@ -670,6 +678,9 @@ public class AuthService : IAuthService
         }
         catch
         {
+            newVerification.UsedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
             return new AuthResult
             {
                 Success = false,
@@ -713,6 +724,27 @@ public class AuthService : IAuthService
                         u.Email.ToLower() ==
                         email
                 );
+
+
+        // Keep the seeded account's canonical address while accepting the
+        // descriptive address commonly used for the Export Officer. An exact
+        // account always wins, so a real user registered with the alias is
+        // never shadowed by this fallback.
+        if (
+            user == null &&
+            email == ExportOfficerLoginAlias
+        )
+        {
+            user =
+                await _context.Users
+                    .FirstOrDefaultAsync(
+                        u =>
+                            u.Email.ToLower() ==
+                                ExportOfficerEmail &&
+                            u.Role ==
+                                UserRoles.ExportOfficer
+                    );
+        }
 
 
         /*

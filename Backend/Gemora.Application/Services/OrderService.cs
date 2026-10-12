@@ -121,8 +121,7 @@ public partial class OrderService : IOrderService
                         o.Status != OrderStatuses.Refunded &&
 
                         o.Status != OrderStatuses.Failed &&
-                        o.Status != OrderStatuses.Rejected &&
-                        (o.Status != OrderStatuses.Pending || o.BuyerId == buyerId));
+                        o.Status != OrderStatuses.Rejected);
 
             if (hasActiveOrder)
 
@@ -429,6 +428,8 @@ public partial class OrderService : IOrderService
         order.FulfillmentStatus =
 
             newStatus;
+
+        order.BuyerMessageAt = DateTime.UtcNow;
 
         order.UpdatedAt =
 
@@ -2116,7 +2117,9 @@ public partial class OrderService : IOrderService
 
         Guid? actorId,
 
-        string? reason)
+        string? reason,
+
+        CancellationToken cancellationToken = default)
 
     {
 
@@ -2180,7 +2183,9 @@ public partial class OrderService : IOrderService
 
         await _context
 
-            .SaveChangesAsync();
+            .SaveChangesAsync(
+
+                cancellationToken);
 
     }
 
@@ -2416,11 +2421,11 @@ public partial class OrderService : IOrderService
 
             CourierName =
 
-                o.Shipment.CourierName,
+                o.Shipment.CourierName ?? string.Empty,
 
             TrackingNumber =
 
-                o.Shipment.TrackingNumber,
+                o.Shipment.TrackingNumber ?? string.Empty,
 
             TrackingUrl =
 
@@ -2864,11 +2869,11 @@ private static OrderResponseDto
 
                     CourierName =
                         order.Shipment
-                            .CourierName,
+                            .CourierName ?? string.Empty,
 
                     TrackingNumber =
                         order.Shipment
-                            .TrackingNumber,
+                            .TrackingNumber ?? string.Empty,
 
                     TrackingUrl =
                         order.Shipment

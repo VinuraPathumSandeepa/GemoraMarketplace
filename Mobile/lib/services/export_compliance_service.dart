@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
@@ -77,7 +78,9 @@ class ExportComplianceService {
 
     if (response.statusCode != 200) {
       if (response.statusCode == 403) {
-        throw Exception("You don't have permission to view these export requests.");
+        throw Exception(
+          "You don't have permission to view these export requests.",
+        );
       }
       throw Exception(
         _parseErrorResponse(
@@ -91,7 +94,9 @@ class ExportComplianceService {
     final rawList = data['requests'] as List<dynamic>? ?? [];
 
     return rawList
-        .map((item) => ExportRequestModel.fromJson(item as Map<String, dynamic>))
+        .map(
+          (item) => ExportRequestModel.fromJson(item as Map<String, dynamic>),
+        )
         .toList();
   }
 
@@ -191,7 +196,10 @@ class ExportComplianceService {
     final rawList = data['documents'] as List<dynamic>? ?? [];
 
     return rawList
-        .map((item) => ComplianceDocumentModel.fromJson(item as Map<String, dynamic>))
+        .map(
+          (item) =>
+              ComplianceDocumentModel.fromJson(item as Map<String, dynamic>),
+        )
         .toList();
   }
 
@@ -208,9 +216,7 @@ class ExportComplianceService {
   }) async {
     final headers = await _getHeaders();
 
-    final bodyPayload = <String, dynamic>{
-      'documentType': documentType.trim(),
-    };
+    final bodyPayload = <String, dynamic>{'documentType': documentType.trim()};
 
     if (documentNumber != null && documentNumber.trim().isNotEmpty) {
       bodyPayload['documentNumber'] = documentNumber.trim();
@@ -261,7 +267,9 @@ class ExportComplianceService {
       throw Exception('The selected file is empty.');
     }
     if (fileBytes.length > maxBytes) {
-      throw Exception('The selected file is too large. Maximum file size is 10 MB.');
+      throw Exception(
+        'The selected file is too large. Maximum file size is 10 MB.',
+      );
     }
 
     // 2. Pre-validation: extension check
@@ -333,13 +341,17 @@ class ExportComplianceService {
         throw Exception('Your session has expired. Please sign in again.');
       }
       if (response.statusCode == 403) {
-        throw Exception("You don't have permission to submit this export request.");
+        throw Exception(
+          "You don't have permission to submit this export request.",
+        );
       }
       if (response.statusCode == 404) {
         throw Exception("This export request could not be found.");
       }
       if (response.statusCode == 409) {
-        throw Exception("This request can't be submitted in its current state.");
+        throw Exception(
+          "This request can't be submitted in its current state.",
+        );
       }
 
       try {
@@ -355,7 +367,9 @@ class ExportComplianceService {
         }
       }
 
-      throw Exception("We couldn't submit your export request. Please try again.");
+      throw Exception(
+        "We couldn't submit your export request. Please try again.",
+      );
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -397,12 +411,16 @@ class ExportComplianceService {
       throw Exception('Your session has expired. Please sign in again.');
     }
     if (response.statusCode == 403) {
-      throw Exception("You don't have permission to perform compliance analysis on this export request.");
+      throw Exception(
+        "You don't have permission to perform compliance analysis on this export request.",
+      );
     }
 
     return ComplianceWorkflowAnalysisResultModel(
       success: false,
-      message: serverMessage ?? "The automated compliance service could not complete the analysis.",
+      message:
+          serverMessage ??
+          "The automated compliance service could not complete the analysis.",
       errorCode: errorCode ?? 'AI_PROVIDER_ERROR',
     );
   }
@@ -416,7 +434,9 @@ class ExportComplianceService {
     final headers = await _getHeaders();
 
     final response = await http.post(
-      Uri.parse('${ApiConfig.exportRequests}/$requestId/compliance-analysis/retry'),
+      Uri.parse(
+        '${ApiConfig.exportRequests}/$requestId/compliance-analysis/retry',
+      ),
       headers: headers,
     );
 
@@ -440,12 +460,16 @@ class ExportComplianceService {
       throw Exception('Your session has expired. Please sign in again.');
     }
     if (response.statusCode == 403) {
-      throw Exception("You don't have permission to retry compliance analysis on this export request.");
+      throw Exception(
+        "You don't have permission to retry compliance analysis on this export request.",
+      );
     }
 
     return ComplianceWorkflowAnalysisResultModel(
       success: false,
-      message: serverMessage ?? "AI assessment retry could not be completed at this time.",
+      message:
+          serverMessage ??
+          "AI assessment retry could not be completed at this time.",
       errorCode: errorCode ?? 'AI_PROVIDER_ERROR',
     );
   }
@@ -485,7 +509,9 @@ class ExportComplianceService {
         throw Exception('Your session has expired. Please sign in again.');
       }
       if (response.statusCode == 403) {
-        throw Exception("You don't have permission to update this export request.");
+        throw Exception(
+          "You don't have permission to update this export request.",
+        );
       }
       if (response.statusCode == 404) {
         throw Exception("This export request could not be found.");
@@ -519,7 +545,9 @@ class ExportComplianceService {
   // ==========================================
   // CREATE EXPORT REQUEST FROM ORDER (SELLER)
   // ==========================================
-  Future<ExportRequestModel> createExportRequestFromOrder(dynamic orderId) async {
+  Future<ExportRequestModel> createExportRequestFromOrder(
+    dynamic orderId,
+  ) async {
     final headers = await _getHeaders();
 
     final response = await http.post(

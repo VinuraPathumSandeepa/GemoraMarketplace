@@ -127,6 +127,7 @@
 .gm-buyer .gm-image-fallback span { font: 400 1.15rem var(--gm-serif); color: var(--gm-text); }
 .gm-buyer .gm-image-fallback small { color: var(--gm-muted); }
 .gm-buyer .gm-card-type { position: absolute; top: 12px; left: 12px; background: var(--gm-cream); color: var(--gm-green); border-radius: 8px; padding: 4px 8px; font-size: .75rem; font-weight: 600; }
+.gm-buyer .gm-card-sold { position: absolute; top: 12px; right: 12px; padding: 5px 11px; border-radius: 8px; background: #8d432d; color: white; font-size: .75rem; font-weight: 800; letter-spacing: .04em; box-shadow: 0 4px 14px rgb(25 13 9 / 18%); }
 .gm-buyer .gm-quick-view { position: absolute; right: 8px; bottom: 8px; display: flex; align-items: center; gap: 8px; padding: 10px; min-height: 44px; min-width: 44px; background: rgb(250 247 240 / 92%); color: var(--gm-ink); border: 1px solid var(--gm-border); border-radius: 10px; font-size: .75rem; backdrop-filter: blur(10px); }
 .gm-buyer .gm-gem-content { padding: 20px; }
 .gm-buyer .gm-card-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 10px; font-size: .75rem; color: var(--gm-muted); }
@@ -150,6 +151,37 @@
 .gm-buyer .gm-visual-caption { position: absolute; bottom: 16px; left: 16px; right: 16px; padding: 12px; display: flex; align-items: center; gap: 12px; font-size: .875rem; }
 .gm-buyer .gm-visual-caption small { display: block; color: var(--gm-muted); }
 .gm-buyer .gm-market-toolbar { display: grid; gap: 12px; padding: 12px; position: sticky; top: var(--gm-nav-height); z-index: 30; }
+.gm-buyer .gm-search-combobox { position: relative; min-width: 0; }
+.gm-buyer .gm-search-combobox .gm-search { min-height: 49px; }
+.gm-buyer .gm-search-combobox .gm-search input { flex: 1; width: 100%; }
+.gm-buyer .gm-search-combobox input::-webkit-search-cancel-button { display: none; }
+.gm-buyer .gm-search-suggestions {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 9px);
+  left: 0;
+  right: 0;
+  max-height: min(430px, 60vh);
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--gm-border);
+  border-radius: 18px;
+  background: var(--gm-surface);
+  color: var(--gm-text);
+  box-shadow: 0 20px 55px rgb(8 37 30 / 20%);
+}
+.gm-buyer .gm-search-suggestions-heading { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px 9px; color: var(--gm-muted); font-size: .65rem; font-weight: 800; letter-spacing: .14em; }
+.gm-buyer .gm-search-suggestions-heading span { font-weight: 600; letter-spacing: 0; text-transform: none; }
+.gm-buyer .gm-search-suggestion { display: flex; align-items: center; gap: 11px; width: 100%; min-height: 63px; padding: 9px 11px; border: 0; border-radius: 12px; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.gm-buyer .gm-search-suggestion:hover, .gm-buyer .gm-search-suggestion[aria-selected="true"] { background: var(--gm-soft); }
+.gm-buyer .gm-search-suggestion:focus-visible { outline: 2px solid var(--gm-gold); outline-offset: -2px; }
+.gm-buyer .gm-search-suggestion-icon { flex: 0 0 37px; display: grid; place-items: center; width: 37px; height: 37px; border-radius: 11px; background: var(--gm-soft); color: var(--gm-green); }
+.gm-buyer .gm-search-suggestion-copy { display: grid; gap: 3px; min-width: 0; flex: 1; }
+.gm-buyer .gm-search-suggestion-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; font-weight: 700; }
+.gm-buyer .gm-search-suggestion-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gm-muted); font-size: .73rem; }
+.gm-buyer .gm-search-suggestion-kind { flex: 0 0 auto; padding: 5px 8px; border-radius: 99px; background: var(--gm-soft); color: var(--gm-green); font-size: .65rem; font-weight: 700; }
+.gm-buyer .gm-search-suggestion-all { margin-top: 5px; border-top: 1px solid var(--gm-border); border-radius: 0 0 12px 12px; }
+.gm-buyer .gm-search-suggestion-all > svg { flex: 0 0 auto; color: var(--gm-gold); }
 .gm-buyer .gm-search { display: flex; align-items: center; gap: 8px; padding: 0 12px; min-width: 0; background: var(--gm-surface); border: 1px solid var(--gm-control-border); border-radius: 12px; color: var(--gm-muted); }
 .gm-buyer .gm-search input { border: 0; background: transparent; min-width: 0; padding-left: 0; }
 .gm-buyer .gm-search:focus-within { outline: 2px solid var(--gm-label); outline-offset: 2px; }

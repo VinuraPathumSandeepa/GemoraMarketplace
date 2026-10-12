@@ -244,6 +244,11 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
               'Certificate: ${g.certificateAuthority ?? ''} ${g.certificateNumber}',
             ),
           const SizedBox(height: 28),
+          if (!g.isAvailable)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: Chip(label: Text('Sold')),
+            ),
           FilledButton.icon(
             onPressed: _ordering ? null : _buy,
             icon: const Icon(Icons.shopping_cart_checkout),

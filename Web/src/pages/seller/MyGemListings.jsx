@@ -3,6 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import DashboardLayout from "../../layouts/DashboardLayout";
+import SellerListingSearch from "../../components/seller/SellerListingSearch";
+import { matchesListingSearch } from "../../components/seller/listingSearchSuggestions";
+import "../../styles/seller-listing-search.css";
 
 import gemListingService from "../../services/gemVerification/gemListingService";
 
@@ -20,6 +23,7 @@ const FILTERS = [
     label: "Changes Requested",
   },
   { value: "Approved", label: "Approved" },
+  { value: "Sold", label: "Sold" },
   { value: "Rejected", label: "Rejected" },
 ];
 
@@ -37,6 +41,9 @@ function formatStatus(status) {
 
     case "Approved":
       return "Approved";
+
+    case "Sold":
+      return "Sold";
 
     case "Rejected":
       return "Rejected";
@@ -477,6 +484,10 @@ function MyGemListings() {
           listing.status === "Approved"
       ).length,
 
+      Sold: listings.filter(
+        (listing) => listing.status === "Sold"
+      ).length,
+
       Rejected: listings.filter(
         (listing) =>
           listing.status === "Rejected"
@@ -489,10 +500,6 @@ function MyGemListings() {
   // ==========================================================
 
   const visibleListings = useMemo(() => {
-    const normalizedSearch = searchTerm
-      .trim()
-      .toLowerCase();
-
     // --------------------------------------------------------
     // FILTER LISTINGS
     // --------------------------------------------------------
@@ -502,24 +509,7 @@ function MyGemListings() {
         statusFilter === "All" ||
         listing.status === statusFilter;
 
-      const searchableText = [
-        listing.title,
-        listing.gemType,
-        listing.color,
-        listing.clarity,
-        listing.cut,
-        listing.certificateNumber,
-        listing.certificateAuthority,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      const matchesSearch =
-        normalizedSearch === "" ||
-        searchableText.includes(normalizedSearch);
-
-      return matchesStatus && matchesSearch;
+      return matchesStatus && matchesListingSearch(listing, searchTerm);
     });
 
     // --------------------------------------------------------
@@ -654,6 +644,11 @@ function MyGemListings() {
           </div>
 
           <div>
+            <span>Sold</span>
+            <strong>{loading ? "—" : counts.Sold}</strong>
+          </div>
+
+          <div>
             <span>Needs Attention</span>
 
             <strong>
@@ -673,34 +668,11 @@ function MyGemListings() {
 
           {/* SEARCH */}
 
-          <div className="seller-listings-search">
-
-            <span className="seller-search-icon">
-              ⌕
-            </span>
-
-            <input
-              type="search"
-              value={searchTerm}
-              onChange={(event) =>
-                setSearchTerm(event.target.value)
-              }
-              placeholder="Search by title, gem type, color, certificate..."
-              aria-label="Search gemstone listings"
-            />
-
-            {searchTerm && (
-              <button
-                type="button"
-                className="seller-search-clear"
-                onClick={() => setSearchTerm("")}
-                aria-label="Clear search"
-              >
-                ×
-              </button>
-            )}
-
-          </div>
+          <SellerListingSearch
+            listings={statusFilter === "All" ? listings : listings.filter((listing) => listing.status === statusFilter)}
+            value={searchTerm}
+            onChange={setSearchTerm}
+          />
 
           {/* SORT */}
 

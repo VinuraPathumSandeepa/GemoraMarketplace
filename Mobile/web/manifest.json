@@ -1,11 +1,11 @@
 {
-    "name": "gemora_mobile",
-    "short_name": "gemora_mobile",
+    "name": "Gemora Marketplace",
+    "short_name": "Gemora",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#08251E",
+    "theme_color": "#08251E",
+    "description": "Discover Sri Lanka's gemstones on Gemora.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
