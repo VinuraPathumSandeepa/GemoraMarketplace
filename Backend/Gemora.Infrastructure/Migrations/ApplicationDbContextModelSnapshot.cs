@@ -623,6 +623,73 @@ namespace Gemora.Infrastructure.Migrations
                     b.ToTable("Notifications");
                 });
 
+            modelBuilder.Entity("Gemora.Domain.Entities.InsuranceRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("CoverageAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("CoverageType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<decimal>("DeclaredValue")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime?>("PolicyEndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PolicyNumber")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("PolicyReference")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("PolicyStartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("PremiumAmount")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("ProviderName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("ShipmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShipmentId")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("InsuranceRecords", (string)null);
+                });
+
             modelBuilder.Entity("Gemora.Domain.Entities.Order", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1451,6 +1518,17 @@ namespace Gemora.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Gemora.Domain.Entities.InsuranceRecord", b =>
+                {
+                    b.HasOne("Gemora.Domain.Entities.Shipment", "Shipment")
+                        .WithOne("InsuranceRecord")
+                        .HasForeignKey("Gemora.Domain.Entities.InsuranceRecord", "ShipmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Shipment");
                 });
 
             modelBuilder.Entity("Gemora.Domain.Entities.Order", b =>

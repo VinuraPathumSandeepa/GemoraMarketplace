@@ -7,6 +7,8 @@ services:
   - type: web
     name: gemora-api
     runtime: docker
+    branch: main
+    autoDeployTrigger: commit
     # Path to the Dockerfile, relative to the repo root
     dockerfilePath: ./Backend/Dockerfile
     dockerContext: ./Backend
@@ -26,7 +28,7 @@ services:
       # Comma-separated list of allowed CORS origins.
       # Update this once you know your frontend's URL.
       - key: CorsOrigins
-        value: http://localhost:5173
+        value: https://gemora-marketplace-web.onrender.com
 
       # ---- Set these in Render Dashboard as secret values ----
       # ConnectionStrings__DefaultConnection  (your PostgreSQL connection string)

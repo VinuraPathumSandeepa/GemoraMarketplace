@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'constants/gemora_colors.dart';
 import 'providers/auth_provider.dart';
 import 'providers/notification_provider.dart';
+import 'screens/auth/login_screen.dart';
 import 'screens/dashboards/role_dashboard.dart';
 import 'screens/home/public_home_screen.dart';
 import 'screens/onboarding/welcome_screen.dart';
@@ -37,8 +38,8 @@ class GemoraApp extends StatelessWidget {
         title: 'Gemora Marketplace',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7356A3)),
-          scaffoldBackgroundColor: const Color(0xFFF7F7FA),
+          colorScheme: ColorScheme.fromSeed(seedColor: GemoraColors.green),
+          scaffoldBackgroundColor: GemoraColors.cream,
           useMaterial3: true,
         ),
         home: const AuthGate(),

@@ -21,7 +21,7 @@ public class MarketplaceService : IMarketplaceService
     // =========================================================
     // MARKETPLACE SEARCH
     //
-    // Keep unavailable gems visible with a Sold badge.
+    // Show only listings that can currently accept a buyer request.
     // =========================================================
 
     public async Task<PagedMarketplaceResponseDto>
@@ -29,7 +29,7 @@ public class MarketplaceService : IMarketplaceService
             MarketplaceSearchQueryDto query)
     {
         var gems =
-            PublicListings();
+            AvailableListings();
 
 
         // =====================================================
@@ -271,24 +271,6 @@ public class MarketplaceService : IMarketplaceService
         var totalItems =
             await gems.CountAsync();
 
-        var offset = ((long)page - 1) * pageSize;
-
-        if (offset >= totalItems)
-        {
-            return new PagedMarketplaceResponseDto
-            {
-                Items = new List<MarketplaceGemResponseDto>(),
-                Page = page,
-                PageSize = pageSize,
-                TotalItems = totalItems,
-                TotalPages = totalItems == 0
-                    ? 0
-                    : (int)Math.Ceiling(totalItems / (double)pageSize)
-            };
-        }
-
-
-
         // C2-BUG-002: Calculate the offset without int overflow.
         long offset = ((long)page - 1L) * pageSize;
 
@@ -375,6 +357,7 @@ public class MarketplaceService : IMarketplaceService
                         IsAvailable =
                             g.Status == GemListingStatuses.Approved &&
                             !g.Orders.Any(o =>
+                                o.Status != OrderStatuses.Pending &&
                                 o.Status != OrderStatuses.Rejected &&
                                 o.Status != OrderStatuses.Cancelled &&
                                 o.Status != OrderStatuses.Refunded &&
@@ -483,6 +466,7 @@ public class MarketplaceService : IMarketplaceService
                     IsAvailable =
                         g.Status == GemListingStatuses.Approved &&
                         !g.Orders.Any(o =>
+                            o.Status != OrderStatuses.Pending &&
                             o.Status != OrderStatuses.Rejected &&
                             o.Status != OrderStatuses.Cancelled &&
                             o.Status != OrderStatuses.Refunded &&
@@ -533,6 +517,7 @@ public class MarketplaceService : IMarketplaceService
             .Where(g =>
                 g.Status == GemListingStatuses.Approved &&
                 !g.Orders.Any(o =>
+                    o.Status != OrderStatuses.Pending &&
                     o.Status != OrderStatuses.Rejected &&
 
                     o.Status !=

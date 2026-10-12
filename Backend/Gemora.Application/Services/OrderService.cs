@@ -108,6 +108,36 @@ public partial class OrderService : IOrderService
 
             // =====================================================
 
+            var hasExistingBuyerRequest =
+
+                await _context.Orders
+
+                    .AnyAsync(o =>
+
+                        o.GemListingId == listing.Id &&
+
+                        o.BuyerId == buyerId &&
+
+                        o.Status != OrderStatuses.Cancelled &&
+
+                        o.Status != OrderStatuses.Refunded &&
+
+                        o.Status != OrderStatuses.Failed &&
+
+                        o.Status != OrderStatuses.Rejected);
+
+            if (hasExistingBuyerRequest)
+
+            {
+
+                throw new InvalidOperationException(
+
+                    "You already have an active request for this gemstone.");
+
+            }
+
+            // Pending requests may coexist until the seller approves one.
+            // Once approved, all later lifecycle states reserve the gemstone.
             var hasActiveOrder =
 
                 await _context.Orders
@@ -115,6 +145,8 @@ public partial class OrderService : IOrderService
                     .AnyAsync(o =>
 
                         o.GemListingId == listing.Id &&
+
+                        o.Status != OrderStatuses.Pending &&
 
                         o.Status != OrderStatuses.Cancelled &&
 

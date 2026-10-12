@@ -176,6 +176,9 @@ class OrderModel {
   final List<OrderHistoryItem> statusHistory;
   final List<FulfillmentHistoryItem> fulfillmentHistory;
 
+  String? get shipmentStatus => shipment?.status;
+  String? get trackingNumber => shipment?.trackingNumber;
+
   const OrderModel({
     required this.id,
     required this.orderNumber,
@@ -204,6 +207,9 @@ class OrderModel {
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     final history = json['statusHistory'];
+    final fulfillmentHistory = json['fulfillmentHistory'];
+    final deliveryDetails = json['deliveryDetails'];
+    final shipment = json['shipment'];
 
     return OrderModel(
       id: json['id']?.toString() ?? '',
@@ -219,11 +225,29 @@ class OrderModel {
       shippingCountryCode: _asNullableString(json['shippingCountryCode']),
       exportStatus: _asNullableString(json['exportStatus']),
       exportRequestId: _asNullableString(json['exportRequestId']),
+      fulfillmentStatus:
+          _asNullableString(json['fulfillmentStatus']) ?? 'Pending',
+      paymentDueAt: _parseNullableDate(json['paymentDueAt']),
+      paidAt: _parseNullableDate(json['paidAt']),
+      handedOverAt: _parseNullableDate(json['handedOverAt']),
+      deliveredAt: _parseNullableDate(json['deliveredAt']),
+      deliveryDetails: deliveryDetails is Map<String, dynamic>
+          ? OrderDeliveryDetails.fromJson(deliveryDetails)
+          : null,
+      shipment: shipment is Map<String, dynamic>
+          ? OrderShipment.fromJson(shipment)
+          : null,
       createdAt: _parseDate(json['createdAt']),
       statusHistory: history is List
           ? history
                 .whereType<Map<String, dynamic>>()
                 .map(OrderHistoryItem.fromJson)
+                .toList()
+          : const [],
+      fulfillmentHistory: fulfillmentHistory is List
+          ? fulfillmentHistory
+                .whereType<Map<String, dynamic>>()
+                .map(FulfillmentHistoryItem.fromJson)
                 .toList()
           : const [],
     );
@@ -248,4 +272,9 @@ double _asDouble(dynamic value) {
 DateTime _parseDate(dynamic value) {
   return DateTime.tryParse(value?.toString() ?? '') ??
       DateTime.fromMillisecondsSinceEpoch(0);
+}
+
+DateTime? _parseNullableDate(dynamic value) {
+  final text = value?.toString();
+  return text == null || text.isEmpty ? null : DateTime.tryParse(text);
 }
