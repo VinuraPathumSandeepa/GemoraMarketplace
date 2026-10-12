@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../config/api_config.dart';
 import '../../models/gem_listing_model.dart';
 import '../../services/gem_listing_service.dart';
+import '../../widgets/seller_listing_search.dart';
 import 'create_gem_listing_screen.dart';
 import 'gem_listing_details_screen.dart';
 
@@ -17,6 +18,8 @@ class _MyGemListingsScreenState extends State<MyGemListingsScreen> {
   final GemListingService _service = GemListingService();
 
   List<GemListingModel> _listings = [];
+
+  String _searchQuery = '';
 
   bool _loading = true;
 
@@ -124,6 +127,9 @@ class _MyGemListingsScreenState extends State<MyGemListingsScreen> {
       case 'approved':
         return 'Approved';
 
+      case 'sold':
+        return 'Sold';
+
       case 'rejected':
         return 'Rejected';
 
@@ -221,9 +227,64 @@ class _MyGemListingsScreenState extends State<MyGemListingsScreen> {
       );
     }
 
+    final visibleListings = _listings
+        .where((listing) => matchesSellerListing(listing, _searchQuery))
+        .toList();
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 100),
-      children: [..._listings.map(_listingCard)],
+      children: [
+        SellerListingSearch(
+          listings: _listings,
+          initialQuery: _searchQuery,
+          onQueryChanged: (query) => setState(() => _searchQuery = query),
+        ),
+        const SizedBox(height: 18),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(2, 0, 2, 12),
+          child: Text(
+            _searchQuery.trim().isEmpty
+                ? '${_listings.length} listings'
+                : '${visibleListings.length} of ${_listings.length} listings',
+            style: const TextStyle(
+              color: _muted,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        if (visibleListings.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 42),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: _border),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Column(
+              children: [
+                Icon(Icons.search_off_rounded, color: _gold, size: 38),
+                SizedBox(height: 12),
+                Text(
+                  'No matching listings',
+                  style: TextStyle(
+                    color: _darkEmerald,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  'Try a gemstone, colour, title or certificate.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: _muted, fontSize: 12),
+                ),
+              ],
+            ),
+          )
+        else
+          ...visibleListings.map(_listingCard),
+      ],
     );
   }
 
@@ -305,13 +366,15 @@ class _MyGemListingsScreenState extends State<MyGemListingsScreen> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: _emerald.withValues(alpha: 0.09),
+                        color: listing.status == 'Sold'
+                            ? _gold.withValues(alpha: 0.16)
+                            : _emerald.withValues(alpha: 0.09),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         _statusLabel(listing.status),
-                        style: const TextStyle(
-                          color: _emerald,
+                        style: TextStyle(
+                          color: listing.status == 'Sold' ? _gold : _emerald,
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
                         ),

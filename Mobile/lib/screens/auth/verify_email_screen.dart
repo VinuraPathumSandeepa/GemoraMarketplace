@@ -7,8 +7,13 @@ import 'login_screen.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
   final String email;
+  final bool initialEmailSent;
 
-  const VerifyEmailScreen({super.key, required this.email});
+  const VerifyEmailScreen({
+    super.key,
+    required this.email,
+    this.initialEmailSent = true,
+  });
 
   @override
   State<VerifyEmailScreen> createState() => _VerifyEmailScreenState();
@@ -27,6 +32,13 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final _codeController = TextEditingController();
+  late bool _emailSent;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailSent = widget.initialEmailSent;
+  }
 
   Future<void> _verifyEmail() async {
     if (!_formKey.currentState!.validate()) {
@@ -81,6 +93,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     }
 
     if (success) {
+      setState(() => _emailSent = true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: _green,
@@ -232,10 +245,13 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
                       const SizedBox(height: 12),
 
-                      const Text(
-                        'We sent a 6-digit verification code to',
+                      Text(
+                        _emailSent ? 'We sent a 6-digit verification code to' : 'We could not send a code to this address. Tap Resend Code below.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: _mutedText, height: 1.5),
+                        style: TextStyle(
+                          color: _emailSent ? _mutedText : Colors.red.shade700,
+                          height: 1.5,
+                        ),
                       ),
 
                       const SizedBox(height: 4),

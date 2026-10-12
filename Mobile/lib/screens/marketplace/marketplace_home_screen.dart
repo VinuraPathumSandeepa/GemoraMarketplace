@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/marketplace/marketplace_gem.dart';
 import '../../services/marketplace_service.dart';
+import '../../widgets/gem_search_suggestions.dart';
 import 'gem_detail_screen.dart';
 
 class MarketplaceHomeScreen extends StatefulWidget {
@@ -12,20 +13,37 @@ class MarketplaceHomeScreen extends StatefulWidget {
 
 class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
   final _search = TextEditingController();
+  final _searchFocusNode = FocusNode();
   final _service = MarketplaceService();
   bool _loading = true;
   String? _error;
   List<MarketplaceGem> _gems = [];
+  List<MarketplaceGem> _suggestionGems = [];
 
   @override
   void initState() {
     super.initState();
+<<<<<<< HEAD
     _load();
   }
 
   @override
   void dispose() {
     _search.dispose();
+=======
+    _searchFocusNode.addListener(_refreshSuggestions);
+    _load();
+  }
+
+  void _refreshSuggestions() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    _searchFocusNode.dispose();
+>>>>>>> origin/dev
     super.dispose();
   }
 
@@ -37,8 +55,21 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
       _error = null;
     });
     try {
+<<<<<<< HEAD
       final gems = await _service.getBuyerGems(search: _search.text.trim());
       if (mounted) setState(() => _gems = gems);
+=======
+      final search = _search.text.trim();
+      final gems = await _service.getGems(search: search);
+      if (mounted) {
+        setState(() {
+          _gems = gems;
+          if (search.isEmpty) {
+            _suggestionGems = gems;
+          }
+        });
+      }
+>>>>>>> origin/dev
     } catch (e) {
       if (mounted) {
         setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
@@ -46,6 +77,28 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+<<<<<<< HEAD
+=======
+  }
+
+  void _submitSearch([String? suggestion]) {
+    if (suggestion != null) {
+      _search.value = TextEditingValue(
+        text: suggestion,
+        selection: TextSelection.collapsed(offset: suggestion.length),
+      );
+    }
+    _searchFocusNode.unfocus();
+    setState(() {});
+    _load();
+  }
+
+  void _clearSearch() {
+    _search.clear();
+    _searchFocusNode.unfocus();
+    setState(() {});
+    _load();
+>>>>>>> origin/dev
   }
 
   @override
@@ -55,6 +108,7 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+<<<<<<< HEAD
           TextField(
             controller: _search,
             textInputAction: TextInputAction.search,
@@ -69,6 +123,48 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
+=======
+          TextFieldTapRegion(
+            child: Column(
+              children: [
+                TextField(
+                  controller: _search,
+                  focusNode: _searchFocusNode,
+                  textInputAction: TextInputAction.search,
+                  onChanged: (_) => setState(() {}),
+                  onSubmitted: (_) => _submitSearch(),
+                  decoration: InputDecoration(
+                    hintText: 'Search sapphire, ruby, color, cut...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_search.text.isNotEmpty)
+                          IconButton(
+                            tooltip: 'Clear search',
+                            onPressed: _clearSearch,
+                            icon: const Icon(Icons.close_rounded),
+                          ),
+                        IconButton(
+                          tooltip: 'Search gemstones',
+                          onPressed: _submitSearch,
+                          icon: const Icon(Icons.arrow_forward_rounded),
+                        ),
+                      ],
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+                if (_searchFocusNode.hasFocus && _search.text.trim().isNotEmpty)
+                  GemSearchSuggestions(
+                    gems: _suggestionGems.isNotEmpty ? _suggestionGems : _gems,
+                    query: _search.text,
+                    onSelected: _submitSearch,
+                  ),
+              ],
+>>>>>>> origin/dev
             ),
           ),
           const SizedBox(height: 16),
@@ -140,7 +236,13 @@ class _MarketplaceHomeScreenState extends State<MarketplaceHomeScreen> {
                 subtitle: Text(
                   '${g.gemType} • ${g.caratWeight} ct • ${g.currency} ${g.price.toStringAsFixed(0)}',
                 ),
+<<<<<<< HEAD
                 trailing: const Icon(Icons.chevron_right),
+=======
+                trailing: g.isAvailable
+                    ? const Icon(Icons.chevron_right)
+                    : const Chip(label: Text('Sold')),
+>>>>>>> origin/dev
                 onTap: () async {
                   final changed = await Navigator.push<bool>(
                     context,
