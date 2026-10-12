@@ -2,7 +2,9 @@ import { getAuthToken } from "./authSession";
 
 const RAW_API_URL =
   import.meta.env.VITE_API_URL ||
-  "https://gemora-api.onrender.com/api";
+  (import.meta.env.DEV
+    ? "http://localhost:5198"
+    : "https://gemora-api.onrender.com");
 
 
 const API_ORIGIN =

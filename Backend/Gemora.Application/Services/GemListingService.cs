@@ -124,7 +124,8 @@ public class GemListingService : IGemListingService
                 CertificateUrl = g.CertificateUrl,
 
                 Status = g.Status == GemListingStatuses.Approved &&
-                    g.Orders.Any(o => o.Status != OrderStatuses.Rejected &&
+                    g.Orders.Any(o => o.Status != OrderStatuses.Pending &&
+                        o.Status != OrderStatuses.Rejected &&
                         o.Status != OrderStatuses.Cancelled &&
                         o.Status != OrderStatuses.Refunded &&
                         o.Status != OrderStatuses.Failed)
@@ -152,7 +153,8 @@ public class GemListingService : IGemListingService
                 Currency = g.Currency,
                 PrimaryImageUrl = g.PrimaryImageUrl,
                 Status = g.Status == GemListingStatuses.Approved &&
-                    g.Orders.Any(o => o.Status != OrderStatuses.Rejected &&
+                    g.Orders.Any(o => o.Status != OrderStatuses.Pending &&
+                        o.Status != OrderStatuses.Rejected &&
                         o.Status != OrderStatuses.Cancelled &&
                         o.Status != OrderStatuses.Refunded &&
                         o.Status != OrderStatuses.Failed)
@@ -245,7 +247,8 @@ public class GemListingService : IGemListingService
                 CertificateUrl = g.CertificateUrl,
 
                 Status = g.Status == GemListingStatuses.Approved &&
-                    g.Orders.Any(o => o.Status != OrderStatuses.Rejected &&
+                    g.Orders.Any(o => o.Status != OrderStatuses.Pending &&
+                        o.Status != OrderStatuses.Rejected &&
                         o.Status != OrderStatuses.Cancelled &&
                         o.Status != OrderStatuses.Refunded &&
                         o.Status != OrderStatuses.Failed)

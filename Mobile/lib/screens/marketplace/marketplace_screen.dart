@@ -3,13 +3,6 @@ import 'package:flutter/material.dart';
 import '../../config/api_config.dart';
 import '../../models/marketplace/marketplace_gem.dart';
 import '../../services/marketplace_service.dart';
-<<<<<<< HEAD
-import '../../widgets/glass_capsule_navigation.dart';
-=======
-import '../../widgets/gem_search_suggestions.dart';
-import '../../widgets/gemora_mark.dart';
-import '../onboarding/welcome_screen.dart';
->>>>>>> origin/dev
 import 'my_orders_screen.dart';
 import '../shipments/seller_shipment_list.dart';
 
@@ -44,15 +37,11 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
   final TextEditingController _searchController = TextEditingController();
 
-  final FocusNode _searchFocusNode = FocusNode();
-
   final ScrollController _scrollController = ScrollController();
 
   final GlobalKey _exploreSectionKey = GlobalKey();
 
   List<MarketplaceGem> _gems = [];
-
-  List<MarketplaceGem> _suggestionGems = [];
 
   bool _loading = true;
 
@@ -90,19 +79,12 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   void initState() {
     super.initState();
 
-    _searchFocusNode.addListener(_refreshSearchSuggestions);
-
     _loadGems();
-  }
-
-  void _refreshSearchSuggestions() {
-    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     _searchController.dispose();
-    _searchFocusNode.dispose();
     _scrollController.dispose();
 
     super.dispose();
@@ -117,9 +99,10 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     }
 
     try {
-      final search = _searchController.text.trim();
-      final category = _selectedCategory;
-      final gems = await _service.getGems(search: search, gemType: category);
+      final gems = await _service.getGems(
+        search: _searchController.text,
+        gemType: _selectedCategory,
+      );
 
       if (!mounted) {
         return;
@@ -127,9 +110,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
       setState(() {
         _gems = gems;
-        if (search.isEmpty && category == 'All') {
-          _suggestionGems = gems;
-        }
       });
     } catch (error) {
       if (!mounted) {
@@ -154,25 +134,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       _bottomIndex = 1;
     });
 
-    _loadGems();
-  }
-
-  void _submitSearch([String? suggestion]) {
-    if (suggestion != null) {
-      _searchController.value = TextEditingValue(
-        text: suggestion,
-        selection: TextSelection.collapsed(offset: suggestion.length),
-      );
-    }
-    _searchFocusNode.unfocus();
-    setState(() => _bottomIndex = 1);
-    _loadGems();
-  }
-
-  void _clearSearch() {
-    _searchController.clear();
-    _searchFocusNode.unfocus();
-    setState(() {});
     _loadGems();
   }
 
@@ -285,6 +246,20 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 
   void _handleBottomNavigation(int index) {
+    if (_hideWorkspaceForBuyer) {
+      switch (index) {
+        case 0:
+          _goHome();
+          return;
+        case 1:
+          _goExplore();
+          return;
+        case 2:
+          widget.onProfile?.call();
+          return;
+      }
+    }
+
     if (_showShipments && index == 4) {
       Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => const SellerShipmentList()));
@@ -383,24 +358,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     );
   }
 
-  Future<void> _openWelcomeTutorial() async {
-    final action = await Navigator.of(context).push<WelcomeAction>(
-      MaterialPageRoute(
-        builder: (tutorialContext) => WelcomeScreen(
-          isReplay: true,
-          canSignIn: !widget.isAuthenticated,
-          onFinished: (value) => Navigator.of(tutorialContext).pop(value),
-        ),
-      ),
-    );
-    if (!mounted) return;
-    if (action == WelcomeAction.signIn) widget.onLogin?.call();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true,
       backgroundColor: _cream,
       body: SafeArea(
         child: RefreshIndicator(
@@ -484,7 +444,11 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: _lightGold.withValues(alpha: 0.24)),
                 ),
-                child: const Center(child: GemoraMark(size: 35)),
+                child: const Icon(
+                  Icons.diamond_outlined,
+                  color: _lightGold,
+                  size: 28,
+                ),
               ),
               const SizedBox(width: 12),
               const Expanded(
@@ -506,16 +470,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                     ),
                   ],
                 ),
-              ),
-              IconButton(
-                tooltip: 'Welcome tour',
-                onPressed: _openWelcomeTutorial,
-                icon: const Icon(Icons.help_outline_rounded, color: _lightGold),
-                constraints: const BoxConstraints.tightFor(
-                  width: 36,
-                  height: 40,
-                ),
-                padding: EdgeInsets.zero,
               ),
               if (!widget.isAuthenticated)
                 TextButton(
@@ -593,59 +547,44 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   Widget _buildSearch() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 20, 18, 0),
-      child: TextFieldTapRegion(
-        child: Column(
-          children: [
-            TextField(
-              controller: _searchController,
-              focusNode: _searchFocusNode,
-              textInputAction: TextInputAction.search,
-              onChanged: (_) => setState(() {}),
-              onSubmitted: (_) => _submitSearch(),
-              decoration: InputDecoration(
-                hintText: 'Search gemstones...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_searchController.text.isNotEmpty)
-                      IconButton(
-                        tooltip: 'Clear search',
-                        onPressed: _clearSearch,
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-                    IconButton(
-                      tooltip: 'Search gemstones',
-                      onPressed: _submitSearch,
-                      icon: const Icon(Icons.arrow_forward_rounded),
-                    ),
-                  ],
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: _border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: _border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: _green),
-                ),
-              ),
-            ),
-            if (_searchFocusNode.hasFocus &&
-                _searchController.text.trim().isNotEmpty)
-              GemSearchSuggestions(
-                gems: _suggestionGems.isNotEmpty ? _suggestionGems : _gems,
-                query: _searchController.text,
-                onSelected: _submitSearch,
-              ),
-          ],
+      child: TextField(
+        controller: _searchController,
+        textInputAction: TextInputAction.search,
+        onSubmitted: (_) {
+          setState(() {
+            _bottomIndex = 1;
+          });
+
+          _loadGems();
+        },
+        decoration: InputDecoration(
+          hintText: 'Search gemstones...',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: IconButton(
+            onPressed: () {
+              setState(() {
+                _bottomIndex = 1;
+              });
+
+              _loadGems();
+            },
+            icon: const Icon(Icons.tune_rounded),
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(vertical: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: _border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: _border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: _green),
+          ),
         ),
       ),
     );
@@ -850,20 +789,11 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                             ),
                           ),
                         ),
-                        gem.isAvailable
-                            ? const Icon(
-                                Icons.verified_rounded,
-                                color: Color(0xFF247A50),
-                                size: 16,
-                              )
-                            : const Text(
-                                'SOLD',
-                                style: TextStyle(
-                                  color: Color(0xFFA66536),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
+                        const Icon(
+                          Icons.verified_rounded,
+                          color: Color(0xFF247A50),
+                          size: 16,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -943,39 +873,47 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   bool get _showShipments =>
       widget.isAuthenticated && widget.role?.trim().toLowerCase() == 'seller';
 
+  bool get _hideWorkspaceForBuyer =>
+      widget.isAuthenticated && widget.role?.trim().toLowerCase() == 'buyer';
+
   Widget _buildBottomNavigation() {
-    return GlassCapsuleNavigation(
+    return NavigationBar(
       selectedIndex: _bottomIndex,
       onDestinationSelected: _handleBottomNavigation,
+      backgroundColor: Colors.white,
+      indicatorColor: const Color(0xFFF1E7D5),
       destinations: [
-        const GlassCapsuleDestination(
-          icon: Icons.home_outlined,
-          selectedIcon: Icons.home_rounded,
+        const NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home_rounded),
           label: 'Home',
         ),
-        const GlassCapsuleDestination(
-          icon: Icons.diamond_outlined,
-          selectedIcon: Icons.diamond,
+        const NavigationDestination(
+          icon: Icon(Icons.diamond_outlined),
+          selectedIcon: Icon(Icons.diamond),
           label: 'Explore',
         ),
-        GlassCapsuleDestination(
-          icon: widget.isAuthenticated
-              ? Icons.work_outline_rounded
-              : Icons.login_rounded,
-          selectedIcon: widget.isAuthenticated
-              ? Icons.work_rounded
-              : Icons.login_rounded,
-          label: widget.isAuthenticated ? 'Workspace' : 'Account',
-        ),
-        const GlassCapsuleDestination(
-          icon: Icons.person_outline_rounded,
-          selectedIcon: Icons.person,
+        if (!_hideWorkspaceForBuyer)
+          NavigationDestination(
+            icon: Icon(
+              widget.isAuthenticated
+                  ? Icons.work_outline_rounded
+                  : Icons.login_rounded,
+            ),
+            selectedIcon: Icon(
+              widget.isAuthenticated ? Icons.work_rounded : Icons.login_rounded,
+            ),
+            label: widget.isAuthenticated ? 'Workspace' : 'Account',
+          ),
+        const NavigationDestination(
+          icon: Icon(Icons.person_outline_rounded),
+          selectedIcon: Icon(Icons.person),
           label: 'Profile',
         ),
         if (_showShipments)
-          const GlassCapsuleDestination(
-            icon: Icons.local_shipping_outlined,
-            selectedIcon: Icons.local_shipping,
+          const NavigationDestination(
+            icon: Icon(Icons.local_shipping_outlined),
+            selectedIcon: Icon(Icons.local_shipping),
             label: 'My Shipments',
           ),
       ],
@@ -1017,8 +955,6 @@ class _MarketplaceGemDetailsScreenState
   bool _loading = true;
 
   bool _ordering = false;
-
-  bool _soldByCurrentOrder = false;
 
   String? _error;
 
@@ -1071,7 +1007,6 @@ class _MarketplaceGemDetailsScreenState
   String? _imageUrl(String? value) => ApiConfig.resolveImageUrl(value);
 
   void _buy() {
-    if (_gem?.isAvailable == false || _soldByCurrentOrder) return;
     if (!widget.isAuthenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1106,20 +1041,12 @@ class _MarketplaceGemDetailsScreenState
     _showPurchaseConfirmation(gem);
   }
 
-  Future<void> _showPurchaseConfirmation(MarketplaceGem gem) async {
+  void _showPurchaseConfirmation(MarketplaceGem gem) {
     String selectedCountry = 'LK';
     final addressController = TextEditingController(
       text: '120 Galle Road, Colombo 03',
     );
     final regionController = TextEditingController(text: 'Western Province');
-<<<<<<< HEAD
-    final recipientController = TextEditingController();
-    final phoneController = TextEditingController();
-    final cityController = TextEditingController(text: 'Colombo');
-    final districtController = TextEditingController(text: 'Colombo');
-    final postalCodeController = TextEditingController(text: '00300');
-=======
->>>>>>> origin/dev
     final formKey = GlobalKey<FormState>();
 
     const countries = [
@@ -1173,7 +1100,7 @@ class _MarketplaceGemDetailsScreenState
       },
     ];
 
-    await showModalBottomSheet<void>(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1309,9 +1236,6 @@ class _MarketplaceGemDetailsScreenState
                               );
                               regionController.text = match['region']!;
                               addressController.text = match['address']!;
-                              cityController.clear();
-                              districtController.clear();
-                              postalCodeController.clear();
                             });
                           },
                         ),
@@ -1382,41 +1306,6 @@ class _MarketplaceGemDetailsScreenState
                               (val == null || val.trim().isEmpty)
                               ? 'Region is required'
                               : null,
-<<<<<<< HEAD
-                        ),
-                        const SizedBox(height: 14),
-                        _purchaseField(
-                          controller: recipientController,
-                          label: 'Recipient Name',
-                          hint: 'Name of the person receiving the package',
-                        ),
-                        const SizedBox(height: 14),
-                        _purchaseField(
-                          controller: phoneController,
-                          label: 'Recipient Phone',
-                          hint: '+94 77 123 4567',
-                          keyboardType: TextInputType.phone,
-                        ),
-                        const SizedBox(height: 14),
-                        _purchaseField(
-                          controller: cityController,
-                          label: 'City / Town',
-                          hint: 'Colombo',
-                        ),
-                        const SizedBox(height: 14),
-                        _purchaseField(
-                          controller: districtController,
-                          label: 'District',
-                          hint: 'Colombo',
-                        ),
-                        const SizedBox(height: 14),
-                        _purchaseField(
-                          controller: postalCodeController,
-                          label: 'Postal Code',
-                          hint: '00300',
-                          keyboardType: TextInputType.number,
-=======
->>>>>>> origin/dev
                         ),
                         const SizedBox(height: 14),
                         Container(
@@ -1505,26 +1394,6 @@ class _MarketplaceGemDetailsScreenState
                                           shippingRegion: regionController.text
                                               .trim(),
                                           shippingCountryCode: selectedCountry,
-                                          deliveryDetails: {
-                                            'recipientName': recipientController
-                                                .text
-                                                .trim(),
-                                            'recipientPhone': phoneController
-                                                .text
-                                                .trim(),
-                                            'addressLine1': addressController
-                                                .text
-                                                .trim(),
-                                            'city': cityController.text.trim(),
-                                            'district': districtController.text
-                                                .trim(),
-                                            'region': regionController.text
-                                                .trim(),
-                                            'postalCode': postalCodeController
-                                                .text
-                                                .trim(),
-                                            'countryCode': selectedCountry,
-                                          },
                                         );
                                       },
                                 style: FilledButton.styleFrom(
@@ -1566,62 +1435,6 @@ class _MarketplaceGemDetailsScreenState
         );
       },
     );
-
-    // The route's closing animation still owns the form for a short time.
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    addressController.dispose();
-    regionController.dispose();
-    recipientController.dispose();
-    phoneController.dispose();
-    cityController.dispose();
-    districtController.dispose();
-    postalCodeController.dispose();
-  }
-
-  Widget _purchaseField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    TextInputType? keyboardType,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: _text,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          decoration: InputDecoration(
-            hintText: hint,
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 12,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _border),
-            ),
-          ),
-          validator: (value) => value == null || value.trim().isEmpty
-              ? '$label is required'
-              : null,
-        ),
-      ],
-    );
   }
 
   Future<void> _submitOrder({
@@ -1629,7 +1442,6 @@ class _MarketplaceGemDetailsScreenState
     required String shippingAddress,
     required String shippingRegion,
     required String shippingCountryCode,
-    required Map<String, dynamic> deliveryDetails,
   }) async {
     setState(() => _ordering = true);
 
@@ -1639,15 +1451,11 @@ class _MarketplaceGemDetailsScreenState
         shippingAddress: shippingAddress,
         shippingRegion: shippingRegion,
         shippingCountryCode: shippingCountryCode,
-        deliveryDetails: deliveryDetails,
       );
 
       if (!mounted) return;
 
-      setState(() {
-        _ordering = false;
-        _soldByCurrentOrder = true;
-      });
+      setState(() => _ordering = false);
 
       final isInternational = order.shippingCountryCode != 'LK';
 
@@ -1780,7 +1588,6 @@ class _MarketplaceGemDetailsScreenState
 
   Widget _buildContent() {
     final gem = _gem!;
-    final isAvailable = gem.isAvailable && !_soldByCurrentOrder;
 
     final image = _imageUrl(gem.primaryImageUrl);
 
@@ -1912,15 +1719,10 @@ class _MarketplaceGemDetailsScreenState
           ],
         ),
         const SizedBox(height: 22),
-        if (!isAvailable)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: Chip(label: Text('Sold')),
-          ),
         SizedBox(
           height: 54,
           child: FilledButton.icon(
-            onPressed: _ordering || !isAvailable ? null : _buy,
+            onPressed: _ordering ? null : _buy,
             style: FilledButton.styleFrom(
               backgroundColor: _gold,
               foregroundColor: _darkGreen,
@@ -1938,11 +1740,6 @@ class _MarketplaceGemDetailsScreenState
             label: Text(
               _ordering
                   ? 'Processing...'
-<<<<<<< HEAD
-=======
-                  : !isAvailable
-                  ? 'Sold'
->>>>>>> origin/dev
                   : (widget.isAuthenticated
                         ? 'Buy Gemstone'
                         : 'Sign In to Buy'),

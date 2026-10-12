@@ -13,7 +13,7 @@ namespace Gemora.Tests;
 public class AdminGemListingTests
 {
     [Fact]
-    public async Task PendingPurchaseShowsSoldAndAdminDeletePreservesHistory()
+    public async Task PendingPurchaseStaysAvailableAndAdminDeletePreservesHistory()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
@@ -41,9 +41,9 @@ public class AdminGemListingTests
 
         var service = new GemListingService(context, Mock.Of<IFileStorageService>());
         var marketplace = new MarketplaceService(context);
-        Assert.Equal(GemListingStatuses.Sold, (await service.GetMyListingsAsync(sellerId)).Single().Status);
-        Assert.Equal(GemListingStatuses.Sold, (await service.GetAllForAdminAsync()).Single().Status);
-        Assert.False((await marketplace.GetByIdAsync(42))!.IsAvailable);
+        Assert.Equal(GemListingStatuses.Approved, (await service.GetMyListingsAsync(sellerId)).Single().Status);
+        Assert.Equal(GemListingStatuses.Approved, (await service.GetAllForAdminAsync()).Single().Status);
+        Assert.True((await marketplace.GetByIdAsync(42))!.IsAvailable);
 
         Assert.True(await service.DeleteForAdminAsync(42, adminId));
         Assert.Empty(await service.GetAllForAdminAsync());

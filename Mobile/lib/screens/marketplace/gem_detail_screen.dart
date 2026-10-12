@@ -82,8 +82,7 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
       'countryCode': TextEditingController(text: 'LK'),
     };
 
-    try {
-      return await showDialog<Map<String, dynamic>>(
+    final result = await showDialog<Map<String, dynamic>>(
         context: context,
         builder: (dialogContext) {
           return AlertDialog(
@@ -152,17 +151,20 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
                         .toUpperCase(),
                   });
                 },
-                child: const Text('Continue'),
+                child: const Text('Place Order'),
               ),
             ],
           );
         },
       );
-    } finally {
-      for (final controller in controllers.values) {
-        controller.dispose();
-      }
+
+    // The dialog future completes before its exit animation has fully removed
+    // the text fields. Dispose their controllers only after that transition.
+    await Future<void>.delayed(kThemeAnimationDuration);
+    for (final controller in controllers.values) {
+      controller.dispose();
     }
+    return result;
   }
 
   Widget _requiredField(
@@ -250,7 +252,7 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
               child: Chip(label: Text('Sold')),
             ),
           FilledButton.icon(
-            onPressed: _ordering ? null : _buy,
+            onPressed: !g.isAvailable || _ordering ? null : _buy,
             icon: const Icon(Icons.shopping_cart_checkout),
             label: Text(_ordering ? 'Creating order...' : 'Purchase gemstone'),
           ),
