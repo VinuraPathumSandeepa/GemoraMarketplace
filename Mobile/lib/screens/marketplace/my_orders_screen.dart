@@ -99,12 +99,12 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   }
 
   Future<void> _pay(OrderModel order) async {
-    final changed = await Navigator.of(context).push<bool>(
+    await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => CardPaymentScreen(order: order, service: _service),
       ),
     );
-    if (changed == true) await _load();
+    if (mounted) await _load();
   }
 
   bool _matchesFilter(OrderModel order, _OrderFilter filter) {
@@ -556,7 +556,7 @@ class _OrderGlassCardState extends State<_OrderGlassCard> {
                         ),
                         icon: const Icon(Icons.credit_card_rounded, size: 18),
                         label: const Text(
-                          'Pay with credit or debit card',
+                          'Delivery details and payment',
                           style: TextStyle(fontWeight: FontWeight.w800),
                         ),
                       ),
@@ -934,6 +934,14 @@ String _readableStatus(String value) => value
     .trim();
 
 String _deliveryLabel(OrderModel order) {
+  final orderStatus = order.status.toLowerCase();
+  if (orderStatus == 'cancelled' || orderStatus == 'rejected') {
+    return 'Not shipping';
+  }
+  if (orderStatus == 'pending') return 'Awaiting seller';
+  if (orderStatus == 'confirmed' || orderStatus == 'awaitingpayment') {
+    return 'Awaiting payment';
+  }
   final status = order.fulfillmentStatus;
   if (status.isNotEmpty && status.toLowerCase() != 'pending') {
     return _readableStatus(status);

@@ -54,23 +54,31 @@ class FulfillmentHistoryItem {
 class OrderDeliveryDetails {
   final String recipientName;
   final String recipientPhone;
+  final String alternatePhone;
   final String addressLine1;
+  final String addressLine2;
   final String city;
   final String district;
   final String region;
   final String postalCode;
   final String countryCode;
+  final String nearestLandmark;
+  final String deliveryInstructions;
   final bool isLocked;
 
   const OrderDeliveryDetails({
     required this.recipientName,
     required this.recipientPhone,
+    this.alternatePhone = '',
     required this.addressLine1,
+    this.addressLine2 = '',
     required this.city,
     required this.district,
     required this.region,
     required this.postalCode,
     required this.countryCode,
+    this.nearestLandmark = '',
+    this.deliveryInstructions = '',
     required this.isLocked,
   });
 
@@ -78,12 +86,16 @@ class OrderDeliveryDetails {
       OrderDeliveryDetails(
         recipientName: json['recipientName']?.toString() ?? '',
         recipientPhone: json['recipientPhone']?.toString() ?? '',
+        alternatePhone: json['alternatePhone']?.toString() ?? '',
         addressLine1: json['addressLine1']?.toString() ?? '',
+        addressLine2: json['addressLine2']?.toString() ?? '',
         city: json['city']?.toString() ?? '',
         district: json['district']?.toString() ?? '',
         region: json['region']?.toString() ?? '',
         postalCode: json['postalCode']?.toString() ?? '',
         countryCode: json['countryCode']?.toString() ?? '',
+        nearestLandmark: json['nearestLandmark']?.toString() ?? '',
+        deliveryInstructions: json['deliveryInstructions']?.toString() ?? '',
         isLocked: json['isLocked'] == true,
       );
 }

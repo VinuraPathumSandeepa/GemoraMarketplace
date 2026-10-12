@@ -53,6 +53,7 @@ public class PaymentConfirmationTests
         Assert.Equal(40000m, payment.RemainingAmount);
         Assert.Equal(OrderStatuses.Paid, payment.Order.Status);
         Assert.NotNull(payment.Order.PaidAt);
+        Assert.Equal(FulfillmentStatuses.Pending, payment.Order.FulfillmentStatus);
         Assert.Equal(
             PaymentStatuses.Succeeded,
             (await db.PaymentTransactions.SingleAsync()).Status);

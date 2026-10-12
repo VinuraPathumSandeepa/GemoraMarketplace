@@ -27,6 +27,14 @@ class MarketplaceService {
       ? client!.post(uri, headers: headers, body: body)
       : http.post(uri, headers: headers, body: body);
 
+  Future<http.Response> _patch(
+    Uri uri, {
+    Map<String, String>? headers,
+    Object? body,
+  }) => client != null
+      ? client!.patch(uri, headers: headers, body: body)
+      : http.patch(uri, headers: headers, body: body);
+
   Future<List<MarketplaceGemModel>> getGems({
     String? search,
     String? gemType,
@@ -196,6 +204,27 @@ class MarketplaceService {
       throw Exception('The order service returned an unexpected response.');
     }
 
+    return OrderModel.fromJson(decoded);
+  }
+
+  Future<OrderModel> updateOrderDeliveryDetails(
+    String orderId,
+    Map<String, dynamic> deliveryDetails,
+  ) async {
+    final response = await _patch(
+      Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/delivery-details'),
+      headers: {
+        ...await _authenticatedHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(deliveryDetails),
+    );
+
+    _ensureSuccess(response, 'We could not save your delivery details.');
+    final decoded = _decode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('The order service returned an unexpected response.');
+    }
     return OrderModel.fromJson(decoded);
   }
 
