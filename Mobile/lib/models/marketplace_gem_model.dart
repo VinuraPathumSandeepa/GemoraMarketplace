@@ -20,6 +20,11 @@ class MarketplaceGemModel {
   final String? certificateNumber;
   final String? certificateAuthority;
 
+  final String countryCode;
+  final String region;
+
+  final bool isAvailable;
+
   final String status;
 
   final DateTime? createdAt;
@@ -40,6 +45,9 @@ class MarketplaceGemModel {
     required this.primaryImageUrl,
     required this.certificateNumber,
     required this.certificateAuthority,
+    required this.countryCode,
+    required this.region,
+    required this.isAvailable,
     required this.status,
     required this.createdAt,
     required this.updatedAt,
@@ -61,6 +69,11 @@ class MarketplaceGemModel {
       primaryImageUrl: _nullableString(json['primaryImageUrl']),
       certificateNumber: _nullableString(json['certificateNumber']),
       certificateAuthority: _nullableString(json['certificateAuthority']),
+      countryCode: json['countryCode']?.toString() ?? '',
+      region: json['region']?.toString() ?? '',
+      isAvailable: json['isAvailable'] is bool
+          ? json['isAvailable'] as bool
+          : true,
       status: json['status']?.toString() ?? '',
       createdAt: _toDateTime(json['createdAt']),
       updatedAt: _toDateTime(json['updatedAt']),

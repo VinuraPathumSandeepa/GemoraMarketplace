@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../widgets/notification_bell.dart';
+import '../../widgets/glass_capsule_navigation.dart';
 import 'buyer_overview_screen.dart';
 import '../marketplace/ai_buyer_assistant_screen.dart';
 import '../marketplace/buyer_export_tracking_screen.dart';
@@ -11,23 +12,25 @@ import '../marketplace/my_orders_screen.dart';
 
 class BuyerDashboard extends StatefulWidget {
   const BuyerDashboard({super.key});
+
   @override
   State<BuyerDashboard> createState() => _BuyerDashboardState();
 }
 
 class _BuyerDashboardState extends State<BuyerDashboard> {
+  static const _titles = [
+    'Marketplace',
+    'AI Buyer Assistant',
+    'My Orders',
+    'Buyer Workspace',
+  ];
+
   int _index = 0;
   final _pages = const [
     MarketplaceHomeScreen(),
     AiBuyerAssistantScreen(),
     MyOrdersScreen(),
     BuyerOverviewScreen(),
-  ];
-  final _titles = const [
-    'Marketplace',
-    'AI Buyer Assistant',
-    'My Orders',
-    'Buyer Workspace',
   ];
 
   @override
@@ -63,28 +66,28 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
               ],
             ),
       body: IndexedStack(index: _index, children: _pages),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: GlassCapsuleNavigation(
         selectedIndex: _index,
         onDestinationSelected: (value) => setState(() => _index = value),
         destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.storefront_outlined),
-            selectedIcon: Icon(Icons.storefront),
+          GlassCapsuleDestination(
+            icon: Icons.storefront_outlined,
+            selectedIcon: Icons.storefront,
             label: 'Market',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined),
-            selectedIcon: Icon(Icons.auto_awesome),
+          GlassCapsuleDestination(
+            icon: Icons.auto_awesome_outlined,
+            selectedIcon: Icons.auto_awesome,
             label: 'Assistant',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
+          GlassCapsuleDestination(
+            icon: Icons.receipt_long_outlined,
+            selectedIcon: Icons.receipt_long,
             label: 'Orders',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
+          GlassCapsuleDestination(
+            icon: Icons.dashboard_outlined,
+            selectedIcon: Icons.dashboard,
             label: 'Services',
           ),
         ],

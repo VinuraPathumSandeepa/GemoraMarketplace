@@ -8,6 +8,8 @@ import "./App.css";
 
 import { AuthProvider } from "./context/AuthContext.jsx";
 
+console.log("✅ Gemora app starting...");
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>

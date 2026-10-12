@@ -1,0 +1,207 @@
+/* Scoped to the shipping management screens; uses the shared Gemora palette. */
+.admin-analysis-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px; margin-bottom: 24px; }
+.admin-shipping .admin-analysis-heading h2 { margin-bottom: 5px; }
+.admin-analysis-heading p { color: var(--gemora-muted); }
+.admin-analysis-notice { padding: 16px 20px; margin-bottom: 22px; border: 1px solid var(--gemora-border); border-radius: 12px; background: #f6f3eb; overflow-wrap: anywhere; }
+.admin-risk-empty { padding: 48px 24px; text-align: center; border: 1px dashed #d9c9aa; border-radius: 14px; background: #faf8f2; }
+.admin-shipping .admin-risk-empty h3 { margin: 12px 0; font-size: 20px; }
+.admin-risk-empty p { max-width: 580px; margin-inline: auto; color: var(--gemora-muted); }
+.admin-shipping {
+  max-width: 1250px;
+  margin: 0 auto;
+  padding: 36px;
+  color: var(--gemora-text);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.admin-shipping h1, .admin-shipping h2, .admin-shipping h3,
+.admin-shipping p { margin: 0; }
+.admin-shipping h1 { font-size: clamp(28px, 4vw, 38px); letter-spacing: -.025em; line-height: 1.2; }
+.admin-shipping h2 { font-size: 22px; margin-bottom: 24px; }
+.admin-shipping h3 { font-size: 16px; }
+.admin-shipping :is(h1, h2, h3) { color: var(--gemora-text); }
+.admin-shipping-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.admin-shipping-stat {
+  padding: 22px 14px;
+  background: white;
+  border: 1px solid var(--gemora-border);
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 3px 8px #111b1a08;
+}
+.admin-shipping-stat h2 {
+  margin: 0 0 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gemora-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.admin-shipping-stat p { font-size: 30px; font-weight: 700; line-height: 1.2; }
+.admin-shipping-stat.pending p { color: #d48a18; }
+.admin-shipping-stat.transit p { color: #3498db; }
+.admin-shipping-stat.delivered p { color: #27ae60; }
+.admin-shipping-stat.exception p { color: #d95145; }
+@media (max-width: 960px) {
+  .admin-shipping-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 540px) {
+  .admin-shipping-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .admin-shipping-stat:first-child { grid-column: 1 / -1; }
+}
+.admin-shipping-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 30px;
+  margin-bottom: 24px;
+  border: 1px solid var(--gemora-border);
+  border-radius: 18px;
+  background: linear-gradient(115deg, #fff, #f4efe3);
+}
+.admin-shipping-header p { color: var(--gemora-muted); margin-top: 10px; overflow-wrap: anywhere; }
+.admin-shipping-header .admin-shipping-eyebrow {
+  color: #8a6932;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  margin: 12px 0;
+}
+.admin-shipping button, .admin-shipping a {
+  font: inherit;
+  cursor: pointer;
+  transition: background .18s, border-color .18s, color .18s;
+}
+.admin-shipping button {
+  padding: 10px 18px;
+  border: 1px solid var(--gemora-border);
+  border-radius: 9px;
+  background: white;
+  color: var(--gemora-text);
+  font-weight: 600;
+}
+.admin-shipping button:hover { background: var(--gemora-cream); border-color: var(--gemora-gold); }
+.admin-shipping button:disabled { opacity: .5; cursor: not-allowed; }
+.admin-shipping :is(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid var(--gemora-gold-light);
+  outline-offset: 3px;
+}
+.admin-shipping-header button { padding: 0; border: 0; background: transparent; color: #82612c; }
+.admin-shipping-tabs { margin-bottom: 24px; }
+.admin-shipping-tabs nav {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 6px;
+  background: #edeae1;
+  border-radius: 12px;
+}
+.admin-shipping-tabs button { white-space: nowrap; flex: 1; background: transparent; border-color: transparent; color: var(--gemora-muted); }
+.admin-shipping-tabs button.active { background: var(--gemora-dark); color: var(--gemora-gold-light); box-shadow: 0 3px 8px #111b1a18; }
+.admin-shipping-panel {
+  background: white;
+  border: 1px solid var(--gemora-border);
+  border-radius: 18px;
+  padding: 30px;
+  box-shadow: 0 8px 30px #111b1a06;
+}
+.admin-shipping-panel label { display: block; color: var(--gemora-muted); font-size: 12px; margin-bottom: 5px; }
+.admin-shipping-panel p { overflow-wrap: anywhere; }
+.admin-shipping-panel .grid > div { padding-bottom: 14px; border-bottom: 1px solid #eeece6; min-width: 0; }
+.admin-shipping input, .admin-shipping select, .admin-shipping textarea {
+  font: inherit;
+  background: white;
+  color: var(--gemora-text);
+  border: 1px solid var(--gemora-border);
+  border-radius: 9px;
+  padding: 11px 14px;
+  min-width: 0;
+  max-width: 100%;
+}
+.admin-shipping textarea { resize: vertical; }
+.admin-shipping-state { min-height: 50vh; display: grid; place-items: center; }
+.admin-shipping-table { overflow-x: auto; padding: 0; }
+.admin-shipping table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.admin-shipping th { background: #f5f3ec; color: var(--gemora-muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.admin-shipping :is(th, td) { padding: 16px; text-align: left; border-bottom: 1px solid #eeece6; }
+.admin-shipping tbody tr:last-child td { border-bottom: 0; }
+.admin-shipping tbody tr:hover { background: #faf9f5; }
+.admin-shipping td a { display: inline-block; border: 1px solid #d9c9aa; background: #f6f0e4; color: #755825; padding: 7px 13px; border-radius: 8px; text-decoration: none; white-space: nowrap; font-weight: 600; }
+.admin-shipping td a:hover { background: var(--gemora-dark); color: var(--gemora-gold-light); }
+
+/* Existing tab content uses these classes; keep their styles local to this page. */
+.admin-shipping .flex { display: flex; }
+.admin-shipping .grid { display: grid; }
+.admin-shipping .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.admin-shipping .items-center { align-items: center; }
+.admin-shipping .items-start { align-items: flex-start; }
+.admin-shipping .justify-between { justify-content: space-between; }
+.admin-shipping .gap-2 { gap: 8px; }
+.admin-shipping .gap-3 { gap: 12px; }
+.admin-shipping .gap-4 { gap: 16px; }
+.admin-shipping .gap-6 { gap: 24px; }
+.admin-shipping .mb-2 { margin-bottom: 8px; }
+.admin-shipping .mb-3 { margin-bottom: 12px; }
+.admin-shipping .mb-4 { margin-bottom: 16px; }
+.admin-shipping .mb-6 { margin-bottom: 24px; }
+.admin-shipping .mt-1 { margin-top: 4px; }
+.admin-shipping .mt-2 { margin-top: 8px; }
+.admin-shipping .mt-3 { margin-top: 12px; }
+.admin-shipping .mt-4 { margin-top: 16px; }
+.admin-shipping .p-4 { padding: 16px; }
+.admin-shipping .p-6 { padding: 24px; }
+.admin-shipping .p-8 { padding: 32px; }
+.admin-shipping .py-4 { padding-block: 16px; }
+.admin-shipping .py-8 { padding-block: 32px; }
+.admin-shipping .px-2 { padding-inline: 8px; }
+.admin-shipping .px-3 { padding-inline: 12px; }
+.admin-shipping .py-1 { padding-block: 4px; }
+.admin-shipping .space-y-3 > * + * { margin-top: 12px; }
+.admin-shipping .space-y-4 > * + * { margin-top: 16px; }
+.admin-shipping .text-center { text-align: center; }
+.admin-shipping .text-sm { font-size: 13px; }
+.admin-shipping .text-xs { font-size: 11px; }
+.admin-shipping .text-lg { font-size: 18px; }
+.admin-shipping .font-semibold { font-weight: 600; }
+.admin-shipping .font-mono { font-family: var(--mono); overflow-wrap: anywhere; }
+.admin-shipping :is(.text-gray-400, .text-gray-500, .text-gray-600) { color: var(--gemora-muted); }
+.admin-shipping :is(.text-gray-700, .text-gray-900) { color: var(--gemora-text); }
+.admin-shipping .rounded, .admin-shipping .rounded-lg { border-radius: 12px; }
+.admin-shipping .rounded-full { border-radius: 999px; }
+.admin-shipping .border { border: 1px solid var(--gemora-border); }
+.admin-shipping .w-full { width: 100%; }
+.admin-shipping .inline-block { display: inline-block; }
+.admin-shipping .inline-flex { display: inline-flex; }
+.admin-shipping .whitespace-nowrap { white-space: nowrap; }
+.admin-shipping :is(.bg-gray-50, .bg-gray-100) { background: #f6f5f0; }
+.admin-shipping :is(.bg-yellow-50, .bg-yellow-100) { background: #faf2dd; color: #896625; }
+.admin-shipping :is(.bg-green-50, .bg-green-100) { background: #eaf4ee; color: #2f654c; }
+.admin-shipping :is(.bg-blue-50, .bg-blue-100) { background: #edf2f4; color: #34586b; }
+.admin-shipping :is(.bg-red-50, .bg-red-100) { background: #fbeeee; color: #9a4141; }
+.admin-shipping :is(.bg-orange-50, .bg-orange-100) { background: #fbf0e5; color: #965c2f; }
+.admin-shipping :is(.text-red-600, .text-red-700, .text-red-800) { color: #9a4141; }
+.admin-shipping :is(.text-green-600, .text-green-700, .text-green-800) { color: #2f654c; }
+.admin-shipping :is(.text-yellow-600, .text-yellow-800) { color: #896625; }
+.admin-shipping .text-orange-600 { color: #965c2f; }
+.admin-shipping :is(.bg-blue-600, .bg-green-600, .bg-purple-600) { background: var(--gemora-dark); color: var(--gemora-gold-light); border-color: var(--gemora-dark); }
+.admin-shipping :is(.bg-blue-600, .bg-green-600, .bg-purple-600):hover { background: #263b36; }
+.admin-shipping .animate-spin { width: 36px; height: 36px; margin: auto; border: 3px solid var(--gemora-border); border-top-color: var(--gemora-gold); border-radius: 50%; animation: admin-shipping-spin .8s linear infinite; }
+@keyframes admin-shipping-spin { to { transform: rotate(360deg); } }
+@media (max-width: 760px) {
+  .admin-shipping { padding: 18px; }
+  .admin-shipping-header { padding: 22px; flex-direction: column; align-items: flex-start; }
+  .admin-shipping-panel { padding: 20px; }
+  .admin-shipping-table { padding: 0; }
+  .admin-shipping .grid-cols-2 { grid-template-columns: 1fr; }
+  .admin-shipping .flex { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-shipping .animate-spin { animation: none; }
+}

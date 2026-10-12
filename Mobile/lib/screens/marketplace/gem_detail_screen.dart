@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../models/marketplace/marketplace_gem.dart';
 import '../../services/marketplace_service.dart';
 import 'my_orders_screen.dart';
@@ -23,12 +24,17 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
     _service = widget.service ?? MarketplaceService();
   }
 
-  void _buy() {
-    String selectedCountry = 'LK';
-    final addressController =
-        TextEditingController(text: '120 Galle Road, Colombo 03');
-    final regionController =
-        TextEditingController(text: 'Western Province');
+  Future<void> _buy() async {
+    final deliveryDetails = await _collectDeliveryDetails();
+    if (deliveryDetails == null || !mounted) return;
+
+    String selectedCountry = deliveryDetails['countryCode']?.toString() ?? 'LK';
+    final addressController = TextEditingController(
+      text: deliveryDetails['addressLine1']?.toString() ?? '',
+    );
+    final regionController = TextEditingController(
+      text: deliveryDetails['region']?.toString() ?? '',
+    );
     final formKey = GlobalKey<FormState>();
 
     const countries = [
@@ -63,6 +69,10 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
         'address': '10 Marina Boulevard, Singapore',
       },
     ];
+
+    if (!countries.any((country) => country['code'] == selectedCountry)) {
+      selectedCountry = 'LK';
+    }
 
     showModalBottomSheet<void>(
       context: context,
@@ -151,7 +161,9 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
                             ? '• Domestic Order: Export clearance not required'
                             : '• International Order: Export clearance required (Component 4)',
                         style: TextStyle(
-                          color: isDomestic ? Colors.green.shade800 : Colors.orange.shade900,
+                          color: isDomestic
+                              ? Colors.green.shade800
+                              : Colors.orange.shade900,
                           fontWeight: FontWeight.w600,
                           fontSize: 12,
                         ),
@@ -173,6 +185,12 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
                                 shippingAddress: addressController.text.trim(),
                                 shippingRegion: regionController.text.trim(),
                                 shippingCountryCode: selectedCountry,
+                                deliveryDetails: {
+                                  ...deliveryDetails,
+                                  'addressLine1': addressController.text.trim(),
+                                  'region': regionController.text.trim(),
+                                  'countryCode': selectedCountry,
+                                },
                               );
                             },
                             child: const Text('Place Order'),
@@ -195,14 +213,17 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
     required String shippingAddress,
     required String shippingRegion,
     required String shippingCountryCode,
+    required Map<String, dynamic> deliveryDetails,
   }) async {
     setState(() => _ordering = true);
+
     try {
       final order = await _service.createOrder(
         widget.gem.id,
         shippingAddress: shippingAddress,
         shippingRegion: shippingRegion,
         shippingCountryCode: shippingCountryCode,
+        deliveryDetails: deliveryDetails,
       );
       if (!mounted) return;
       setState(() => _ordering = false);
@@ -232,6 +253,7 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
           ],
         ),
       );
+
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
@@ -242,6 +264,119 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
     } finally {
       if (mounted) setState(() => _ordering = false);
     }
+  }
+
+  Future<Map<String, dynamic>?> _collectDeliveryDetails() async {
+    final formKey = GlobalKey<FormState>();
+    final controllers = {
+      'recipientName': TextEditingController(),
+      'recipientPhone': TextEditingController(),
+      'addressLine1': TextEditingController(),
+      'city': TextEditingController(),
+      'district': TextEditingController(),
+      'region': TextEditingController(),
+      'postalCode': TextEditingController(),
+      'countryCode': TextEditingController(text: 'LK'),
+    };
+
+    try {
+      return await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Delivery details'),
+            content: SizedBox(
+              width: 420,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(dialogContext).height * 0.62,
+                ),
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        _requiredField(
+                          controllers['recipientName']!,
+                          'Recipient name',
+                        ),
+                        _requiredField(
+                          controllers['recipientPhone']!,
+                          'Phone number',
+                          keyboardType: TextInputType.phone,
+                        ),
+                        _requiredField(controllers['addressLine1']!, 'Address'),
+                        _requiredField(controllers['city']!, 'City'),
+                        _requiredField(controllers['district']!, 'District'),
+                        _requiredField(
+                          controllers['region']!,
+                          'Province / region',
+                        ),
+                        _requiredField(
+                          controllers['postalCode']!,
+                          'Postal code',
+                        ),
+                        _requiredField(
+                          controllers['countryCode']!,
+                          'Country code',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  if (!formKey.currentState!.validate()) return;
+
+                  Navigator.pop(dialogContext, {
+                    'recipientName': controllers['recipientName']!.text.trim(),
+                    'recipientPhone': controllers['recipientPhone']!.text
+                        .trim(),
+                    'addressLine1': controllers['addressLine1']!.text.trim(),
+                    'city': controllers['city']!.text.trim(),
+                    'district': controllers['district']!.text.trim(),
+                    'region': controllers['region']!.text.trim(),
+                    'postalCode': controllers['postalCode']!.text.trim(),
+                    'countryCode': controllers['countryCode']!.text
+                        .trim()
+                        .toUpperCase(),
+                  });
+                },
+                child: const Text('Continue'),
+              ),
+            ],
+          );
+        },
+      );
+    } finally {
+      for (final controller in controllers.values) {
+        controller.dispose();
+      }
+    }
+  }
+
+  Widget _requiredField(
+    TextEditingController controller,
+    String label, {
+    TextInputType? keyboardType,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(labelText: label),
+        validator: (value) =>
+            value == null || value.trim().isEmpty ? '$label is required' : null,
+      ),
+    );
   }
 
   @override
@@ -281,9 +416,7 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
           const SizedBox(height: 20),
           Text(
             g.title,
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
+            style: Theme.of(context).textTheme.headlineSmall
                 ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
@@ -292,20 +425,26 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 18),
-          Wrap(spacing: 10, runSpacing: 10, children: [
-            Chip(label: Text(g.gemType)),
-            Chip(label: Text('${g.caratWeight} ct')),
-            Chip(label: Text(g.color)),
-            Chip(label: Text(g.cut)),
-            Chip(label: Text(g.clarity)),
-          ]),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              Chip(label: Text(g.gemType)),
+              Chip(label: Text('${g.caratWeight} ct')),
+              Chip(label: Text(g.color)),
+              Chip(label: Text(g.cut)),
+              Chip(label: Text(g.clarity)),
+            ],
+          ),
           const SizedBox(height: 16),
           Text(g.description),
           const SizedBox(height: 16),
           Text('Seller: ${g.sellerName}'),
           Text('Location: ${g.region}, ${g.countryCode}'),
           if (g.certificateNumber != null)
-            Text('Certificate: ${g.certificateAuthority ?? ''} ${g.certificateNumber}'),
+            Text(
+              'Certificate: ${g.certificateAuthority ?? ''} ${g.certificateNumber}',
+            ),
           const SizedBox(height: 28),
           if (!g.isAvailable)
             const Padding(
@@ -318,7 +457,10 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
                 : const Icon(Icons.shopping_cart_checkout),
             label: Text(

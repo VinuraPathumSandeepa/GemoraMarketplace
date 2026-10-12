@@ -279,19 +279,23 @@ function CreateGemListing() {
         requestError
       );
 
+      const failureMessage =
+        getApiErrorMessage(requestError);
+
       /*
        * If the Draft was already created but an evidence
        * upload failed, do NOT pretend the entire operation
-       * disappeared. The seller can continue from Details.
+       * disappeared. Keep the backend reason visible so the
+       * seller knows whether the image or storage needs attention.
        */
       if (createdListingId) {
         setError(
-          "The Draft was created, but one of the evidence files could not be uploaded. Open the Draft from My Listings to upload or replace the missing evidence."
+          `The Draft was created, but an evidence file could not be uploaded: ${failureMessage} Open the Draft from My Listings to retry or replace the missing evidence.`
         );
 
         setProgressStep("");
       } else {
-        setError(getApiErrorMessage(requestError));
+        setError(failureMessage);
         setProgressStep("");
       }
     } finally {

@@ -1,0 +1,277 @@
+.shipment-detail {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 8px 0;
+  margin-bottom: 20px;
+}
+
+.btn-back:hover {
+  text-decoration: underline;
+}
+
+.detail-section {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.detail-section h2 {
+  margin: 0 0 20px 0;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #eee;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.info-item label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.info-item p {
+  margin: 0;
+  font-size: 15px;
+  color: #333;
+}
+
+/* Shipping Plan Styles */
+.plan-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  background: #f9f9f9;
+}
+
+.plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #ddd;
+}
+
+.plan-status {
+  display: flex;
+  flex-direction: column;
+}
+
+.btn-approve {
+  padding: 10px 24px;
+  background: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-approve:hover:not(:disabled) {
+  background: #219a52;
+}
+
+.btn-approve:disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
+}
+
+.plan-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.risk-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.risk-badge.low {
+  background: #d4edda;
+  color: #155724;
+}
+
+.risk-badge.medium {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.risk-badge.high {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.plan-warnings {
+  margin-top: 16px;
+  padding: 16px;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #007bff;
+}
+
+.plan-warnings.warning {
+  border-left-color: #ffc107;
+  background: #fff8e1;
+}
+
+.plan-warnings.info {
+  border-left-color: #17a2b8;
+  background: #e3f2fd;
+}
+
+.plan-warnings h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  text-transform: uppercase;
+  color: #666;
+}
+
+.plan-warnings ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.plan-warnings li {
+  margin-bottom: 6px;
+}
+
+.approval-info {
+  margin-top: 16px;
+  padding: 12px;
+  background: #d4edda;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.approval-info p {
+  margin: 4px 0;
+}
+
+.rejection-info {
+  margin-top: 16px;
+  padding: 12px;
+  background: #f8d7da;
+  border-radius: 6px;
+  color: #721c24;
+}
+
+/* Tracking Timeline */
+.tracking-timeline {
+  position: relative;
+  padding-left: 30px;
+}
+
+.tracking-timeline::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e0e0e0;
+}
+
+.timeline-event {
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: -24px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #007bff;
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px #007bff;
+}
+
+.timeline-content {
+  background: #f9f9f9;
+  padding: 16px;
+  border-radius: 8px;
+  border-left: 3px solid #007bff;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.timeline-status {
+  font-weight: 600;
+  color: #333;
+  text-transform: capitalize;
+}
+
+.timeline-time {
+  font-size: 13px;
+  color: #666;
+}
+
+.timeline-description {
+  margin: 8px 0 4px 0;
+  color: #555;
+}
+
+.timeline-location {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+/* Insurance Cards */
+.insurance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.insurance-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  background: #f9f9f9;
+}
+
+.insurance-card h3 {
+  margin: 0 0 16px 0;
+  color: #333;
+}

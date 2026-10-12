@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gemora.Infrastructure.Data;
@@ -10,6 +11,19 @@ public static class DatabaseCompatibilityInitializer
     {
         ArgumentNullException.ThrowIfNull(
             dbContext);
+
+
+        // Avoid taking table locks on every application start. The merged
+        // compatibility SQL is only needed for older databases that are
+        // missing one or more required objects.
+        if (
+            await IsComponent2SchemaReadyAsync(
+                dbContext,
+                cancellationToken)
+        )
+        {
+            return;
+        }
 
 
         var commands =
@@ -601,6 +615,12 @@ public static class DatabaseCompatibilityInitializer
                 await dbContext.Database.OpenConnectionAsync(cancellationToken);
                 try
                 {
+                    // A stale transaction must not make application startup
+                    // wait indefinitely for an ACCESS EXCLUSIVE table lock.
+                    await dbContext.Database.ExecuteSqlRawAsync(
+                        "SET lock_timeout = '10s';",
+                        cancellationToken);
+
                     foreach (var command in commands)
                     {
                         if (string.IsNullOrWhiteSpace(command))
@@ -620,7 +640,9 @@ public static class DatabaseCompatibilityInitializer
 
                 return;
             }
-            catch (Exception ex) when (attempt < maxRetries && (ex is Npgsql.NpgsqlException || ex is System.IO.IOException || ex is System.Net.Sockets.SocketException))
+            catch (Exception ex) when (
+                attempt < maxRetries &&
+                IsTransientDatabaseException(ex))
             {
                 try
                 {
@@ -634,5 +656,153 @@ public static class DatabaseCompatibilityInitializer
                 await Task.Delay(TimeSpan.FromSeconds(attempt * 2), cancellationToken);
             }
         }
+    }
+
+
+    private static async Task<bool> IsComponent2SchemaReadyAsync(
+        ApplicationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        const string compatibilityProbe =
+            """
+            SELECT
+                NOT EXISTS (
+                    SELECT 1
+                    FROM (
+                        VALUES
+                            ('Orders', 'PaymentDueAt'),
+                            ('Orders', 'BuyerMessageAt'),
+                            ('Orders', 'BuyerReadAt'),
+                            ('Orders', 'SellerReadAt'),
+                            ('Orders', 'IsLegacyDuplicate'),
+                            ('Orders', 'FulfillmentStatus'),
+                            ('Orders', 'HandedOverAt'),
+                            ('Orders', 'DeliveredAt'),
+                            ('OrderDeliveryDetails', 'AlternatePhone'),
+                            ('OrderDeliveryDetails', 'AddressLine2'),
+                            ('OrderDeliveryDetails', 'NearestLandmark'),
+                            ('OrderDeliveryDetails', 'DeliveryInstructions'),
+                            ('OrderDeliveryDetails', 'SignatureRequired'),
+                            ('OrderDeliveryDetails', 'UpdatedAt'),
+                            ('OrderDeliveryDetails', 'LastUpdatedByUserId'),
+                            ('OrderDeliveryDetails', 'LockedAt'),
+                            ('Shipments', 'CourierName'),
+                            ('Shipments', 'TrackingNumber'),
+                            ('Shipments', 'TrackingUrl'),
+                            ('Shipments', 'ExpectedDeliveryDate'),
+                            ('Shipments', 'DispatchNote'),
+                            ('Shipments', 'Status'),
+                            ('Shipments', 'CreatedAt'),
+                            ('Shipments', 'UpdatedAt'),
+                            ('Shipments', 'HandedOverAt'),
+                            ('Shipments', 'DeliveredAt'),
+                            ('FulfillmentStatusHistories', 'PreviousStatus'),
+                            ('FulfillmentStatusHistories', 'ChangedByUserId'),
+                            ('FulfillmentStatusHistories', 'Note'),
+                            ('WishlistItems', 'CreatedAt'),
+                            ('ProfileImages', 'Content'),
+                            ('ExportRequests', 'OrderId')
+                    ) AS required("TableName", "ColumnName")
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM information_schema.columns AS columns
+                        WHERE columns.table_schema = 'public'
+                          AND columns.table_name = required."TableName"
+                          AND columns.column_name = required."ColumnName"
+                    )
+                )
+                AND to_regclass('public."IX_Orders_ReservedGem"') IS NOT NULL
+                AND to_regclass('public."IX_Orders_ActiveBuyerGem"') IS NOT NULL
+                AND to_regclass('public."IX_Orders_Status_PaymentDueAt"') IS NOT NULL
+                AND to_regclass('public."IX_OrderDeliveryDetails_OrderId"') IS NOT NULL
+                AND to_regclass('public."IX_Shipments_OrderId"') IS NOT NULL
+                AND to_regclass('public."IX_Shipments_TrackingNumber"') IS NOT NULL
+                AND to_regclass('public."IX_FulfillmentStatusHistories_OrderId"') IS NOT NULL
+                AND to_regclass('public."IX_FulfillmentStatusHistories_ChangedByUserId"') IS NOT NULL
+                AND to_regclass('public."IX_FulfillmentStatusHistories_CreatedAt"') IS NOT NULL
+                AND to_regclass('public."IX_WishlistItems_GemListingId"') IS NOT NULL
+                AND to_regclass('public."IX_ProfileImages_UserId"') IS NOT NULL
+                AND to_regclass('public."IX_ExportRequests_OrderId"') IS NOT NULL
+                AND EXISTS (
+                    SELECT 1
+                    FROM pg_constraint
+                    WHERE conname = 'FK_ExportRequests_Orders_OrderId'
+                );
+            """;
+
+        const int maxAttempts = 3;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            var connection =
+                dbContext.Database.GetDbConnection();
+
+            var openedHere =
+                connection.State != ConnectionState.Open;
+
+            try
+            {
+                if (openedHere)
+                {
+                    await dbContext.Database.OpenConnectionAsync(
+                        cancellationToken);
+                }
+
+                await using var command =
+                    connection.CreateCommand();
+
+                command.CommandText =
+                    compatibilityProbe;
+
+                var result =
+                    await command.ExecuteScalarAsync(
+                        cancellationToken);
+
+                return result is bool isReady &&
+                       isReady;
+            }
+            catch (Exception ex) when (
+                attempt < maxAttempts &&
+                IsTransientDatabaseException(ex))
+            {
+                await Task.Delay(
+                    TimeSpan.FromSeconds(attempt * 2),
+                    cancellationToken);
+            }
+            finally
+            {
+                if (openedHere)
+                {
+                    try
+                    {
+                        await dbContext.Database.CloseConnectionAsync();
+                    }
+                    catch
+                    {
+                        // A broken provider connection may already be closed.
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+
+    private static bool IsTransientDatabaseException(
+        Exception exception)
+    {
+        if (
+            exception is Npgsql.NpgsqlException ||
+            exception is System.IO.IOException ||
+            exception is System.Net.Sockets.SocketException
+        )
+        {
+            return true;
+        }
+
+        return exception.InnerException != null &&
+               IsTransientDatabaseException(
+                   exception.InnerException);
     }
 }

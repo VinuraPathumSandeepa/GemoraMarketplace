@@ -249,6 +249,323 @@ public sealed class SupabaseStorageClient
     }
 
     // ============================================================
+    // ENSURE APP-OWNED BUCKET EXISTS
+    //
+    // New Supabase projects do not have Gemora's buckets by
+    // default. Create a missing bucket and align its upload limits
+    // with this application. Certificate visibility mismatches
+    // fail closed so private evidence cannot become public.
+    // ============================================================
+
+    private async Task EnsureBucketAsync(
+        string bucket,
+        CancellationToken cancellationToken)
+    {
+        using var getRequest = CreateRequest(
+            HttpMethod.Get,
+            $"bucket/{Uri.EscapeDataString(bucket)}"
+        );
+
+        using var getResponse = await _httpClient.SendAsync(
+            getRequest,
+            cancellationToken
+        );
+
+        if (getResponse.IsSuccessStatusCode)
+        {
+            await EnsureBucketSettingsAsync(
+                bucket,
+                getResponse,
+                cancellationToken
+            );
+
+            return;
+        }
+
+        var getError = await ReadStorageErrorMessageAsync(
+            getResponse,
+            cancellationToken
+        );
+
+        var bucketIsMissing =
+            getResponse.StatusCode == HttpStatusCode.NotFound ||
+            (
+                (int)getResponse.StatusCode == 400 &&
+                getError.Contains(
+                    "bucket not found",
+                    StringComparison.OrdinalIgnoreCase
+                )
+            );
+
+        if (!bucketIsMissing)
+        {
+            throw new InvalidOperationException(
+                $"Could not check Supabase Storage bucket '{bucket}' (HTTP {(int)getResponse.StatusCode}): {getError}"
+            );
+        }
+
+        using var createRequest = CreateRequest(
+            HttpMethod.Post,
+            "bucket"
+        );
+
+        createRequest.Content = JsonContent.Create(
+            GetBucketConfiguration(bucket)
+        );
+
+        using var createResponse = await _httpClient.SendAsync(
+            createRequest,
+            cancellationToken
+        );
+
+        if (createResponse.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var createError = await ReadStorageErrorMessageAsync(
+            createResponse,
+            cancellationToken
+        );
+
+        // Another API instance may have created the bucket between
+        // our lookup and create request. Confirm its visibility.
+        if (
+            createResponse.StatusCode == HttpStatusCode.Conflict ||
+            createError.Contains(
+                "already exists",
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
+        {
+            using var retryGetRequest = CreateRequest(
+                HttpMethod.Get,
+                $"bucket/{Uri.EscapeDataString(bucket)}"
+            );
+
+            using var retryGetResponse = await _httpClient.SendAsync(
+                retryGetRequest,
+                cancellationToken
+            );
+
+            if (retryGetResponse.IsSuccessStatusCode)
+            {
+                await EnsureBucketSettingsAsync(
+                    bucket,
+                    retryGetResponse,
+                    cancellationToken
+                );
+
+                return;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Could not create Supabase Storage bucket '{bucket}' (HTTP {(int)createResponse.StatusCode}): {createError}"
+        );
+    }
+
+    private static object GetBucketConfiguration(string bucket)
+    {
+        return new Dictionary<string, object>
+        {
+            ["id"] = bucket,
+            ["name"] = bucket,
+            ["public"] = bucket != CertificatesBucket,
+            ["file_size_limit"] = GetBucketMaximumBytes(bucket),
+            ["allowed_mime_types"] = GetBucketMimeTypes(bucket)
+        };
+    }
+
+    private static object GetBucketSettings(string bucket)
+    {
+        return new Dictionary<string, object>
+        {
+            ["public"] = bucket != CertificatesBucket,
+            ["file_size_limit"] = GetBucketMaximumBytes(bucket),
+            ["allowed_mime_types"] = GetBucketMimeTypes(bucket)
+        };
+    }
+
+    private static long GetBucketMaximumBytes(string bucket)
+    {
+        return bucket == CertificatesBucket
+            ? 10L * 1024 * 1024
+            : 5L * 1024 * 1024;
+    }
+
+    private static string[] GetBucketMimeTypes(string bucket)
+    {
+        return bucket == CertificatesBucket
+            ? new[] { "application/pdf", "image/jpeg", "image/png" }
+            : new[] { "image/jpeg", "image/png", "image/webp" };
+    }
+
+    private async Task EnsureBucketSettingsAsync(
+        string bucket,
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        await using var stream = await response.Content.ReadAsStreamAsync(
+            cancellationToken
+        );
+
+        using var json = await JsonDocument.ParseAsync(
+            stream,
+            cancellationToken: cancellationToken
+        );
+
+        if (
+            !json.RootElement.TryGetProperty("public", out var publicProperty) ||
+            (publicProperty.ValueKind != JsonValueKind.True &&
+             publicProperty.ValueKind != JsonValueKind.False)
+        )
+        {
+            throw new InvalidOperationException(
+                $"Supabase Storage returned invalid settings for bucket '{bucket}'."
+            );
+        }
+
+        var shouldBePublic = bucket != CertificatesBucket;
+
+        if (publicProperty.GetBoolean() != shouldBePublic)
+        {
+            var expectedVisibility = shouldBePublic ? "public" : "private";
+
+            throw new InvalidOperationException(
+                $"Supabase Storage bucket '{bucket}' must be {expectedVisibility}. Update its visibility in the Supabase Storage settings."
+            );
+        }
+
+        var fileSizeIsCorrect =
+            json.RootElement.TryGetProperty(
+                "file_size_limit",
+                out var fileSizeProperty
+            ) &&
+            fileSizeProperty.ValueKind == JsonValueKind.Number &&
+            fileSizeProperty.TryGetInt64(out var currentFileSize) &&
+            currentFileSize == GetBucketMaximumBytes(bucket);
+
+        var mimeTypesAreCorrect = false;
+
+        if (
+            json.RootElement.TryGetProperty(
+                "allowed_mime_types",
+                out var mimeTypesProperty
+            ) &&
+            mimeTypesProperty.ValueKind == JsonValueKind.Array
+        )
+        {
+            var currentMimeTypes = mimeTypesProperty
+                .EnumerateArray()
+                .Where(item => item.ValueKind == JsonValueKind.String)
+                .Select(item => item.GetString()!)
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase);
+
+            var expectedMimeTypes = GetBucketMimeTypes(bucket)
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase);
+
+            mimeTypesAreCorrect = currentMimeTypes.SequenceEqual(
+                expectedMimeTypes,
+                StringComparer.OrdinalIgnoreCase
+            );
+        }
+
+        if (!fileSizeIsCorrect || !mimeTypesAreCorrect)
+        {
+            using var updateRequest = CreateRequest(
+                HttpMethod.Put,
+                $"bucket/{Uri.EscapeDataString(bucket)}"
+            );
+
+            updateRequest.Content = JsonContent.Create(
+                GetBucketSettings(bucket)
+            );
+
+            using var updateResponse = await _httpClient.SendAsync(
+                updateRequest,
+                cancellationToken
+            );
+
+            if (!updateResponse.IsSuccessStatusCode)
+            {
+                var errorMessage = await ReadStorageErrorMessageAsync(
+                    updateResponse,
+                    cancellationToken
+                );
+
+                throw new InvalidOperationException(
+                    $"Could not configure Supabase Storage bucket '{bucket}' (HTTP {(int)updateResponse.StatusCode}): {errorMessage}"
+                );
+            }
+        }
+    }
+
+    private static async Task<string> ReadStorageErrorMessageAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        var body = await response.Content.ReadAsStringAsync(
+            cancellationToken
+        );
+
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return "Supabase did not return additional details.";
+        }
+
+        try
+        {
+            using var json = JsonDocument.Parse(body);
+
+            if (json.RootElement.ValueKind == JsonValueKind.Object)
+            {
+                var parts = new List<string>();
+
+                foreach (var propertyName in new[]
+                {
+                    "message",
+                    "error",
+                    "code"
+                })
+                {
+                    if (
+                        json.RootElement.TryGetProperty(
+                            propertyName,
+                            out var value
+                        ) &&
+                        value.ValueKind == JsonValueKind.String
+                    )
+                    {
+                        var text = value.GetString()?.Trim();
+
+                        if (
+                            !string.IsNullOrWhiteSpace(text) &&
+                            !parts.Contains(text, StringComparer.OrdinalIgnoreCase)
+                        )
+                        {
+                            parts.Add(text);
+                        }
+                    }
+                }
+
+                if (parts.Count > 0)
+                {
+                    return string.Join(": ", parts);
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Some Storage gateway errors are plain text.
+        }
+
+        return body.Length <= 300
+            ? body.Trim()
+            : $"{body[..300].Trim()}…";
+    }
+
+    // ============================================================
     // UPLOAD FILE TO SUPABASE STORAGE
     //
     // Public images return:
@@ -354,6 +671,11 @@ public sealed class SupabaseStorageClient
             );
         }
 
+        await EnsureBucketAsync(
+            bucket,
+            cancellationToken
+        );
+
         // ========================================================
         // BUILD SUPABASE UPLOAD REQUEST
         // ========================================================
@@ -391,8 +713,13 @@ public sealed class SupabaseStorageClient
 
         if (!response.IsSuccessStatusCode)
         {
+            var errorMessage = await ReadStorageErrorMessageAsync(
+                response,
+                cancellationToken
+            );
+
             throw new InvalidOperationException(
-                $"Supabase Storage upload failed. HTTP {(int)response.StatusCode}."
+                $"Supabase Storage upload failed (HTTP {(int)response.StatusCode}): {errorMessage}"
             );
         }
 

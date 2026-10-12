@@ -1,9 +1,9 @@
 import OrderInbox from "../components/OrderInbox";
 import { useState } from "react";
-
 import {
   NavLink,
   useNavigate,
+  useLocation,
 } from "react-router-dom";
 
 import {
@@ -17,6 +17,8 @@ import { NotificationProvider } from "../context/NotificationContext";
 
 function DashboardLayout({ children }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const shipmentDashboard = pathname === "/admin" || pathname === "/admin/shipments";
 
   const {
     user,
@@ -112,6 +114,8 @@ function DashboardLayout({ children }) {
               Gem Listings
             </NavLink>
 
+
+
             <NavLink
               to="/seller/listings"
               className={({ isActive }) =>
@@ -132,6 +136,14 @@ function DashboardLayout({ children }) {
               }
             >
               Create Listing
+            </NavLink>
+            <NavLink
+              to="/seller/shipments"
+              className={({ isActive }) =>
+                isActive ? "gemora-nav-link active" : "gemora-nav-link"
+              }
+            >
+              My Shipments
             </NavLink>
           </>
         );
@@ -200,23 +212,19 @@ function DashboardLayout({ children }) {
         return (
           <>
             <NavLink
-              to="/admin"
-              end
-              className={({ isActive }) =>
-                isActive
-                  ? "gemora-nav-link active"
-                  : "gemora-nav-link"
-              }
+              to="/admin/shipments"
+              className={({ isActive }) => isActive || pathname === "/admin" ? "gemora-nav-link active" : "gemora-nav-link"}
             >
-              Dashboard
+              Shipment Dashboard
+            </NavLink>
+            <NavLink
+              to="/admin/transactions"
+              className={({ isActive }) => isActive ? "gemora-nav-link active" : "gemora-nav-link"}
+            >
+              Transactions
             </NavLink>
           </>
         );
-
-
-      // ========================================================
-      // EXPORT OFFICER
-      // ========================================================
 
       case "ExportOfficer":
         return (
@@ -248,7 +256,7 @@ function DashboardLayout({ children }) {
 
   return (
     <NotificationProvider key={user?.id}>
-    <div className="gemora-app-shell">
+    <div className={`gemora-app-shell${shipmentDashboard ? " shipment-dashboard-shell" : ""}`}>
 
       {/* ======================================================
           TOP NAVIGATION
@@ -309,7 +317,6 @@ function DashboardLayout({ children }) {
 
           <div className="gemora-user-area">
             {user?.role === "Seller" && <OrderInbox seller key={user?.userId || user?.id || user?.email} />}
-
             {(user?.role === "Seller" || user?.role === "Gemologist") && <NotificationBell />}
 
             {/* ROLE */}

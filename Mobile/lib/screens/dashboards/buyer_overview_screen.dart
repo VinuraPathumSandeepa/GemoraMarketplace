@@ -6,6 +6,7 @@ import '../../widgets/notification_bell.dart';
 import '../export_compliance/my_export_requests_screen.dart';
 import '../marketplace/buyer_export_tracking_screen.dart';
 import '../marketplace/marketplace_screen.dart';
+import '../shipments/seller_shipment_list.dart';
 
 class BuyerOverviewScreen extends StatelessWidget {
   const BuyerOverviewScreen({super.key});
@@ -219,6 +220,22 @@ class BuyerOverviewScreen extends StatelessWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => const MyExportRequestsScreen(),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 14),
+
+            _BuyerActionCard(
+              icon: Icons.local_shipping_outlined,
+              title: 'My Shipments',
+              description: 'Follow delivery progress, insurance details, and tracking updates for your gemstone orders.',
+              badge: 'SHIPPING',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const SellerShipmentList(buyerView: true),
                   ),
                 );
               },
