@@ -48,6 +48,21 @@ class ApiConfig {
   static const String currentUser = '$baseUrl/Auth/me';
 
   // ============================================================
+  // NOTIFICATION ENDPOINTS
+  // ============================================================
+
+  static const String notifications = '$baseUrl/Notifications';
+
+  static const String notificationUnreadCount =
+      '$baseUrl/Notifications/unread-count';
+
+  static String markNotificationRead(String notificationId) =>
+      '$baseUrl/Notifications/$notificationId/read';
+
+  static const String markAllNotificationsRead =
+      '$baseUrl/Notifications/read-all';
+
+  // ============================================================
   // EXPORT COMPLIANCE ENDPOINTS
   // ============================================================
 
@@ -63,6 +78,7 @@ class ApiConfig {
 
   static const String myExportTracking = '$baseUrl/export-tracking/my';
 
+  static const String myOrders = '$baseUrl/orders/my';
   static const String sellerOrders = '$baseUrl/seller/orders';
 
   // ============================================================
@@ -70,6 +86,10 @@ class ApiConfig {
   // ============================================================
 
   static const String myGemListings = '$baseUrl/GemListings/my';
+
+  static String get adminGemListings => '$baseUrl/admin/gem-listings';
+
+  static String adminGemListing(int id) => '$adminGemListings/$id';
 
   static const String createGemListing = '$baseUrl/GemListings';
 
@@ -86,4 +106,30 @@ class ApiConfig {
 
   static String uploadGemCertificate(int id) =>
       '$baseUrl/GemListings/$id/certificate';
+
+  // ============================================================
+  // GEM VERIFICATION ENDPOINTS
+  // ============================================================
+
+  static const String pendingGemVerifications =
+      '$baseUrl/GemVerifications/pending';
+
+  static String gemVerification(int verificationId) =>
+      '$baseUrl/GemVerifications/$verificationId';
+
+  static String gemVerificationAiAnalysis(int verificationId) =>
+      '$baseUrl/GemVerifications/$verificationId/ai-analysis';
+
+  static String reviewGemVerification(int verificationId) =>
+      '$baseUrl/GemVerifications/$verificationId/review';
+
+  // ============================================================
+  // PROTECTED CERTIFICATE ENDPOINTS
+  // ============================================================
+
+  static String gemCertificateAccess(int listingId) =>
+      '$baseUrl/GemCertificates/listings/$listingId/access';
+
+  static String gemLegacyCertificate(int listingId) =>
+      '$baseUrl/GemCertificates/listings/$listingId/legacy';
 }

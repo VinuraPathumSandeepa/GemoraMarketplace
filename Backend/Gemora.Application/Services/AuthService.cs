@@ -256,6 +256,11 @@ public class AuthService : IAuthService
         }
         catch
         {
+            // The code never reached the user. Invalidate it so resend can
+            // issue a replacement immediately instead of enforcing cooldown.
+            verification.UsedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
             return new AuthResult
             {
                 Success = true,
@@ -536,7 +541,8 @@ public class AuthService : IAuthService
                 .Where(
                     v =>
                         v.UserId ==
-                        user.Id
+                        user.Id &&
+                        v.UsedAt == null
                 )
                 .OrderByDescending(
                     v =>
@@ -670,6 +676,9 @@ public class AuthService : IAuthService
         }
         catch
         {
+            newVerification.UsedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
             return new AuthResult
             {
                 Success = false,

@@ -1,17 +1,16 @@
-# gemora_mobile
+# Gemora Flutter app
 
-A new Flutter project.
+Run the app from this directory with `flutter run`.
 
-## Getting Started
+The first launch shows a four-page welcome tour. People can swipe through it, use
+Continue and Back, skip it, or choose Explore Gemora or Sign in at the end. The
+tour is saved locally and appears only once. The help icon in the marketplace
+header opens it again at any time.
 
-This project is a starting point for a Flutter application.
+The Gemora mark is drawn in Flutter by `lib/widgets/gemora_mark.dart`. The vector
+launcher source is `assets/brand/gemora_launcher.svg`. On Windows, regenerate
+Android, iOS, macOS, web, and Windows icons and the native launch images with:
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```powershell
+./tool/generate_brand_icons.ps1
+```

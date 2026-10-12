@@ -100,6 +100,7 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
                       ),
                       const SizedBox(height: 14),
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
                         initialValue: selectedCountry,
                         decoration: const InputDecoration(
                           labelText: 'Shipping Country',
@@ -306,8 +307,13 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
           if (g.certificateNumber != null)
             Text('Certificate: ${g.certificateAuthority ?? ''} ${g.certificateNumber}'),
           const SizedBox(height: 28),
+          if (!g.isAvailable)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: Chip(label: Text('Sold')),
+            ),
           FilledButton.icon(
-            onPressed: _ordering ? null : _buy,
+            onPressed: _ordering || !g.isAvailable ? null : _buy,
             icon: _ordering
                 ? const SizedBox(
                     width: 18,
@@ -315,7 +321,13 @@ class _GemDetailScreenState extends State<GemDetailScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
                 : const Icon(Icons.shopping_cart_checkout),
-            label: Text(_ordering ? 'Creating order...' : 'Purchase gemstone'),
+            label: Text(
+              _ordering
+                  ? 'Creating order...'
+                  : g.isAvailable
+                  ? 'Purchase gemstone'
+                  : 'Sold',
+            ),
           ),
         ],
       ),

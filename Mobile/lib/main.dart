@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'constants/gemora_colors.dart';
 import 'providers/auth_provider.dart';
+import 'providers/notification_provider.dart';
+import 'screens/auth/login_screen.dart';
 import 'screens/dashboards/role_dashboard.dart';
 import 'screens/home/public_home_screen.dart';
+import 'screens/onboarding/welcome_screen.dart';
+import 'widgets/gemora_mark.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,28 +27,93 @@ class GemoraApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Gemora Marketplace',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7356A3)),
-        scaffoldBackgroundColor: const Color(0xFFF7F7FA),
-        useMaterial3: true,
+    final user = context.watch<AuthProvider>().user;
+
+    // Dashboard and notification routes are pushed onto MaterialApp's
+    // Navigator, so they must share a provider above that Navigator.
+    return ChangeNotifierProvider(
+      key: ValueKey(user?.id ?? user?.email ?? 'guest'),
+      create: (_) => NotificationProvider(),
+      child: MaterialApp(
+        title: 'Gemora Marketplace',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: GemoraColors.green),
+          scaffoldBackgroundColor: GemoraColors.cream,
+          useMaterial3: true,
+        ),
+        home: const AuthGate(),
       ),
-      home: const AuthGate(),
     );
   }
 }
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  static const _welcomeKey = 'gemora_welcome_completed_v1';
+  bool? _welcomeCompleted;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWelcomePreference();
+  }
+
+  Future<void> _loadWelcomePreference() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      setState(() {
+        _welcomeCompleted = preferences.getBool(_welcomeKey) ?? false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _welcomeCompleted = false);
+    }
+  }
+
+  Future<void> _completeWelcome(
+    WelcomeAction action,
+    bool isAuthenticated,
+  ) async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setBool(_welcomeKey, true);
+    } catch (_) {
+      // Let the user proceed even if local preferences are unavailable.
+    }
+    if (!mounted) return;
+    setState(() => _welcomeCompleted = true);
+
+    if (action == WelcomeAction.signIn && !isAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context)
+            .push(MaterialPageRoute<void>(builder: (_) => const LoginScreen()));
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
 
-    if (authProvider.isLoading) {
+    if (authProvider.isLoading || _welcomeCompleted == null) {
       return const _StartupScreen();
+    }
+
+    if (!_welcomeCompleted!) {
+      return WelcomeScreen(
+        canSignIn: !authProvider.isAuthenticated,
+        onFinished: (action) =>
+            _completeWelcome(action, authProvider.isAuthenticated),
+      );
     }
 
     if (!authProvider.isAuthenticated) {
@@ -59,13 +130,13 @@ class _StartupScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      backgroundColor: Color(0xFF5B4385),
+      backgroundColor: GemoraColors.darkGreen,
       body: SafeArea(
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.diamond_outlined, size: 64, color: Colors.white),
+              GemoraMark(size: 80),
               SizedBox(height: 18),
               Text(
                 'GEMORA',

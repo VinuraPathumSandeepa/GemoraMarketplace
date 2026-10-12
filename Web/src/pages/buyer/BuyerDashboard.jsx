@@ -12,6 +12,7 @@ import FeaturedGems from "../../components/buyer/FeaturedGems";
 import BuyerQuickActions from "../../components/buyer/BuyerQuickActions";
 import BuyerOrdersPreview from "../../components/buyer/BuyerOrdersPreview";
 import BuyerProfileSummary from "../../components/buyer/BuyerProfileSummary";
+import "../../styles/dashboard-experience.css";
 
 import {
   getBuyerDashboardStats,
@@ -90,5 +91,14 @@ export default function BuyerDashboard() {
     loadDashboard();
   }, []);
 
-  return <div className="gm-page gm-dashboard"><div className="gm-welcome"><span>YOUR GEMORA</span><p>Welcome back, {user?.fullName?.split(" ")[0] || "collector"}.</p></div><BuyerHero /><BuyerStats stats={stats} loading={loading} /><div className="gm-dashboard-grid"><div className="gm-dashboard-main"><FeaturedGems gems={gems} loading={loading} /><BuyerOrdersPreview orders={orders} loading={loading} /></div><aside className="gm-dashboard-side"><BuyerQuickActions /><BuyerProfileSummary /></aside></div><BuyerGuide /></div>;
+  return <div className="gm-page gm-dashboard">
+    <div className="gm-welcome"><span>YOUR GEMORA</span><p>Welcome back, {user?.fullName?.split(" ")[0] || "collector"}.</p></div>
+    <BuyerHero />
+    <BuyerStats stats={stats} loading={loading} />
+    <div className="gm-dashboard-grid">
+      <div className="gm-dashboard-main"><FeaturedGems gems={gems} loading={loading} /><BuyerOrdersPreview orders={orders} loading={loading} /></div>
+      <aside className="gm-dashboard-side"><BuyerQuickActions /><BuyerProfileSummary /></aside>
+    </div>
+    <BuyerGuide />
+  </div>;
 }

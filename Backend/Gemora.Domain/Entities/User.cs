@@ -55,6 +55,9 @@ public class User
     public ICollection<EmailVerificationCode> EmailVerificationCodes { get; set; }
         = new List<EmailVerificationCode>();
 
+    public ICollection<Notification> Notifications { get; set; }
+        = new List<Notification>();
+
 
     // =========================================================
     // COMPONENT 2 RELATIONSHIPS

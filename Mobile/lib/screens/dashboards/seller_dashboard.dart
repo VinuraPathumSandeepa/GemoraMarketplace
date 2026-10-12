@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../widgets/notification_bell.dart';
 import '../export_compliance/my_export_requests_screen.dart';
 import '../seller/create_gem_listing_screen.dart';
 import '../seller/my_gem_listings_screen.dart';
@@ -13,7 +14,6 @@ class SellerDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
-
     final user = authProvider.user;
 
     return Scaffold(
@@ -43,6 +43,7 @@ class SellerDashboard extends StatelessWidget {
             ),
           ],
         ),
+        actions: const [NotificationBell(), SizedBox(width: 8)],
       ),
 
       // ============================================================
@@ -84,9 +85,7 @@ class SellerDashboard extends StatelessWidget {
                       letterSpacing: 1.3,
                     ),
                   ),
-
                   const SizedBox(height: 12),
-
                   Text(
                     'Welcome, ${user?.fullName ?? 'Seller'}',
                     style: const TextStyle(
@@ -95,9 +94,7 @@ class SellerDashboard extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-
                   const SizedBox(height: 8),
-
                   const Text(
                     'Create gemstone listings, prepare supporting evidence, and submit your gems for professional verification.',
                     style: TextStyle(
@@ -123,9 +120,7 @@ class SellerDashboard extends StatelessWidget {
                 fontWeight: FontWeight.w800,
               ),
             ),
-
             const SizedBox(height: 7),
-
             const Text(
               'Manage your gemstone inventory and verification workflow.',
               style: TextStyle(
@@ -134,12 +129,8 @@ class SellerDashboard extends StatelessWidget {
                 height: 1.4,
               ),
             ),
-
             const SizedBox(height: 20),
 
-            // ======================================================
-            // MY GEM LISTINGS
-            // ======================================================
             _DashboardActionCard(
               icon: Icons.diamond_outlined,
               title: 'My Gem Listings',
@@ -155,9 +146,6 @@ class SellerDashboard extends StatelessWidget {
 
             const SizedBox(height: 14),
 
-            // ======================================================
-            // CREATE GEM LISTING
-            // ======================================================
             _DashboardActionCard(
               icon: Icons.add_circle_outline_rounded,
               title: 'Create Gem Listing',
@@ -184,9 +172,7 @@ class SellerDashboard extends StatelessWidget {
                 fontWeight: FontWeight.w800,
               ),
             ),
-
             const SizedBox(height: 7),
-
             const Text(
               'Track gemstone export requests and compliance activity.',
               style: TextStyle(
@@ -195,12 +181,8 @@ class SellerDashboard extends StatelessWidget {
                 height: 1.4,
               ),
             ),
-
             const SizedBox(height: 20),
 
-            // ======================================================
-            // MY EXPORT REQUESTS
-            // ======================================================
             _DashboardActionCard(
               icon: Icons.flight_takeoff_rounded,
               title: 'My Export Requests',
@@ -252,9 +234,7 @@ class SellerDashboard extends StatelessWidget {
                     color: Color(0xFFC99242),
                     size: 26,
                   ),
-
                   SizedBox(width: 13),
-
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,9 +247,7 @@ class SellerDashboard extends StatelessWidget {
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-
                         SizedBox(height: 5),
-
                         Text(
                           'Gemora AI assists the gemstone verification workflow, but the final verification decision always remains with a human Gemologist.',
                           style: TextStyle(
@@ -309,25 +287,19 @@ class SellerDashboard extends StatelessWidget {
                       letterSpacing: 1.2,
                     ),
                   ),
-
                   const SizedBox(height: 12),
-
                   _AccountRow(
                     icon: Icons.person_outline_rounded,
                     label: 'Seller',
                     value: user?.fullName ?? 'Gemora Seller',
                   ),
-
                   const Divider(height: 24),
-
                   _AccountRow(
                     icon: Icons.mail_outline_rounded,
                     label: 'Email',
                     value: user?.email ?? '',
                   ),
-
                   const Divider(height: 24),
-
                   const _AccountRow(
                     icon: Icons.shield_outlined,
                     label: 'Role',
@@ -351,11 +323,8 @@ class SellerDashboard extends StatelessWidget {
 
 class _DashboardActionCard extends StatelessWidget {
   final IconData icon;
-
   final String title;
-
   final String description;
-
   final VoidCallback onTap;
 
   const _DashboardActionCard({
@@ -390,9 +359,7 @@ class _DashboardActionCard extends StatelessWidget {
                 ),
                 child: Icon(icon, color: const Color(0xFFE4BC74), size: 27),
               ),
-
               const SizedBox(width: 16),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -405,9 +372,7 @@ class _DashboardActionCard extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-
                     const SizedBox(height: 6),
-
                     Text(
                       description,
                       style: const TextStyle(
@@ -419,9 +384,7 @@ class _DashboardActionCard extends StatelessWidget {
                   ],
                 ),
               ),
-
               const SizedBox(width: 10),
-
               const Icon(
                 Icons.arrow_forward_ios_rounded,
                 size: 16,
@@ -441,9 +404,7 @@ class _DashboardActionCard extends StatelessWidget {
 
 class _AccountRow extends StatelessWidget {
   final IconData icon;
-
   final String label;
-
   final String value;
 
   const _AccountRow({
@@ -465,9 +426,7 @@ class _AccountRow extends StatelessWidget {
           ),
           child: Icon(icon, size: 19, color: const Color(0xFFC99242)),
         ),
-
         const SizedBox(width: 12),
-
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -480,9 +439,7 @@ class _AccountRow extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-
               const SizedBox(height: 2),
-
               Text(
                 value,
                 style: const TextStyle(

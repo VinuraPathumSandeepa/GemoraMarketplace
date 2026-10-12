@@ -2,7 +2,7 @@ import axios from "axios";
 
 const RAW_API_URL =
   import.meta.env.VITE_API_URL ||
-  "http://localhost:5198/api";
+  (import.meta.env.DEV ? "/api" : "https://gemora-api.onrender.com/api");
 
 const NORMALIZED_API_URL =
   RAW_API_URL.replace(/\/+$/, "");

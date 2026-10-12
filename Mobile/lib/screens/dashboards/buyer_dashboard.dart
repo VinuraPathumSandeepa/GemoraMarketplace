@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../services/export_compliance_service.dart';
+import '../../widgets/notification_bell.dart';
 import '../marketplace/ai_buyer_assistant_screen.dart';
 import '../marketplace/buyer_export_tracking_screen.dart';
 import '../marketplace/marketplace_home_screen.dart';
@@ -50,6 +51,7 @@ class _BuyerDashboardState extends State<BuyerDashboard> {
       appBar: AppBar(
         title: Text(_titles[_index]),
         actions: [
+          const NotificationBell(),
           IconButton(
             tooltip: 'Logout',
             onPressed: () => context.read<AuthProvider>().logout(),
