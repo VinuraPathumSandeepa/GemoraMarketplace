@@ -172,108 +172,35 @@ function GemVerificationAgentPanel({
 
 
   // ============================================================
-  // DEFAULT AGENT WORKFLOW
+  // BACKEND WORKFLOW
   // ============================================================
 
   const defaultSteps = [
-    "Load verification and gemstone listing",
-    "Check verification workflow state",
-    "Validate submitted evidence",
-    "Load gemstone image",
-    "Run multimodal AI analysis",
-    "Prepare structured findings",
-    "Return findings for human review",
+    ["load", "Load verification and gemstone listing"],
+    ["state", "Check verification workflow state"],
+    ["validation", "Validate submitted evidence"],
+    ["image", "Load gemstone image"],
+    ["ai", "Run AI analysis"],
+    ["findings", "Prepare structured findings"],
+    ["review", "Return findings for human review"],
   ];
 
 
-  const completedSteps =
-    Array.isArray(
-      aiResult?.stepsCompleted
-    )
-      ? aiResult.stepsCompleted
-      : [];
+  const workflowSteps = !analyzing && Array.isArray(aiResult?.workflowSteps)
+    ? aiResult.workflowSteps : [];
+
+  const evidenceWarnings = Array.isArray(aiResult?.evidenceWarnings)
+    ? aiResult.evidenceWarnings : [];
+  const riskFlags = Array.isArray(aiResult?.riskFlags)
+    ? aiResult.riskFlags.filter((flag) => !evidenceWarnings.includes(flag)) : [];
 
 
   // ============================================================
   // TIMELINE STATE
   // ============================================================
 
-  const getStepState = (
-    index
-  ) => {
-
-    /*
-      When completed, all high-level
-      stages are considered complete.
-    */
-
-    if (isCompleted) {
-      return "completed";
-    }
-
-
-    /*
-      For NeedsMoreEvidence,
-      deterministic validation ran,
-      but full AI model analysis
-      may not have run.
-    */
-
-    if (needsMoreEvidence) {
-      if (index <= 2) {
-        return "completed";
-      }
-
-      return "pending";
-    }
-
-
-    /*
-      While processing, use available
-      backend step count to give a
-      progressive visualization.
-    */
-
-    if (isProcessing) {
-      if (
-        index <
-        completedSteps.length
-      ) {
-        return "completed";
-      }
-
-      if (
-        index ===
-        Math.min(
-          completedSteps.length,
-          defaultSteps.length - 1
-        )
-      ) {
-        return "active";
-      }
-    }
-
-
-    /*
-      Failed run:
-      retain steps the backend
-      completed before failure.
-    */
-
-    if (isFailed) {
-      if (
-        index <
-        completedSteps.length
-      ) {
-        return "completed";
-      }
-
-      return "pending";
-    }
-
-
-    return "pending";
-  };
+  const getStepState = (id) =>
+    workflowSteps.find((step) => step.id === id)?.status?.toLowerCase() || "pending";
 
 
   // ============================================================
@@ -367,10 +294,7 @@ function GemVerificationAgentPanel({
           onClick={
             onRunAnalysis
           }
-          disabled={
-            isProcessing ||
-            !isPendingReview
-          }
+          disabled={isProcessing || !isPendingReview}
         >
 
           {isProcessing ? (
@@ -544,11 +468,7 @@ function GemVerificationAgentPanel({
         !isProcessing && (
           <div className="verification-ai-warning">
 
-            The previous agent execution
-            could not be completed.
-            Review the submitted evidence
-            and retry the Gemora
-            Verification Agent when ready.
+            {aiResult?.findings || "The previous agent execution could not be completed. Human review remains available."}
 
           </div>
         )}
@@ -605,18 +525,19 @@ function GemVerificationAgentPanel({
           </div>
 
 
-          <div className="agent-timeline">
+          {workflowSteps.length === 0 && <p>{isProcessing
+            ? "Waiting for backend step results."
+            : "Detailed step history was not recorded for this analysis."}</p>}
+          {workflowSteps.length > 0 && <div className="agent-timeline">
 
             {defaultSteps.map(
               (
-                step,
+                [id, step],
                 index
               ) => {
 
                 const state =
-                  getStepState(
-                    index
-                  );
+                  getStepState(id);
 
 
                 return (
@@ -633,8 +554,10 @@ function GemVerificationAgentPanel({
                       "completed"
                         ? "✓"
                         : state ===
-                          "active"
+                          "running"
                         ? "◆"
+                        : state === "failed" ? "!"
+                        : state === "skipped" ? "–"
                         : index +
                           1}
 
@@ -650,17 +573,7 @@ function GemVerificationAgentPanel({
                       </strong>
 
 
-                      {completedSteps[
-                        index
-                      ] && (
-                        <small>
-                          {
-                            completedSteps[
-                              index
-                            ]
-                          }
-                        </small>
-                      )}
+                      <small>{state.charAt(0).toUpperCase() + state.slice(1)}</small>
 
                     </div>
 
@@ -669,7 +582,7 @@ function GemVerificationAgentPanel({
               }
             )}
 
-          </div>
+          </div>}
 
         </div>
       )}
@@ -737,7 +650,7 @@ function GemVerificationAgentPanel({
               <article>
 
                 <span>
-                  Confidence
+                  Model-reported confidence
                 </span>
 
                 <strong>
@@ -764,6 +677,10 @@ function GemVerificationAgentPanel({
               </article>
 
             </div>
+
+            <p className="agent-confidence-note">
+              This advisory score is not a measure of authenticity or approval. Review all risk flags and evidence before deciding.
+            </p>
 
 
             {/* ================================================
@@ -835,16 +752,22 @@ function GemVerificationAgentPanel({
               )}
 
 
+            {evidenceWarnings.length > 0 && (
+              <div className="agent-report-block agent-validation-report">
+                <h4>Evidence Warnings</h4>
+                <ul>
+                  {evidenceWarnings.map((warning, index) => (
+                    <li key={`${warning}-${index}`}><span>!</span>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* ================================================
                 RISK FLAGS
                 ================================================ */}
 
-            {Array.isArray(
-              aiResult.riskFlags
-            ) &&
-              aiResult
-                .riskFlags
-                .length > 0 && (
+            {riskFlags.length > 0 && (
                 <div className="agent-report-block agent-risk-report">
 
                   <h4>
@@ -854,7 +777,7 @@ function GemVerificationAgentPanel({
 
                   <ul>
 
-                    {aiResult.riskFlags.map(
+                    {riskFlags.map(
                       (
                         risk,
                         index

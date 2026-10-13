@@ -23,7 +23,8 @@ function Login() {
     useState("");
 
   const [error, setError] =
-    useState("");
+    useState(() => sessionStorage.getItem("gemora_session_expired") === "1"
+      ? "Your session expired. Please sign in again." : "");
 
   const [success, setSuccess] =
     useState(

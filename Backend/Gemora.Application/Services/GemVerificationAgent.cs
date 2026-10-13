@@ -107,15 +107,38 @@ public class GemVerificationAgent : IGemVerificationAgent
         // STEP 4 — MARK AGENT AS PROCESSING
         // ========================================================
 
-        verification.AiStatus =
-            "Processing";
+        if (_context.Database.IsRelational())
+        {
+            var claimed = await _context.GemVerifications
+                .Where(v => v.Id == verificationId && v.Decision == "Pending" && v.AiStatus != "Processing")
+                .ExecuteUpdateAsync(update => update.SetProperty(v => v.AiStatus, "Processing"));
+            if (claimed != 1)
+                throw new InvalidOperationException("AI analysis is already running or this verification is no longer pending.");
 
-
-        await _context.SaveChangesAsync();
+            // ExecuteUpdate bypasses tracked entities. Align the original value
+            // so a later Completed/Failed status is persisted even when it
+            // matches the value loaded before the atomic claim.
+            var statusProperty = _context.Entry(verification).Property(v => v.AiStatus);
+            statusProperty.OriginalValue = "Processing";
+            statusProperty.CurrentValue = "Processing";
+        }
+        else
+        {
+            verification.AiStatus = "Processing";
+            await _context.SaveChangesAsync();
+        }
 
 
         var result =
             new GemAiAnalysisResultDto();
+
+        result.WorkflowSteps = new[]
+        {
+            "load", "state", "validation", "image", "ai", "findings", "review"
+        }.Select(id => new GemAiWorkflowStepDto { Id = id }).ToList();
+
+        SetStep(result, "load", "Completed");
+        SetStep(result, "state", "Completed");
 
 
         result.StepsCompleted.Add(
@@ -128,6 +151,7 @@ public class GemVerificationAgent : IGemVerificationAgent
 
         try
         {
+            SetStep(result, "validation", "Running");
             // ====================================================
             // STEP 5 — DETERMINISTIC EVIDENCE VALIDATION
             // ====================================================
@@ -144,6 +168,9 @@ public class GemVerificationAgent : IGemVerificationAgent
             result.ValidationIssues.AddRange(
                 validation.Issues);
 
+            result.EvidenceWarnings.AddRange(
+                validation.Warnings);
+
 
             result.RiskFlags.AddRange(
                 validation.Warnings);
@@ -152,6 +179,8 @@ public class GemVerificationAgent : IGemVerificationAgent
             result.StepsCompleted.Add(
                 "Deterministic evidence validation completed.");
 
+            SetStep(result, "validation", "Completed");
+
 
             // ====================================================
             // STEP 6 — STOP IF REQUIRED EVIDENCE IS INVALID
@@ -159,6 +188,7 @@ public class GemVerificationAgent : IGemVerificationAgent
 
             if (!validation.IsValid)
             {
+                SkipPendingSteps(result);
                 result.Status =
                     "NeedsMoreEvidence";
 
@@ -208,6 +238,7 @@ public class GemVerificationAgent : IGemVerificationAgent
 
             try
             {
+                SetStep(result, "image", "Running");
                 imageEvidence =
                     await _gemImageReader.OpenImageAsync(
                         listing.PrimaryImageUrl);
@@ -215,11 +246,13 @@ public class GemVerificationAgent : IGemVerificationAgent
 
                 if (imageEvidence != null)
                 {
+                    SetStep(result, "image", "Completed");
                     result.StepsCompleted.Add(
                         "Uploaded gemstone image loaded for multimodal analysis.");
                 }
                 else
                 {
+                    SetStep(result, "image", "Skipped");
                     result.RiskFlags.Add(
                         "The gemstone image could not be loaded for visual AI analysis.");
 
@@ -254,13 +287,16 @@ public class GemVerificationAgent : IGemVerificationAgent
                 // Human Gemologist review remains available.
                 // =================================================
 
+                var modelCompleted = false;
                 try
                 {
+                    SetStep(result, "ai", "Running");
                     var modelResult =
                         await _aiModelClient.AnalyzeAsync(
                             listing,
                             imageEvidence?.Stream,
                             imageEvidence?.ContentType);
+                    modelCompleted = true;
 
 
                     // =============================================
@@ -285,6 +321,9 @@ public class GemVerificationAgent : IGemVerificationAgent
 
                     result.ImageAnalyzed =
                         modelResult.ImageAnalyzed;
+
+                    SetStep(result, "ai", "Completed");
+                    SetStep(result, "findings", "Running");
 
 
                     // =============================================
@@ -360,6 +399,9 @@ public class GemVerificationAgent : IGemVerificationAgent
                     result.StepsCompleted.Add(
                         "AI findings prepared for human Gemologist review.");
 
+                    SetStep(result, "findings", "Completed");
+                    SetStep(result, "review", "Completed");
+
 
                     // =============================================
                     // PERSIST COMPLETED RESULT
@@ -378,6 +420,27 @@ public class GemVerificationAgent : IGemVerificationAgent
                 }
                 catch (Exception ex)
                 {
+                    // Database and result-merging failures are internal errors,
+                    // never evidence that the provider failed.
+                    if (modelCompleted)
+                        throw;
+
+                    SetStep(result, "ai", "Failed");
+                    SkipPendingSteps(result);
+
+                    if (ex is GemAiProviderException providerError)
+                    {
+                        result.ErrorCategory = providerError.Category;
+                        result.RetryAfterSeconds = providerError.RetryAfterSeconds;
+                    }
+                    else if (ex is TimeoutException or TaskCanceledException)
+                    {
+                        result.ErrorCategory = "Timeout";
+                    }
+                    else
+                    {
+                        result.ErrorCategory = "ProviderError";
+                    }
                     // =============================================
                     // EXTERNAL AI PROVIDER FAILURE
                     //
@@ -465,6 +528,11 @@ public class GemVerificationAgent : IGemVerificationAgent
         }
         catch (Exception ex)
         {
+            foreach (var step in result.WorkflowSteps.Where(s => s.Status == "Running"))
+                step.Status = "Failed";
+            if (result.WorkflowSteps.First(s => s.Id == "review").Status == "Completed")
+                SetStep(result, "review", "Failed");
+            SkipPendingSteps(result);
             // ====================================================
             // STEP 10 — UNEXPECTED INTERNAL GEMORA FAILURE
             //
@@ -473,12 +541,14 @@ public class GemVerificationAgent : IGemVerificationAgent
             // application/database failure.
             // ====================================================
 
-            verification.AiStatus =
-                "Failed";
-
-
-            verification.AiProcessedAt =
-                DateTime.UtcNow;
+            result.Status = "Failed";
+            result.ErrorCategory = "InternalError";
+            result.ConfidenceScore = null;
+            result.SuggestedGemType = null;
+            result.ImageAnalyzed = false;
+            result.VisualObservations.Clear();
+            result.Findings = "AI analysis could not be saved. Human Gemologist review remains available.";
+            PersistResult(verification, result, "Failed");
 
 
             _logger.LogError(
@@ -514,6 +584,23 @@ public class GemVerificationAgent : IGemVerificationAgent
     private static string GetSafeAiFailureMessage(
         Exception exception)
     {
+        if (exception is GemAiProviderException providerError)
+        {
+            return providerError.Category switch
+            {
+                "QuotaExceeded" => "The AI provider quota is exhausted. Contact the service administrator before retrying. Human Gemologist review remains available.",
+                "UsageLimit" => "The AI provider reported a usage limit. The administrator should check rate limits, quota, and billing before retrying. Human Gemologist review remains available.",
+                "RateLimited" => providerError.RetryAfterSeconds is > 0
+                    ? $"The AI provider is rate limiting requests. Please wait at least {providerError.RetryAfterSeconds} seconds before retrying. Human Gemologist review remains available."
+                    : "The AI provider is rate limiting requests. Please wait before retrying. Human Gemologist review remains available.",
+                "Authentication" => "The AI provider credentials require administrator attention. Human Gemologist review remains available.",
+                "InvalidRequest" => "The AI provider rejected the analysis request. The service administrator should check model compatibility and configuration. Human Gemologist review remains available.",
+                "MalformedResponse" => "The AI provider did not return valid analysis findings. Human Gemologist review remains available.",
+                "ModelUnavailable" => "The configured AI model is unavailable. Human Gemologist review remains available.",
+                "Timeout" => "The AI provider timed out. Please retry later. Human Gemologist review remains available.",
+                _ => "AI-assisted analysis could not be completed. Human Gemologist review remains available."
+            };
+        }
         var message =
             exception.ToString();
 
@@ -645,6 +732,9 @@ public class GemVerificationAgent : IGemVerificationAgent
                     visualObservations =
                         result.VisualObservations,
 
+                    evidenceWarnings =
+                        result.EvidenceWarnings,
+
                     riskFlags =
                         result.RiskFlags,
 
@@ -652,11 +742,27 @@ public class GemVerificationAgent : IGemVerificationAgent
                         result.ValidationIssues,
 
                     stepsCompleted =
-                        result.StepsCompleted
+                        result.StepsCompleted,
+
+                    workflowSteps = result.WorkflowSteps,
+                    errorCategory = result.ErrorCategory,
+                    retryAfterSeconds = result.RetryAfterSeconds
                 });
 
 
         verification.AiProcessedAt =
             DateTime.UtcNow;
+    }
+
+    private static void SetStep(GemAiAnalysisResultDto result, string id, string status)
+    {
+        var step = result.WorkflowSteps.First(s => s.Id == id);
+        step.Status = status;
+    }
+
+    private static void SkipPendingSteps(GemAiAnalysisResultDto result)
+    {
+        foreach (var step in result.WorkflowSteps.Where(s => s.Status == "Pending"))
+            step.Status = "Skipped";
     }
 }

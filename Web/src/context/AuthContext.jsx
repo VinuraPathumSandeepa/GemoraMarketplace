@@ -14,6 +14,12 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    const expireSession = () => setUser(null);
+    window.addEventListener("gemora:session-expired", expireSession);
+    return () => window.removeEventListener("gemora:session-expired", expireSession);
+  }, []);
+
   // ==========================================
   // LOAD CURRENT USER
   // ==========================================
@@ -41,6 +47,10 @@ export function AuthProvider({ children }) {
       );
 
       clearAuthToken();
+
+      if (error.response?.status === 401) {
+        sessionStorage.setItem("gemora_session_expired", "1");
+      }
 
       setUser(null);
 
@@ -98,6 +108,7 @@ export function AuthProvider({ children }) {
       response.data.token;
 
     setAuthToken(token);
+    sessionStorage.removeItem("gemora_session_expired");
 
     // Get logged-in user's information
     const userResponse =

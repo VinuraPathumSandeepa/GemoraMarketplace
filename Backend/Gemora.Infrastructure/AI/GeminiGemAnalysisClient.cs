@@ -132,10 +132,6 @@ public class GeminiGemAnalysisClient : IGemAiModelClient
                 generationConfig =
                     new
                     {
-                        // Low temperature keeps the analysis
-                        // more consistent and less creative.
-                        temperature = 0.2,
-
                         responseMimeType =
                             "application/json"
                     }
@@ -147,8 +143,7 @@ public class GeminiGemAnalysisClient : IGemAiModelClient
         // ========================================================
 
         var endpoint =
-            $"v1beta/models/{_options.Model}:generateContent" +
-            $"?key={Uri.EscapeDataString(_options.ApiKey)}";
+            $"v1beta/models/{_options.Model}:generateContent";
 
 
         // ========================================================
@@ -190,11 +185,19 @@ public class GeminiGemAnalysisClient : IGemAiModelClient
                 response?.Dispose();
 
 
-                response =
-                    await _httpClient.PostAsJsonAsync(
-                        endpoint,
-                        requestBody,
-                        cancellationToken);
+                try
+                {
+                    using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
+                    {
+                        Content = JsonContent.Create(requestBody)
+                    };
+                    request.Headers.Add("x-goog-api-key", _options.ApiKey);
+                    response = await _httpClient.SendAsync(request, cancellationToken);
+                }
+                catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    throw new GemAiProviderException("Timeout");
+                }
 
 
                 responseText =
@@ -215,6 +218,35 @@ public class GeminiGemAnalysisClient : IGemAiModelClient
                 var statusCode =
                     (int)response.StatusCode;
 
+                var retryAfter = response.Headers.RetryAfter?.Delta ??
+                    (response.Headers.RetryAfter?.Date - DateTimeOffset.UtcNow);
+                var retryAfterSeconds = retryAfter.HasValue
+                    ? Math.Max(0, (int)Math.Ceiling(retryAfter.Value.TotalSeconds))
+                    : (int?)null;
+
+                // A 429 can mean a short rate limit or a depleted project quota.
+                // Do not multiply requests when the provider gives no retry window.
+                if (statusCode == 429)
+                {
+                    var hardQuota = responseText.Contains("billing account spend cap", StringComparison.OrdinalIgnoreCase) ||
+                        responseText.Contains("insufficient credits", StringComparison.OrdinalIgnoreCase) ||
+                        responseText.Contains("billing disabled", StringComparison.OrdinalIgnoreCase);
+                    var quotaReported = responseText.Contains("quota", StringComparison.OrdinalIgnoreCase);
+                    if (hardQuota || quotaReported || retryAfterSeconds is null || retryAfterSeconds > 8 || attempt == maxAttempts)
+                        throw new GemAiProviderException(hardQuota ? "QuotaExceeded" :
+                            quotaReported || retryAfterSeconds is null ? "UsageLimit" : "RateLimited", retryAfterSeconds);
+
+                    await Task.Delay(TimeSpan.FromSeconds(retryAfterSeconds.Value), cancellationToken);
+                    continue;
+                }
+
+                if (statusCode is 401 or 403)
+                    throw new GemAiProviderException("Authentication");
+                if (statusCode == 400)
+                    throw new GemAiProviderException("InvalidRequest");
+                if (statusCode == 404)
+                    throw new GemAiProviderException("ModelUnavailable");
+
 
                 // =================================================
                 // DETERMINE WHETHER FAILURE IS TRANSIENT
@@ -222,7 +254,6 @@ public class GeminiGemAnalysisClient : IGemAiModelClient
 
                 var transientError =
                     statusCode == 408 ||
-                    statusCode == 429 ||
                     statusCode >= 500;
 
 
@@ -250,8 +281,7 @@ public class GeminiGemAnalysisClient : IGemAiModelClient
 
                 if (attempt == maxAttempts)
                 {
-                    throw new InvalidOperationException(
-                        $"Gemini analysis request failed with HTTP {statusCode} after {maxAttempts} attempts.");
+                    throw new GemAiProviderException(statusCode == 408 ? "Timeout" : "ProviderUnavailable");
                 }
 
 
@@ -363,7 +393,12 @@ public class GeminiGemAnalysisClient : IGemAiModelClient
                 // GET STRUCTURED JSON TEXT
                 // =================================================
 
-                if (!responseParts[0].TryGetProperty(
+                var textPart = responseParts.EnumerateArray().FirstOrDefault(part =>
+                    part.ValueKind == JsonValueKind.Object &&
+                    (!part.TryGetProperty("thought", out var thought) || thought.ValueKind != JsonValueKind.True) &&
+                    part.TryGetProperty("text", out var text) && text.ValueKind == JsonValueKind.String);
+
+                if (textPart.ValueKind == JsonValueKind.Undefined || !textPart.TryGetProperty(
                         "text",
                         out var textElement))
                 {
@@ -417,6 +452,11 @@ public class GeminiGemAnalysisClient : IGemAiModelClient
                         "Gemini returned an empty structured analysis response.");
                 }
 
+                if (string.IsNullOrWhiteSpace(structuredResponse.Findings))
+                {
+                    throw new GemAiProviderException("MalformedResponse");
+                }
+
 
                 // =================================================
                 // STEP 11 — DEFENSIVE CONFIDENCE VALIDATION
@@ -453,10 +493,7 @@ public class GeminiGemAnalysisClient : IGemAiModelClient
 
 
                     Findings =
-                        string.IsNullOrWhiteSpace(
-                            structuredResponse.Findings)
-                            ? "AI analysis completed without detailed findings."
-                            : structuredResponse.Findings,
+                        structuredResponse.Findings,
 
 
                     VisualObservations =

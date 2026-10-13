@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
@@ -35,10 +35,6 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
   bool _reviewing = false;
   bool _loadingCertificate = false;
 
-  int _aiProgressStep = 0;
-
-  Timer? _aiProgressTimer;
-
   String? _error;
 
   static const Color _darkEmerald = Color(0xFF08251E);
@@ -53,25 +49,11 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
 
   static const Color _muted = Color(0xFF697771);
 
-  static const List<String> _aiProgressSteps = [
-    'Preparing verification evidence',
-    'Analyzing available gemstone evidence',
-    'Evaluating verification signals',
-    'Preparing professional findings',
-  ];
-
   @override
   void initState() {
     super.initState();
 
     _load();
-  }
-
-  @override
-  void dispose() {
-    _aiProgressTimer?.cancel();
-
-    super.dispose();
   }
 
   Future<void> _load() async {
@@ -114,30 +96,12 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
   // ============================================================
 
   Future<void> _runAiAnalysis() async {
-    if (_runningAi) {
+    if (_runningAi || _verification?.aiStatus.toLowerCase() == 'processing') {
       return;
     }
 
-    _aiProgressTimer?.cancel();
-
     setState(() {
       _runningAi = true;
-      _aiProgressStep = 0;
-    });
-
-    _aiProgressTimer = Timer.periodic(const Duration(milliseconds: 1400), (
-      timer,
-    ) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-
-      if (_aiProgressStep < _aiProgressSteps.length - 1) {
-        setState(() {
-          _aiProgressStep++;
-        });
-      }
     });
 
     try {
@@ -149,26 +113,29 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
         return;
       }
 
-      _aiProgressTimer?.cancel();
-
       setState(() {
         _verification = refreshed;
         _aiResult = result;
         _runningAi = false;
-        _aiProgressStep = _aiProgressSteps.length - 1;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          backgroundColor: result.status.toLowerCase() == 'completed'
+              ? _emerald
+              : const Color(0xFFA5433A),
           behavior: SnackBarBehavior.floating,
           content: Row(
             children: [
-              const Icon(Icons.auto_awesome_rounded, color: Colors.white),
+              Icon(result.status.toLowerCase() == 'completed'
+                  ? Icons.check_circle_outline_rounded
+                  : Icons.warning_amber_rounded, color: Colors.white),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'AI analysis completed: '
-                  '${_humanize(result.status)}',
+                  result.status.toLowerCase() == 'completed'
+                      ? 'AI analysis completed.'
+                      : 'AI analysis ${_humanize(result.status)}. Manual review remains available.',
                 ),
               ),
             ],
@@ -176,15 +143,12 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
         ),
       );
     } catch (error) {
-      _aiProgressTimer?.cancel();
-
       if (!mounted) {
         return;
       }
 
       setState(() {
         _runningAi = false;
-        _aiProgressStep = 0;
       });
 
       _showError(_cleanError(error));
@@ -523,17 +487,7 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
   }
 
   Color _confidenceColor(double? value) {
-    final score = _normalizedConfidence(value);
-
-    if (score >= 0.75) {
-      return const Color(0xFF247A50);
-    }
-
-    if (score >= 0.50) {
-      return const Color(0xFFB7791F);
-    }
-
-    return const Color(0xFFA5433A);
+    return value == null ? _muted : const Color(0xFF3E6688);
   }
 
   // ============================================================
@@ -676,7 +630,9 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
               'Listing: ${_humanize(verification.listingStatus)}',
               _gold,
             ),
-            _statusChip('AI: ${_humanize(verification.aiStatus)}', _emerald),
+            _statusChip('AI: ${_humanize(verification.aiStatus)}',
+                verification.aiStatus.toLowerCase() == 'failed'
+                    ? const Color(0xFFA5433A) : _emerald),
           ],
         ),
 
@@ -796,7 +752,9 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
                     backgroundColor: _emerald,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  onPressed: !isPending ? null : _runAiAnalysis,
+                  onPressed: !isPending || _runningAi ||
+                      verification.aiStatus.toLowerCase() == 'processing'
+                          ? null : _runAiAnalysis,
                   icon: const Icon(Icons.auto_awesome_rounded),
                   label: const Text('Run AI Analysis'),
                 ),
@@ -993,75 +951,20 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
 
           const Text(
             'Processing time depends on the available image '
-            'and certificate evidence. Progress shown below '
-            'is an estimated interface status.',
+            'and certificate evidence. Actual step results appear when '
+            'the backend finishes.',
             style: TextStyle(color: Colors.white60, fontSize: 10, height: 1.4),
           ),
 
           const SizedBox(height: 16),
 
           LinearProgressIndicator(
-            value: (_aiProgressStep + 1) / (_aiProgressSteps.length + 1),
             minHeight: 5,
             borderRadius: BorderRadius.circular(20),
             backgroundColor: Colors.white.withValues(alpha: 0.12),
             color: const Color(0xFFE4BC74),
           ),
 
-          const SizedBox(height: 18),
-
-          for (var index = 0; index < _aiProgressSteps.length; index++)
-            _aiProgressRow(index, _aiProgressSteps[index]),
-        ],
-      ),
-    );
-  }
-
-  Widget _aiProgressRow(int index, String title) {
-    final completed = index < _aiProgressStep;
-
-    final active = index == _aiProgressStep;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 11),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 24,
-            height: 24,
-            child: completed
-                ? const Icon(
-                    Icons.check_circle_rounded,
-                    color: Color(0xFF7DD3A7),
-                    size: 20,
-                  )
-                : active
-                ? const Padding(
-                    padding: EdgeInsets.all(4),
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Color(0xFFE4BC74),
-                    ),
-                  )
-                : Icon(
-                    Icons.radio_button_unchecked_rounded,
-                    color: Colors.white.withValues(alpha: 0.30),
-                    size: 19,
-                  ),
-          ),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Text(
-              title,
-              style: TextStyle(
-                color: completed || active
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.38),
-                fontSize: 11,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -1072,9 +975,17 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
   // ============================================================
 
   Widget _aiResultView(GemAiAnalysisModel result) {
-    final confidence = _normalizedConfidence(result.confidenceScore);
+    final completed = result.status.toLowerCase() == 'completed';
+    final otherRiskFlags = result.riskFlags
+        .where((flag) => !result.evidenceWarnings.contains(flag))
+        .toList();
+    final confidence = _normalizedConfidence(
+      completed ? result.confidenceScore : null,
+    );
 
-    final confidenceColor = _confidenceColor(result.confidenceScore);
+    final confidenceColor = _confidenceColor(
+      completed ? result.confidenceScore : null,
+    );
 
     return Container(
       key: const ValueKey('ai-result'),
@@ -1093,12 +1004,12 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: _emerald.withValues(alpha: 0.09),
+                  color: (completed ? _emerald : const Color(0xFFA5433A)).withValues(alpha: 0.09),
                   borderRadius: BorderRadius.circular(11),
                 ),
-                child: const Icon(
-                  Icons.auto_awesome_rounded,
-                  color: _emerald,
+                child: Icon(
+                  completed ? Icons.auto_awesome_rounded : Icons.warning_amber_rounded,
+                  color: completed ? _emerald : const Color(0xFFA5433A),
                   size: 21,
                 ),
               ),
@@ -1123,19 +1034,19 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.check_circle_outline_rounded,
-                color: Color(0xFF247A50),
+              Icon(
+                completed ? Icons.check_circle_outline_rounded : Icons.error_outline_rounded,
+                color: completed ? const Color(0xFF247A50) : const Color(0xFFA5433A),
               ),
             ],
           ),
 
           const SizedBox(height: 18),
 
-          if (result.suggestedGemType != null)
+          if (completed && result.suggestedGemType != null)
             _detailRow('Suggested Type', result.suggestedGemType!),
 
-          _detailRow('Image Analyzed', result.imageAnalyzed ? 'Yes' : 'No'),
+          _detailRow('Image Analyzed', completed && result.imageAnalyzed ? 'Yes' : 'No'),
 
           const SizedBox(height: 8),
 
@@ -1143,7 +1054,7 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Confidence',
+                'Model-reported confidence',
                 style: TextStyle(
                   color: _muted,
                   fontSize: 12,
@@ -1151,7 +1062,7 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
                 ),
               ),
               Text(
-                _confidenceText(result.confidenceScore),
+                _confidenceText(completed ? result.confidenceScore : null),
                 style: TextStyle(
                   color: confidenceColor,
                   fontSize: 12,
@@ -1163,13 +1074,21 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
 
           const SizedBox(height: 7),
 
-          ClipRRect(
+          if (result.confidenceScore != null && completed) ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: LinearProgressIndicator(
               value: confidence,
               minHeight: 7,
               backgroundColor: const Color(0xFFE4E7E5),
               color: confidenceColor,
+            ),
+          ),
+
+          if (completed && result.confidenceScore != null) const Padding(
+            padding: EdgeInsets.only(top: 7),
+            child: Text(
+              'Advisory score only; it does not establish authenticity or approval.',
+              style: TextStyle(color: _muted, fontSize: 11),
             ),
           ),
 
@@ -1183,7 +1102,7 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
             ),
           ],
 
-          _resultList(
+          if (completed) _resultList(
             icon: Icons.visibility_outlined,
             title: 'Visual Observations',
             values: result.visualObservations,
@@ -1191,9 +1110,16 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
           ),
 
           _resultList(
+            icon: Icons.report_problem_outlined,
+            title: 'Evidence Warnings',
+            values: result.evidenceWarnings,
+            iconColor: const Color(0xFFB7791F),
+          ),
+
+          _resultList(
             icon: Icons.warning_amber_rounded,
             title: 'Risk Flags',
-            values: result.riskFlags,
+            values: otherRiskFlags,
             iconColor: const Color(0xFFA5433A),
           ),
 
@@ -1204,21 +1130,57 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
             iconColor: const Color(0xFFB7791F),
           ),
 
-          _resultList(
-            icon: Icons.task_alt_rounded,
-            title: 'Agent Steps Completed',
-            values: result.stepsCompleted,
-            iconColor: const Color(0xFF247A50),
-          ),
+          if (result.workflowSteps.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _resultHeading(Icons.list_alt_rounded, 'Workflow Steps'),
+            for (final step in result.workflowSteps)
+              Padding(
+                padding: const EdgeInsets.only(top: 7),
+                child: Row(children: [
+                  Icon(
+                    step.status == 'Completed' ? Icons.check_circle_outline_rounded
+                        : step.status == 'Failed' ? Icons.error_outline_rounded
+                        : Icons.remove_circle_outline_rounded,
+                    size: 17,
+                    color: step.status == 'Completed' ? const Color(0xFF247A50)
+                        : step.status == 'Failed' ? const Color(0xFFA5433A) : _muted,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text('${step.id}: ${step.status}',
+                      style: const TextStyle(color: _muted, fontSize: 12))),
+                ]),
+              ),
+          ],
         ],
       ),
     );
   }
 
   Widget _storedAiView(GemVerificationModel verification) {
+    if (verification.aiRiskFlags?.trimLeft().startsWith('{') == true) {
+      try {
+        final details = jsonDecode(verification.aiRiskFlags!);
+        if (details is Map<String, dynamic>) {
+          return _aiResultView(GemAiAnalysisModel.fromJson({
+            ...details,
+            'status': verification.aiStatus,
+            'suggestedGemType': verification.aiSuggestedGemType,
+            'confidenceScore': verification.aiConfidenceScore,
+            'findings': verification.aiFindings,
+          }));
+        }
+      } on FormatException {
+        // Older records may contain plain-text risk flags.
+      }
+    }
+
     final confidence = _normalizedConfidence(verification.aiConfidenceScore);
 
-    final confidenceColor = _confidenceColor(verification.aiConfidenceScore);
+    final confidenceColor = _confidenceColor(
+      verification.aiStatus.toLowerCase() == 'completed'
+          ? verification.aiConfidenceScore
+          : null,
+    );
 
     return Container(
       key: const ValueKey('stored-ai-result'),
@@ -1233,7 +1195,8 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
         children: [
           _detailRow('AI Status', _humanize(verification.aiStatus)),
 
-          if (verification.aiSuggestedGemType != null)
+          if (verification.aiStatus.toLowerCase() == 'completed' &&
+              verification.aiSuggestedGemType != null)
             _detailRow('Suggested Type', verification.aiSuggestedGemType!),
 
           const SizedBox(height: 8),
@@ -1242,7 +1205,7 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Confidence',
+                'Model-reported confidence',
                 style: TextStyle(
                   color: _muted,
                   fontSize: 12,
@@ -1250,7 +1213,8 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
                 ),
               ),
               Text(
-                _confidenceText(verification.aiConfidenceScore),
+                _confidenceText(verification.aiStatus.toLowerCase() == 'completed'
+                    ? verification.aiConfidenceScore : null),
                 style: TextStyle(
                   color: confidenceColor,
                   fontSize: 12,
@@ -1262,13 +1226,23 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
 
           const SizedBox(height: 7),
 
-          ClipRRect(
+          if (verification.aiConfidenceScore != null &&
+              verification.aiStatus.toLowerCase() == 'completed') ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: LinearProgressIndicator(
               value: confidence,
               minHeight: 7,
               backgroundColor: const Color(0xFFE4E7E5),
               color: confidenceColor,
+            ),
+          ),
+
+          if (verification.aiConfidenceScore != null &&
+              verification.aiStatus.toLowerCase() == 'completed') const Padding(
+            padding: EdgeInsets.only(top: 7),
+            child: Text(
+              'Advisory score only; it does not establish authenticity or approval.',
+              style: TextStyle(color: _muted, fontSize: 11),
             ),
           ),
 
