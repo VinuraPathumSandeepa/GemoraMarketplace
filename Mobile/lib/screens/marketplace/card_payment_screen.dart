@@ -145,6 +145,7 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
       );
 
       if (!mounted) return;
+      setState(() => _processing = false);
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
@@ -156,9 +157,9 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
             color: Color(0xFF2E7D32),
             size: 52,
           ),
-          title: const Text('Demo payment approved'),
+          title: const Text('Payment successful'),
           content: Text(
-            '${paidOrder.orderNumber} is marked paid. Delivery is pending while the seller prepares your order.',
+            'Your 60% advance payment for order ${paidOrder.orderNumber} was successful. The seller will prepare your order for delivery.',
             textAlign: TextAlign.center,
           ),
           actionsAlignment: MainAxisAlignment.center,
@@ -168,7 +169,7 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
               style: FilledButton.styleFrom(
                 backgroundColor: GemoraColors.darkGreen,
               ),
-              child: const Text('Back to orders'),
+              child: const Text('View my orders'),
             ),
           ],
         ),
@@ -441,15 +442,19 @@ class _CardPaymentScreenState extends State<CardPaymentScreen> {
                           style: TextStyle(fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: 8),
-                        Text([
-                          _deliveryFields['recipientName']!.text.trim(),
-                          _deliveryFields['recipientPhone']!.text.trim(),
-                          _deliveryFields['addressLine1']!.text.trim(),
-                          _deliveryFields['addressLine2']!.text.trim(),
-                          '${_deliveryFields['city']!.text.trim()}, ${_deliveryFields['district']!.text.trim()}',
-                          '${_deliveryFields['region']!.text.trim()} ${_deliveryFields['postalCode']!.text.trim()}',
-                          _deliveryFields['countryCode']!.text.trim().toUpperCase(),
-                        ].where((line) => line.isNotEmpty).join('\n')),
+                        Text(
+                          [
+                            _deliveryFields['recipientName']!.text.trim(),
+                            _deliveryFields['recipientPhone']!.text.trim(),
+                            _deliveryFields['addressLine1']!.text.trim(),
+                            _deliveryFields['addressLine2']!.text.trim(),
+                            '${_deliveryFields['city']!.text.trim()}, ${_deliveryFields['district']!.text.trim()}',
+                            '${_deliveryFields['region']!.text.trim()} ${_deliveryFields['postalCode']!.text.trim()}',
+                            _deliveryFields['countryCode']!.text
+                                .trim()
+                                .toUpperCase(),
+                          ].where((line) => line.isNotEmpty).join('\n'),
+                        ),
                         Align(
                           alignment: Alignment.centerLeft,
                           child: TextButton.icon(

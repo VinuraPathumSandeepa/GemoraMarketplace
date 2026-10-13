@@ -115,7 +115,13 @@ void main() {
 
     expect(service.confirmedIntent, 'gemora_pi_test');
     expect(service.confirmedToken, 'demo_card_mobile_4242');
-    expect(find.text('Demo payment approved'), findsOneWidget);
+    expect(find.text('Payment successful'), findsOneWidget);
+    expect(
+      find.textContaining('60% advance payment for order GEM-ABCD1234'),
+      findsOneWidget,
+    );
+    expect(find.text('View my orders'), findsOneWidget);
+    expect(find.text('Authorizing payment...'), findsNothing);
   });
 
   testWidgets('declined demo payment stays on the card step for retry', (
@@ -161,23 +167,31 @@ void main() {
 
     expect(service.confirmedToken, 'demo_card_mobile_decline');
     expect(find.textContaining('Payment failed:'), findsOneWidget);
-    expect(find.text('Demo payment approved'), findsNothing);
+    expect(find.text('Payment successful'), findsNothing);
     expect(find.text('Edit delivery details'), findsOneWidget);
 
     await tester.enterText(fields.at(1), '4242424242424242');
     await tester.ensureVisible(find.textContaining('Pay LKR'));
     await tester.tap(find.textContaining('Pay LKR'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
     expect(service.intentCalls, 2);
-    expect(find.text('Demo payment approved'), findsOneWidget);
-    expect(find.textContaining('Delivery is pending'), findsOneWidget);
+    expect(find.text('Payment successful'), findsOneWidget);
+    expect(
+      find.textContaining('The seller will prepare your order for delivery.'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('missing delivery details cannot open card payment', (tester) async {
+  testWidgets('missing delivery details cannot open card payment', (
+    tester,
+  ) async {
     final service = _PaymentService();
-    await tester.pumpWidget(MaterialApp(
-      home: CardPaymentScreen(order: _order(), service: service),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CardPaymentScreen(order: _order(), service: service),
+      ),
+    );
     await tester.ensureVisible(find.text('Save and continue to card payment'));
     await tester.tap(find.text('Save and continue to card payment'));
     await tester.pumpAndSettle();
@@ -187,19 +201,31 @@ void main() {
     expect(service.intentCalls, 0);
   });
 
-  testWidgets('save failure keeps delivery details for retry and editing', (tester) async {
+  testWidgets('save failure keeps delivery details for retry and editing', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(500, 1300);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     final service = _PaymentService()..failDeliverySave = true;
-    await tester.pumpWidget(MaterialApp(
-      home: CardPaymentScreen(order: _order(), service: service),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CardPaymentScreen(order: _order(), service: service),
+      ),
+    );
     for (final entry in <int, String>{
-      1: '0771234567', 3: '12 Main Street', 5: 'Colombo',
-      6: 'Colombo', 7: 'Western', 8: '00100', 9: 'lk',
+      1: '0771234567',
+      3: '12 Main Street',
+      5: 'Colombo',
+      6: 'Colombo',
+      7: 'Western',
+      8: '00100',
+      9: 'lk',
     }.entries) {
-      await tester.enterText(find.byType(TextFormField).at(entry.key), entry.value);
+      await tester.enterText(
+        find.byType(TextFormField).at(entry.key),
+        entry.value,
+      );
     }
     await tester.ensureVisible(find.text('Save and continue to card payment'));
     await tester.tap(find.text('Save and continue to card payment'));
