@@ -16207,6 +16207,22 @@ html {
     1.2s ease-in-out infinite;
 }
 
+.agent-step-running .agent-timeline-marker {
+  border-color: rgba(105, 183, 224, 0.35);
+  color: #82c4e9;
+  animation: agentActiveStep 1.2s ease-in-out infinite;
+}
+
+.agent-step-failed .agent-timeline-marker {
+  border-color: rgba(230, 105, 105, 0.5);
+  background: rgba(230, 105, 105, 0.15);
+  color: #ff9b9b;
+}
+
+.agent-step-skipped .agent-timeline-marker {
+  color: rgba(255, 255, 255, 0.35);
+}
+
 
 @keyframes agentActiveStep {
 
@@ -16346,6 +16362,13 @@ html {
 
   font-size: 18px;
   font-weight: 500;
+}
+
+.agent-confidence-note {
+  margin: 10px 0 0;
+  color: #c7d6cf;
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 

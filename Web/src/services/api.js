@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getAuthToken } from "./authSession";
+import { clearAuthToken, getAuthToken } from "./authSession";
 
 const RAW_API_URL =
   import.meta.env.VITE_API_URL ||
@@ -70,6 +70,20 @@ api.interceptors.request.use(
 
   (error) =>
     Promise.reject(error)
+);
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 &&
+        error.config?.headers?.Authorization &&
+        !/\/Auth\/login$/i.test(error.config?.url || "")) {
+      clearAuthToken();
+      sessionStorage.setItem("gemora_session_expired", "1");
+      window.dispatchEvent(new Event("gemora:session-expired"));
+    }
+    return Promise.reject(error);
+  }
 );
 
 export default api;

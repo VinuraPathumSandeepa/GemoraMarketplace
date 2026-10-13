@@ -578,9 +578,10 @@ function VerificationQueue() {
                           </strong>
                         </div>
 
-                        {verification.aiConfidenceScore != null && (
+                        {verification.aiStatus?.toLowerCase() === "completed" &&
+                          verification.aiConfidenceScore != null && (
                           <div>
-                            <span>Confidence</span>
+                            <span>Model score</span>
 
                             <strong>
                               {Number(

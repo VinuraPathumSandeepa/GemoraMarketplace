@@ -70,9 +70,13 @@ function parsePersistedAiDetails(value) {
   const emptyResult = {
     imageAnalyzed: false,
     visualObservations: [],
+    evidenceWarnings: [],
     riskFlags: [],
     validationIssues: [],
     stepsCompleted: [],
+    workflowSteps: [],
+    errorCategory: null,
+    retryAfterSeconds: null,
   };
 
   if (!value) {
@@ -91,6 +95,10 @@ function parsePersistedAiDetails(value) {
         ? parsed.visualObservations
         : [],
 
+      evidenceWarnings: Array.isArray(parsed.evidenceWarnings)
+        ? parsed.evidenceWarnings
+        : [],
+
       riskFlags: Array.isArray(parsed.riskFlags)
         ? parsed.riskFlags
         : [],
@@ -106,6 +114,9 @@ function parsePersistedAiDetails(value) {
       )
         ? parsed.stepsCompleted
         : [],
+      workflowSteps: Array.isArray(parsed.workflowSteps) ? parsed.workflowSteps : [],
+      errorCategory: parsed.errorCategory || null,
+      retryAfterSeconds: parsed.retryAfterSeconds ?? null,
     };
   } catch {
     // Backward compatibility with previously stored text.
@@ -149,6 +160,9 @@ function buildStoredAiResult(verification) {
     visualObservations:
       details.visualObservations,
 
+    evidenceWarnings:
+      details.evidenceWarnings,
+
     riskFlags:
       details.riskFlags,
 
@@ -157,6 +171,9 @@ function buildStoredAiResult(verification) {
 
     stepsCompleted:
       details.stepsCompleted,
+    workflowSteps: details.workflowSteps,
+    errorCategory: details.errorCategory,
+    retryAfterSeconds: details.retryAfterSeconds,
 
     processedAt:
       verification.aiProcessedAt,
@@ -317,9 +334,9 @@ function VerificationDetails() {
         silent: true,
       });
 
-      if (
-        aiStatus === "needsmoreevidence"
-      ) {
+      if (aiStatus === "failed") {
+        setError(response.data?.findings || "AI analysis is unavailable. Manual review remains available.");
+      } else if (aiStatus === "needsmoreevidence") {
         setSuccess(
           "The Gemora Verification Agent completed evidence validation and determined that additional or corrected evidence is required."
         );

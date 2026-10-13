@@ -261,6 +261,8 @@ public class GemListingVerificationQualityTests
 
         Assert.False(result.ImageAnalyzed);
         Assert.NotEmpty(result.ValidationIssues);
+        Assert.Equal("Completed", result.WorkflowSteps.Single(s => s.Id == "validation").Status);
+        Assert.Equal("Skipped", result.WorkflowSteps.Single(s => s.Id == "ai").Status);
 
         Assert.Equal(
             "NeedsMoreEvidence",
@@ -322,6 +324,12 @@ public class GemListingVerificationQualityTests
             "Failed",
             result.Status);
 
+        Assert.Equal("Completed", result.WorkflowSteps.Single(s => s.Id == "validation").Status);
+        Assert.Equal("Failed", result.WorkflowSteps.Single(s => s.Id == "ai").Status);
+        Assert.Equal("Skipped", result.WorkflowSteps.Single(s => s.Id == "findings").Status);
+        Assert.Null(result.ConfidenceScore);
+        Assert.False(result.ImageAnalyzed);
+
         Assert.Equal(
             "Failed",
             data.Verification.AiStatus);
@@ -333,5 +341,69 @@ public class GemListingVerificationQualityTests
         Assert.Equal(
             GemListingStatuses.PendingVerification,
             data.Gem.Status);
+    }
+
+    [Fact]
+    public async Task QuotaFailure_KeepsRulesBasedWarningsAndManualReview()
+    {
+        await using var db = CreateDb();
+        var data = SeedPending(db, hasImage: true);
+        data.Gem.CertificateUrl = "/certificate.pdf";
+        await db.SaveChangesAsync();
+        var model = new Mock<IGemAiModelClient>();
+        model.Setup(x => x.AnalyzeAsync(It.IsAny<GemListing>(), It.IsAny<Stream?>(),
+            It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new GemAiProviderException("QuotaExceeded"));
+        var reader = new Mock<IGemImageReader>();
+        reader.Setup(x => x.OpenImageAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GemImageReadResult?)null);
+
+        var result = await new GemVerificationAgent(db, new GemEvidenceValidator(), model.Object,
+            reader.Object, NullLogger<GemVerificationAgent>.Instance).AnalyzeAsync(data.Verification.Id);
+
+        Assert.Equal("Failed", result.Status);
+        Assert.Equal("QuotaExceeded", result.ErrorCategory);
+        Assert.Contains(result.RiskFlags, flag => flag.Contains("certificate number is missing"));
+        Assert.Contains(result.RiskFlags, flag => flag.Contains("certificate authority is missing"));
+        Assert.Contains(result.EvidenceWarnings, warning => warning.Contains("certificate number is missing"));
+        Assert.Contains(result.EvidenceWarnings, warning => warning.Contains("certificate authority is missing"));
+        Assert.Null(result.ConfidenceScore);
+        Assert.Equal("Pending", data.Verification.Decision);
+        Assert.Contains("evidenceWarnings", data.Verification.AiRiskFlags!);
+        Assert.Contains("workflowSteps", data.Verification.AiRiskFlags!);
+    }
+
+    [Fact]
+    public async Task CompletedAnalysis_PreservesWarningSourceAndPendingHumanDecision()
+    {
+        await using var db = CreateDb();
+        var data = SeedPending(db, hasImage: true);
+        var model = new Mock<IGemAiModelClient>();
+        model.Setup(x => x.AnalyzeAsync(It.IsAny<GemListing>(), It.IsAny<Stream?>(),
+                It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GemAiModelResult
+            {
+                SuggestedGemType = "Sapphire",
+                ConfidenceScore = 0.85m,
+                Findings = "Blue oval appearance; human review required.",
+                ImageAnalyzed = true,
+                VisualObservations = new List<string> { "Apparent blue oval shape" },
+                RiskFlags = new List<string> { "Declared color needs review" }
+            });
+        var reader = new Mock<IGemImageReader>();
+        reader.Setup(x => x.OpenImageAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GemImageReadResult(new MemoryStream(new byte[] { 1, 2, 3 }), "image/png"));
+
+        var result = await new GemVerificationAgent(db, new GemEvidenceValidator(), model.Object,
+            reader.Object, NullLogger<GemVerificationAgent>.Instance).AnalyzeAsync(data.Verification.Id);
+
+        Assert.Equal("Completed", result.Status);
+        Assert.Equal(new[] { "Apparent blue oval shape" }, result.VisualObservations);
+        Assert.Contains(result.EvidenceWarnings, warning => warning.Contains("No gemstone certificate"));
+        Assert.Contains("Declared color needs review", result.RiskFlags);
+        Assert.DoesNotContain(result.EvidenceWarnings, warning => warning.Contains("Declared color"));
+        Assert.Equal("Pending", data.Verification.Decision);
+        Assert.Equal(1, await db.GemVerifications.CountAsync());
+        Assert.Contains("evidenceWarnings", data.Verification.AiRiskFlags!);
     }
 }
