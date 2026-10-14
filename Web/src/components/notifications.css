@@ -3,6 +3,23 @@
 .gemora-notification-bell:hover, .gemora-notification-bell:focus-visible { background: rgba(217,188,123,.16); outline-color: #e4bc74; }
 .gemora-notification-badge { position: absolute; top: -6px; right: -7px; min-width: 18px; padding: 2px 4px; border-radius: 99px; background: #e4bc74; color: #08251e; font-size: 10px; font-weight: 800; line-height: 15px; }
 .gemora-notification-popover { position: absolute; z-index: 1100; top: calc(100% + 14px); right: 0; width: min(380px, calc(100vw - 24px)); max-height: min(550px, calc(100vh - 100px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid #e7dfd2; border-radius: 18px; background: #fff; box-shadow: 0 22px 55px rgba(8,37,30,.2); color: #10241f; }
+.gemora-notification-popover[hidden] { display: none; }
+.seller-combined-notification-popover { width: min(580px, calc(100vw - 24px)); max-height: min(720px, calc(100dvh - 100px)); }
+.seller-combined-notification-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.seller-combined-notification-section { border-bottom: 1px solid #e9e3d8; }
+.seller-combined-notification-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 18px 8px; }
+.seller-combined-notification-section-head h2 { margin: 0; color: #173e32; font-size: 14px; }
+.seller-combined-notification-section-head span { color: #86662f; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.seller-combined-notification-section-head button { border: 0; background: none; color: #16483b; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.seller-combined-notification-section-head button:disabled { opacity: .45; cursor: default; }
+.seller-general-notification-head { padding-top: 17px; padding-bottom: 12px; border-bottom: 1px solid #f0ebe4; }
+.seller-combined-notification-popover .oi-toolbar { padding: 4px 18px 12px; }
+.seller-combined-notification-popover .oi-list { padding: 0 18px 16px; gap: 10px; }
+.seller-combined-notification-popover .oi-card { padding: 14px; }
+.seller-combined-notification-popover .oi-card h3 { font-size: 15px; }
+.seller-combined-notification-popover .oi-error { margin: 0 18px 12px; }
+.seller-combined-notification-popover .oi-empty { margin: 0; padding: 12px 0; font-size: 13px; }
+.seller-combined-notification-popover .oi-embedded :focus-visible { outline: 2px solid #bd924b; outline-offset: 2px; }
 .gemora-notification-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 18px 14px; border-bottom: 1px solid #eee8df; }
 .gemora-notification-head strong { font-size: 16px; }
 .gemora-notification-head button, .gemora-notification-view-all { border: 0; background: none; color: #16483b; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
@@ -33,4 +50,6 @@
 .gemora-notification-filters button.active { background: #16483b; color: #fff; border-color: #16483b; }
 .gemora-notifications-panel { overflow: hidden; border: 1px solid #e7dfd2; border-radius: 16px; background: #fff; }
 .gemora-notifications-panel .gemora-notification-item { padding: 19px 22px; }
-@media (max-width: 600px) { .gemora-notifications-page { padding: 24px 14px 50px; } .gemora-notifications-title { align-items: start; flex-direction: column; } .gemora-notification-popover { position: fixed; top: 72px; right: 12px; max-height: calc(100vh - 86px); } }
+@media (max-width: 900px) { .seller-combined-notification-popover { position: fixed; top: 80px; right: 12px; max-height: calc(100dvh - 94px); } }
+@media (max-width: 720px) { .seller-combined-notification-popover { top: 72px; max-height: calc(100dvh - 86px); } }
+@media (max-width: 600px) { .gemora-notifications-page { padding: 24px 14px 50px; } .gemora-notifications-title { align-items: start; flex-direction: column; } .gemora-notification-popover { position: fixed; top: 72px; right: 12px; max-height: calc(100vh - 86px); } .seller-combined-notification-popover { max-height: calc(100dvh - 86px); } .seller-combined-notification-popover .oi-toolbar { padding: 4px 12px 10px; } .seller-combined-notification-popover .oi-list { padding: 0 12px 12px; } .seller-combined-notification-section-head { padding-right: 12px; padding-left: 12px; } }

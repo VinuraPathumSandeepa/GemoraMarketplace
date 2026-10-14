@@ -29,7 +29,7 @@ export function PaymentDeadline({ dueAt, onExpire }) {
 const errorMessage = error => error.message || "Unable to update the order. Please try again.";
 const dateLabel = value => new Date(utcTime(value)).toLocaleString();
 
-export default function OrderInbox({ seller = false }) {
+export default function OrderInbox({ seller = false, embedded = false, onSummaryChange }) {
   const [now, setNow] = useState(() => Date.now());
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +59,12 @@ export default function OrderInbox({ seller = false }) {
     ? order.status === "Pending" && !order.sellerReadAt
     : order.buyerMessageAt && (!order.buyerReadAt || utcTime(order.buyerReadAt) < utcTime(order.buyerMessageAt));
   const count = orders.filter(unread).length;
+  useEffect(() => {
+    onSummaryChange?.({
+      unreadCount: count,
+      orderIds: orders.map((order) => String(order.id).toLowerCase()),
+    });
+  }, [count, orders, onSummaryChange]);
   const visible = orders.filter(order => seller ? all || order.status === "Pending" : order.buyerMessageAt)
     .sort((a, b) => utcTime(seller ? b.createdAt : b.buyerMessageAt) - utcTime(seller ? a.createdAt : a.buyerMessageAt));
   const close = () => { dialog.current?.close(); setDecision(null); setReason(""); };
@@ -77,14 +83,8 @@ export default function OrderInbox({ seller = false }) {
     } catch (err) { setError(errorMessage(err)); }
     finally { setBusy(null); }
   }
-  return <>
-    <button type="button" className="oi-trigger" onClick={() => dialog.current?.showModal()} aria-label={`${seller ? "Orders" : "Messages"}, ${count} unread`}>
-      <Bell size={18} aria-hidden="true" /><span>{seller ? "Orders" : "Messages"}</span>
-      {count > 0 && <strong className="oi-badge">{count > 99 ? "99+" : count}</strong>}
-    </button>
-    <dialog className="oi-dialog" ref={dialog} onCancel={() => { setDecision(null); setReason(""); }} aria-labelledby={`oi-title-${seller ? "seller" : "buyer"}`}>
-      <header className="oi-header"><div><small>GEMORA INBOX</small><h2 id={`oi-title-${seller ? "seller" : "buyer"}`}>{seller ? "Order requests" : "Your messages"}</h2><p>{count} new {seller ? "orders" : "messages"}</p></div><button type="button" onClick={close} aria-label="Close inbox"><X size={22} /></button></header>
-      <div className="oi-toolbar">{seller && <button type="button" onClick={() => setAll(!all)}>{all ? "Show pending requests" : "Show all orders"}</button>}<button type="button" onClick={load}><RefreshCw size={15} />Refresh</button></div>
+  const content = <>
+      <div className="oi-toolbar">{seller && <button type="button" onClick={() => setAll(!all)}>{all ? "Show pending requests" : "View all orders"}</button>}<button type="button" onClick={load}><RefreshCw size={15} />Refresh</button></div>
       {error && <p role="alert" className="oi-error">{error}</p>}
       <div className="oi-list">
         {loading && <p role="status">Loading your inbox…</p>}
@@ -117,6 +117,18 @@ export default function OrderInbox({ seller = false }) {
           </article>;
         })}
       </div>
+  </>;
+
+  if (embedded) return <div className="oi-embedded">{content}</div>;
+
+  return <>
+    <button type="button" className="oi-trigger" onClick={() => dialog.current?.showModal()} aria-label={`${seller ? "Orders" : "Messages"}, ${count} unread`}>
+      <Bell size={18} aria-hidden="true" /><span>{seller ? "Orders" : "Messages"}</span>
+      {count > 0 && <strong className="oi-badge">{count > 99 ? "99+" : count}</strong>}
+    </button>
+    <dialog className="oi-dialog" ref={dialog} onCancel={() => { setDecision(null); setReason(""); }} aria-labelledby={`oi-title-${seller ? "seller" : "buyer"}`}>
+      <header className="oi-header"><div><small>GEMORA INBOX</small><h2 id={`oi-title-${seller ? "seller" : "buyer"}`}>{seller ? "Order requests" : "Your messages"}</h2><p>{count} new {seller ? "orders" : "messages"}</p></div><button type="button" onClick={close} aria-label="Close inbox"><X size={22} /></button></header>
+      {content}
     </dialog>
   </>;
 }

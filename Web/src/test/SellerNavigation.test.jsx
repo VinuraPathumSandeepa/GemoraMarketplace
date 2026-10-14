@@ -16,7 +16,7 @@ vi.mock("../components/OrderInbox", () => ({
   default: () => <span>Orders</span>,
 }));
 vi.mock("../components/NotificationBell", () => ({
-  default: () => <span>Notifications</span>,
+  default: ({ seller }) => <span>{seller ? "Seller notifications" : "Notifications"}</span>,
 }));
 vi.mock("../components/UserAvatar", () => ({
   default: () => <span>Avatar</span>,
@@ -57,8 +57,8 @@ it("shows the four Seller links in desktop and mobile navigation without Gem Lis
     expect(navigation.queryByRole("link", { name: "Gem Listings" })).not.toBeInTheDocument();
   }
 
-  expect(screen.getByText("Orders")).toBeInTheDocument();
-  expect(screen.getByText("Notifications")).toBeInTheDocument();
+  expect(screen.getByText("Seller notifications")).toBeInTheDocument();
+  expect(screen.queryByText("Orders")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Open account menu" })).toBeInTheDocument();
   fireEvent.click(within(container.querySelector(".gemora-main-nav"))
     .getByRole("link", { name: "My Listings" }));
