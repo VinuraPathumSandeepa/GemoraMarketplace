@@ -19629,12 +19629,22 @@ article:nth-child(3) {
 }
 
 .verification-large-image {
-  min-height: 260px;
+  height: clamp(250px, 29vw, 350px);
+  min-height: 0;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1000px) {
+  .verification-large-image {
+    height: clamp(240px, 42vw, 340px);
+  }
 }
 
 @media (max-width: 600px) {
   .verification-large-image {
-    min-height: 210px;
+    height: clamp(210px, 56vw, 280px);
+    padding: 8px;
   }
 }
 /* ============================================================
