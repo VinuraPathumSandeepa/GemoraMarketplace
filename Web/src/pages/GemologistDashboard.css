@@ -112,6 +112,159 @@
   outline-offset: 4px;
 }
 
+/* Four live workload measures; color supports the label, never replaces it. */
+.gemologist-dashboard-page .gemologist-stats-grid {
+  gap: 15px;
+}
+
+.gemologist-dashboard-page .gemologist-stats-grid .gemologist-stat-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 176px;
+  padding: 21px;
+  overflow: hidden;
+  border: 1px solid #e4ddcf;
+  border-radius: 17px;
+  background: #fffdf9;
+  box-shadow: 0 9px 24px rgba(25, 55, 43, 0.055);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.gemologist-dashboard-page .gemologist-stats-grid .gemologist-stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: #d5a457;
+}
+
+.gemologist-dashboard-page .gemologist-stats-grid .gemologist-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: #cbb891;
+  box-shadow: 0 15px 30px rgba(25, 55, 43, 0.09);
+}
+
+.gemologist-dashboard-page .gemologist-stats-grid .gemologist-stat-primary {
+  border-color: #315a48;
+  background: linear-gradient(145deg, #12372c, #1b5140);
+}
+
+.gemologist-dashboard-page .gemologist-stats-grid .gemologist-stat-primary::before {
+  background: #ecc27c;
+}
+
+.gemologist-dashboard-page .gemologist-stats-grid .gemologist-stat-completed {
+  background: linear-gradient(145deg, #f1faf5, #fffefa);
+  border-color: #d6e7db;
+}
+
+.gemologist-dashboard-page .gemologist-stats-grid .gemologist-stat-completed::before {
+  background: #58a57a;
+}
+
+.gemologist-dashboard-page .gemologist-stats-grid .gemologist-stat-pending {
+  background: linear-gradient(145deg, #fff8eb, #fffdf9);
+  border-color: #ebddc2;
+}
+
+.gemologist-dashboard-page .gemologist-stats-grid .gemologist-stat-attention {
+  background: linear-gradient(145deg, #fff5f0, #fffdf9);
+  border-color: #ecd8ce;
+}
+
+.gemologist-dashboard-page .gemologist-stats-grid .gemologist-stat-attention::before {
+  background: #bd6b55;
+}
+
+.gemologist-dashboard-page .gemologist-stat-top {
+  gap: 11px;
+}
+
+.gemologist-dashboard-page .gemologist-stat-icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 11px;
+  background: #f4e8d2;
+  color: #9a6327;
+}
+
+.gemologist-dashboard-page .gemologist-stat-icon.completed {
+  background: #ddf0e5;
+  color: #246b4a;
+}
+
+.gemologist-dashboard-page .gemologist-stat-icon.pending {
+  background: #f9ecd0;
+  color: #8b6126;
+}
+
+.gemologist-dashboard-page .gemologist-stat-icon.attention {
+  background: #f9e5de;
+  color: #a24e3d;
+}
+
+.gemologist-dashboard-page .gemologist-stat-label {
+  color: #55685e;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.065em;
+  line-height: 1.3;
+}
+
+.gemologist-dashboard-page .gemologist-stat-primary .gemologist-stat-label {
+  color: #e5eee6;
+}
+
+.gemologist-dashboard-page .gemologist-stat-card > strong {
+  margin-top: 15px;
+  color: #163f32;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(36px, 3.7vw, 48px);
+  font-weight: 500;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.gemologist-dashboard-page .gemologist-stat-primary > strong {
+  color: #f0cc87;
+}
+
+.gemologist-dashboard-page .gemologist-stat-card p {
+  margin: auto 0 0;
+  padding-top: 12px;
+  color: #5d6f65;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.gemologist-dashboard-page .gemologist-stat-primary p {
+  color: #d6e5d9;
+}
+
+@media (max-width: 540px) {
+  .gemologist-dashboard-page .gemologist-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .gemologist-dashboard-page .gemologist-stats-grid .gemologist-stat-card {
+    min-height: 175px;
+    padding: 16px;
+  }
+}
+
+@media (max-width: 400px) {
+  .gemologist-dashboard-page .gemologist-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .gemologist-dashboard-page .gemologist-stats-grid .gemologist-stat-card {
+    min-height: 145px;
+  }
+}
+
 @media (max-width: 760px) {
   .gemologist-dashboard-page .gemologist-dashboard-hero {
     padding: 26px 22px;
@@ -129,11 +282,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gemologist-dashboard-page .gemologist-queue-button {
+  .gemologist-dashboard-page .gemologist-queue-button,
+  .gemologist-dashboard-page .gemologist-stats-grid .gemologist-stat-card {
     transition: none;
   }
 
-  .gemologist-dashboard-page .gemologist-queue-button:hover {
+  .gemologist-dashboard-page .gemologist-queue-button:hover,
+  .gemologist-dashboard-page .gemologist-stats-grid .gemologist-stat-card:hover {
     transform: none;
   }
 }

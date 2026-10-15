@@ -1,7 +1,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, ClipboardList, Clock3, ShieldAlert, Sparkles } from "lucide-react";
 
 import DashboardLayout from "../layouts/DashboardLayout";
 import api, { resolveApiAssetUrl } from "../services/api";
@@ -219,7 +219,7 @@ function GemologistDashboard() {
     {
       key: "pending",
       title: "Pending Reviews",
-      icon: "◇",
+      icon: <ClipboardList size={19} strokeWidth={1.8} aria-hidden="true" />,
       className: "gemologist-stat-primary",
       iconClass: "",
       description:
@@ -228,8 +228,8 @@ function GemologistDashboard() {
     {
       key: "aiCompleted",
       title: "AI Completed",
-      icon: "AI",
-      className: "",
+      icon: <Sparkles size={19} strokeWidth={1.8} aria-hidden="true" />,
+      className: "gemologist-stat-completed",
       iconClass: "completed",
       description:
         "Pending requests with agent analysis ready for human assessment.",
@@ -237,8 +237,8 @@ function GemologistDashboard() {
     {
       key: "aiNotStarted",
       title: "AI Not Started",
-      icon: "◆",
-      className: "",
+      icon: <Clock3 size={19} strokeWidth={1.8} aria-hidden="true" />,
+      className: "gemologist-stat-pending",
       iconClass: "pending",
       description:
         "Pending verifications where the Gemora Agent has not yet been run.",
@@ -246,8 +246,8 @@ function GemologistDashboard() {
     {
       key: "attentionRequired",
       title: "Attention Required",
-      icon: "!",
-      className: "",
+      icon: <ShieldAlert size={19} strokeWidth={1.8} aria-hidden="true" />,
+      className: "gemologist-stat-attention",
       iconClass: "attention",
       description:
         "Items with missing evidence or AI execution issues.",
