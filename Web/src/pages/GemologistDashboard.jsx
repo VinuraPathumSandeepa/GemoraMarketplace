@@ -1,9 +1,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { ArrowUpRight } from "lucide-react";
 
 import DashboardLayout from "../layouts/DashboardLayout";
 import api, { resolveApiAssetUrl } from "../services/api";
+import "./GemologistDashboard.css";
 
 // ============================================================
 // HELPERS
@@ -265,6 +267,7 @@ function GemologistDashboard() {
         <section className="gemologist-dashboard-hero">
           <div className="gemologist-dashboard-hero-content">
             <span className="gemologist-dashboard-eyebrow">
+              <span className="gemologist-dashboard-eyebrow-mark" aria-hidden="true" />
               PROFESSIONAL VERIFICATION WORKSPACE
             </span>
 
@@ -275,6 +278,9 @@ function GemologistDashboard() {
               run AI-assisted analysis and make the final
               professional verification decision.
             </p>
+            <span className="gemologist-dashboard-hero-caption">
+              Gemora laboratory desk <span aria-hidden="true">·</span> Human-led review
+            </span>
           </div>
 
           <Link
@@ -282,7 +288,7 @@ function GemologistDashboard() {
             className="gemologist-queue-button"
           >
             Open Verification Queue
-            <span>→</span>
+            <ArrowUpRight size={18} aria-hidden="true" />
           </Link>
         </section>
 
