@@ -70,7 +70,7 @@ function GemVerificationAgentPanel({
       return "FAILED";
     }
 
-    return "READY";
+    return "NOT STARTED";
   };
 
 
@@ -193,6 +193,7 @@ function GemVerificationAgentPanel({
     ? aiResult.evidenceWarnings : [];
   const riskFlags = Array.isArray(aiResult?.riskFlags)
     ? aiResult.riskFlags.filter((flag) => !evidenceWarnings.includes(flag)) : [];
+  const hasCompletedAnalysis = isCompleted && !isProcessing;
 
 
   // ============================================================
@@ -327,91 +328,26 @@ function GemVerificationAgentPanel({
 
       </div>
 
-
-      {/* ======================================================
-          AGENT RESPONSIBILITIES
-          ====================================================== */}
-
-      <div className="gemora-agent-role-grid">
-
-        <div>
-
-          <span className="agent-role-number">
-            01
-          </span>
-
-          <strong>
-            Validate Evidence
-          </strong>
-
-          <p>
-            Check required listing,
-            image and certificate
-            evidence before AI model
-            analysis.
-          </p>
-
+      <div className="agent-overview" aria-label="AI analysis summary">
+        <div className="agent-overview-heading">
+          <span>ANALYSIS SNAPSHOT</span>
+          {isPendingReview && <strong>Human Review Required</strong>}
         </div>
-
-
-        <div>
-
-          <span className="agent-role-number">
-            02
-          </span>
-
-          <strong>
-            Analyze Gemstone
-          </strong>
-
-          <p>
-            Review gemstone imagery
-            together with the seller's
-            submitted listing data.
-          </p>
-
+        <div className="agent-result-summary">
+          <article><span>Suggested Gemstone Type</span>
+            <strong>{hasCompletedAnalysis ? aiResult?.suggestedGemType || "No suggestion" : "—"}</strong></article>
+          <article><span>Model-Reported Confidence</span>
+            <strong>{hasCompletedAnalysis ? formatConfidence(aiResult?.confidenceScore) : "—"}</strong></article>
+          <article><span>Image Analysis Status</span>
+            <strong>{isProcessing ? "Processing" : hasCompletedAnalysis
+              ? aiResult?.imageAnalyzed ? "Completed" : "Not Performed"
+              : isFailed ? "Failed" : needsMoreEvidence ? "Not Performed" : "Not Started"}</strong></article>
+          <article><span>Risk Flags Count</span>
+            <strong>{hasCompletedAnalysis ? riskFlags.length : "—"}</strong></article>
         </div>
-
-
-        <div>
-
-          <span className="agent-role-number">
-            03
-          </span>
-
-          <strong>
-            Identify Risks
-          </strong>
-
-          <p>
-            Surface inconsistencies,
-            evidence problems and
-            relevant verification
-            risk indicators.
-          </p>
-
-        </div>
-
-
-        <div>
-
-          <span className="agent-role-number">
-            04
-          </span>
-
-          <strong>
-            Assist Human Review
-          </strong>
-
-          <p>
-            Prepare structured findings
-            for the Gemologist without
-            making the final approval
-            decision.
-          </p>
-
-        </div>
-
+        <p className="agent-confidence-note">
+          Model confidence is advisory only, not a measure of authenticity or approval. A Gemologist makes the final decision.
+        </p>
       </div>
 
 
@@ -623,64 +559,6 @@ function GemVerificationAgentPanel({
               )}
 
             </div>
-
-
-            {/* ================================================
-                SUMMARY
-                ================================================ */}
-
-            <div className="agent-result-summary">
-
-              <article>
-
-                <span>
-                  Suggested Gem Type
-                </span>
-
-                <strong>
-                  {
-                    aiResult.suggestedGemType ||
-                    "No suggestion"
-                  }
-                </strong>
-
-              </article>
-
-
-              <article>
-
-                <span>
-                  Model-reported confidence
-                </span>
-
-                <strong>
-                  {formatConfidence(
-                    aiResult.confidenceScore
-                  )}
-                </strong>
-
-              </article>
-
-
-              <article>
-
-                <span>
-                  Image Analysis
-                </span>
-
-                <strong>
-                  {aiResult.imageAnalyzed
-                    ? "Completed"
-                    : "Not Performed"}
-                </strong>
-
-              </article>
-
-            </div>
-
-            <p className="agent-confidence-note">
-              This advisory score is not a measure of authenticity or approval. Review all risk flags and evidence before deciding.
-            </p>
 
 
             {/* ================================================

@@ -42,7 +42,7 @@ it("labels completed confidence as advisory even when risk flags exist", () => {
       riskFlags: ["No gemstone certificate file has been provided.", "Color inconsistency"] }}
     analyzing={false} onRunAnalysis={vi.fn()} />);
 
-  expect(screen.getByText("Model-reported confidence")).toBeInTheDocument();
+  expect(screen.getByText("Model-Reported Confidence")).toBeInTheDocument();
   expect(screen.getByText("85%")).toBeInTheDocument();
   expect(screen.getByText(/not a measure of authenticity or approval/)).toBeInTheDocument();
   expect(screen.getByText("Color inconsistency")).toBeInTheDocument();
@@ -50,6 +50,39 @@ it("labels completed confidence as advisory even when risk flags exist", () => {
   const risks = screen.getByText("Risk Flags").closest(".agent-report-block");
   expect(within(warnings).getByText("No gemstone certificate file has been provided.")).toBeInTheDocument();
   expect(within(risks).queryByText("No gemstone certificate file has been provided.")).not.toBeInTheDocument();
+});
+
+it("places real completed analysis metrics directly under the header", () => {
+  const { container } = render(<GemVerificationAgentPanel
+    verification={{ decision: "Pending", aiStatus: "Completed" }}
+    aiResult={{ status: "Completed", suggestedGemType: "Sapphire", confidenceScore: 0.82,
+      imageAnalyzed: true, riskFlags: ["Color inconsistency", "Certificate mismatch"] }}
+    analyzing={false} onRunAnalysis={vi.fn()} />);
+
+  const overview = container.querySelector(".agent-overview");
+  expect(overview).toBeInTheDocument();
+  expect(overview.compareDocumentPosition(container.querySelector(".gemora-agent-results")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(within(overview).getByText("Sapphire")).toBeInTheDocument();
+  expect(within(overview).getByText("82%")).toBeInTheDocument();
+  expect(within(overview).getByText("Image Analysis Status")).toBeInTheDocument();
+  expect(within(overview).getByText("Risk Flags Count").nextElementSibling).toHaveTextContent("2");
+  expect(within(overview).getByText("Human Review Required")).toBeInTheDocument();
+});
+
+it.each([
+  ["NotStarted", "NOT STARTED", "Not Started"],
+  ["Processing", "PROCESSING", "Processing"],
+  ["Failed", "FAILED", "Failed"],
+])("shows %s truthfully without stale successful metrics", (status, badge, imageStatus) => {
+  const { container } = render(<GemVerificationAgentPanel
+    verification={{ decision: "Pending", aiStatus: status }}
+    aiResult={{ status, confidenceScore: 0.99, suggestedGemType: "Ruby", imageAnalyzed: true }}
+    analyzing={status === "Processing"} onRunAnalysis={vi.fn()} />);
+  expect(container.querySelector(".gemora-agent-status")).toHaveTextContent(badge);
+  const overview = container.querySelector(".agent-overview");
+  expect(within(overview).getByText("Image Analysis Status").nextElementSibling).toHaveTextContent(imageStatus);
+  expect(within(overview).queryByText("99%")).not.toBeInTheDocument();
+  expect(within(overview).queryByText("Ruby")).not.toBeInTheDocument();
 });
 
 it("does not reconstruct detailed steps from a legacy status or audit-message count", () => {
