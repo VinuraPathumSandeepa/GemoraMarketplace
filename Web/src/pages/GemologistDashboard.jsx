@@ -414,7 +414,7 @@ function GemologistDashboard() {
                             {item.gemType || "Gemstone"}
                           </span>
 
-                          <h3>{item.title}</h3>
+                          <h3>{item.title || "Untitled gemstone"}</h3>
                         </div>
 
                         <span
@@ -428,18 +428,20 @@ function GemologistDashboard() {
 
                       <div className="gemologist-preview-meta">
                         <span>
-                          Seller:{" "}
+                          <small>Seller</small>
                           <strong>
-                            {item.sellerName}
+                            {item.sellerName || "Not provided"}
                           </strong>
                         </span>
 
                         <span>
-                          {item.caratWeight} ct
+                          <small>Weight</small>
+                          <strong>{item.caratWeight != null ? `${item.caratWeight} ct` : "Not provided"}</strong>
                         </span>
 
                         <span>
-                          {formatDate(item.createdAt)}
+                          <small>Submitted</small>
+                          <strong>{formatDate(item.createdAt)}</strong>
                         </span>
                       </div>
 
@@ -477,7 +479,7 @@ function GemologistDashboard() {
                       className="gemologist-preview-open"
                     >
                       Open Review
-                      <span>→</span>
+                      <ArrowUpRight size={16} aria-hidden="true" />
                     </Link>
                   </div>
                 ))}
@@ -530,7 +532,7 @@ function GemologistDashboard() {
                       className="gemologist-attention-item"
                     >
                       <div className="gemologist-attention-icon">
-                        !
+                        <ShieldAlert size={18} strokeWidth={1.8} aria-hidden="true" />
                       </div>
 
                       <div>
@@ -538,7 +540,11 @@ function GemologistDashboard() {
                           VERIFICATION #{item.verificationId}
                         </span>
 
-                        <strong>{item.title}</strong>
+                        <strong>{item.title || "Untitled gemstone"}</strong>
+
+                        <span className={`gemologist-ai-chip ${getAiStatusClass(item.aiStatus)}`}>
+                          {getAiStatusLabel(item.aiStatus)}
+                        </span>
 
                         <ul>
                           {issues.map((issue) => (
