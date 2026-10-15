@@ -312,8 +312,13 @@ function GemologistDashboard() {
           </div>
 
           {error && (
-            <div className="gemologist-dashboard-error">
-              {error}
+            <div className="gemologist-dashboard-error" role="alert">
+              <div>
+                <strong>Verification workload unavailable</strong>
+                <span>{error}</span>
+                {verifications.length > 0 && <small>Showing the last successfully loaded records.</small>}
+              </div>
+              <button type="button" onClick={loadDashboard} disabled={loading}>Try again</button>
             </div>
           )}
 
@@ -336,7 +341,7 @@ function GemologistDashboard() {
                 </div>
 
                 <strong>
-                  {loading ? "—" : stats[card.key]}
+                  {loading || (error && verifications.length === 0) ? "—" : stats[card.key]}
                 </strong>
 
                 <p>{card.description}</p>
@@ -375,6 +380,11 @@ function GemologistDashboard() {
               <div className="gemologist-panel-state">
                 <span className="gemologist-dashboard-loader" />
                 <p>Loading verification queue...</p>
+              </div>
+            ) : error && verifications.length === 0 ? (
+              <div className="gemologist-panel-state gemologist-panel-state-error">
+                <strong>Queue unavailable</strong>
+                <p>Try again to load pending submissions.</p>
               </div>
             ) : recentVerifications.length === 0 ? (
               <div className="gemologist-panel-state">
@@ -506,6 +516,11 @@ function GemologistDashboard() {
               <div className="gemologist-panel-state">
                 <span className="gemologist-dashboard-loader" />
                 <p>Checking verification evidence...</p>
+              </div>
+            ) : error && verifications.length === 0 ? (
+              <div className="gemologist-panel-state gemologist-panel-state-error">
+                <strong>Priorities unavailable</strong>
+                <p>Evidence checks will appear when the workload loads.</p>
               </div>
             ) : attentionItems.length === 0 ? (
               <div className="gemologist-panel-state">

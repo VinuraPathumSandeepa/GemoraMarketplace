@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 import GemologistDashboard from "../pages/GemologistDashboard";
@@ -72,4 +72,21 @@ it("shows real review details, evidence issues, and the human decision boundary"
   expect(within(issue).getByText("Previous AI execution failed")).toBeInTheDocument();
   expect(within(issue).getByText("AI Failed")).toBeInTheDocument();
   expect(screen.getByText("AI assists. Humans decide.")).toBeInTheDocument();
+});
+
+it("does not call a failed workload empty and allows a retry", async () => {
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  api.get.mockRejectedValueOnce(new Error("network unavailable"))
+    .mockResolvedValueOnce({ data: [] });
+
+  render(<MemoryRouter><GemologistDashboard /></MemoryRouter>);
+  expect(await screen.findByRole("alert")).toHaveTextContent("Verification workload unavailable");
+  expect(screen.getByText("Queue unavailable")).toBeInTheDocument();
+  expect(screen.getByText("Priorities unavailable")).toBeInTheDocument();
+  expect(screen.queryByText("Queue is clear")).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+  expect(await screen.findByText("Queue is clear")).toBeInTheDocument();
+  expect(api.get).toHaveBeenCalledTimes(2);
+  log.mockRestore();
 });
