@@ -19709,6 +19709,40 @@ article:nth-child(3) {
   .agent-insight-grid { grid-template-columns: 1fr; }
   .agent-workflow-summary { flex-wrap: wrap; }
 }
+
+/* Final verification page spacing, feedback and keyboard polish. */
+.verification-details-page, .verification-evidence-layout,
+.verification-evidence-layout > *, .gemora-agent-panel,
+.gemora-agent-header, .gemora-agent-identity { min-width: 0; }
+.verification-details-page { gap: 18px; }
+.verification-details-header { padding: 24px; }
+.verification-details-header h1 { overflow-wrap: anywhere; font-size: clamp(27px, 3.2vw, 36px); }
+.verification-detail-panel { padding: 20px; }
+.verification-panel-heading { align-items: center; margin-bottom: 16px; }
+.verification-panel-heading a { white-space: nowrap; }
+.verification-details-loading, .verification-details-error { min-height: 240px; padding: 26px; }
+.agent-failure-notice { border-color: rgba(226,105,96,.45); background: rgba(183,65,57,.13); color: #ffe7de; }
+.agent-failure-notice strong { display: block; margin-bottom: 4px; color: #ffb4a8; font-size: 14px; }
+.agent-failure-notice p { margin: 0; overflow-wrap: anywhere; font-size: 12px; }
+.agent-failure-notice small { display: block; margin-top: 8px; color: #f5c3b8; font-size: 11px; }
+.agent-report-empty { margin: 14px 0 0; padding: 14px; border: 1px dashed rgba(221,169,88,.3); border-radius: 10px; color: #d9e3da; font-size: 12px; line-height: 1.6; }
+.gemora-agent-run-button:focus-visible,
+.verification-details-page a:focus-visible { outline: 3px solid #e0b46c; outline-offset: 3px; }
+@media (max-width: 700px) {
+  .verification-details-page { gap: 14px; }
+  .verification-details-header { padding: 20px; }
+  .verification-detail-panel { padding: 16px; }
+  .verification-panel-heading { flex-wrap: wrap; gap: 8px; }
+  .gemora-agent-header { gap: 14px; }
+  .gemora-agent-results { padding: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-orb-processing .agent-orb-ring,
+  .agent-orb-processing .agent-orb-ring::before,
+  .agent-button-spinner, .agent-status-processing i,
+  .agent-step-running .agent-timeline-marker { animation: none; }
+  .gemora-agent-run-button { transition: none; }
+}
 /* ============================================================
    GEMORA HOME — FINAL DESKTOP WIDTH
    Reduce unnecessary left/right whitespace

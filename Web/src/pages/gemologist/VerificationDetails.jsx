@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   Link,
@@ -204,6 +204,7 @@ function VerificationDetails() {
 
   const [analyzing, setAnalyzing] =
     useState(false);
+  const analysisInFlight = useRef(false);
 
   const [reviewing, setReviewing] =
     useState(false);
@@ -306,10 +307,11 @@ function VerificationDetails() {
   // ==========================================================
 
   const handleRunAiAnalysis = async () => {
-    if (!verification || analyzing) {
+    if (!verification || analyzing || analysisInFlight.current) {
       return;
     }
 
+    analysisInFlight.current = true;
     setError("");
     setSuccess("");
     setAnalyzing(true);
@@ -330,12 +332,13 @@ function VerificationDetails() {
       // Reload persisted information so the
       // React UI stays synchronized with PostgreSQL.
 
-      await loadVerification({
+      const refreshedVerification = await loadVerification({
         silent: true,
       });
 
       if (aiStatus === "failed") {
-        setError(response.data?.findings || "AI analysis is unavailable. Manual review remains available.");
+        // The Agent panel presents the persisted failure and retry guidance.
+        if (refreshedVerification) setError("");
       } else if (aiStatus === "needsmoreevidence") {
         setSuccess(
           "The Gemora Verification Agent completed evidence validation and determined that additional or corrected evidence is required."
@@ -367,6 +370,7 @@ function VerificationDetails() {
 
       setError(message);
     } finally {
+      analysisInFlight.current = false;
       setAnalyzing(false);
     }
   };
@@ -535,7 +539,7 @@ function VerificationDetails() {
   if (loading) {
     return (
       <DashboardLayout title="Gem Verification">
-        <div className="verification-details-loading">
+        <div className="verification-details-loading" role="status">
           <div className="verification-loader" />
 
           <h3>

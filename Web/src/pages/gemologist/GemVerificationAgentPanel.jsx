@@ -402,10 +402,11 @@ function GemVerificationAgentPanel({
 
       {isFailed &&
         !isProcessing && (
-          <div className="verification-ai-warning">
-
-            {aiResult?.findings || "The previous agent execution could not be completed. Human review remains available."}
-
+          <div className="verification-ai-warning agent-failure-notice" role="alert">
+            <strong>Analysis could not be completed</strong>
+            <p>{aiResult?.findings || "The previous agent execution could not be completed. Human review remains available."}</p>
+            {Number(aiResult?.retryAfterSeconds) > 0 &&
+              <small>Provider retry guidance: wait at least {aiResult.retryAfterSeconds} seconds before trying again.</small>}
           </div>
         )}
 
@@ -483,6 +484,10 @@ function GemVerificationAgentPanel({
 
               </div>
             )}
+
+            {!aiResult.findings && !aiResult.visualObservations?.length &&
+              !riskFlags.length && !evidenceWarnings.length && !aiResult.validationIssues?.length &&
+              <p className="agent-report-empty">No detailed findings were returned. Review the submitted evidence before making a human decision.</p>}
 
 
             {/* ================================================

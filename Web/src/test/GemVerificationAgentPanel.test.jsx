@@ -130,3 +130,26 @@ it("labels deterministic evidence results without implying Gemini image analysis
   expect(screen.getByText("Evidence Warnings").closest(".agent-validation-report"))
     .toHaveTextContent("Certificate is missing.");
 });
+
+it("shows readable provider failure and retry guidance without successful findings", () => {
+  const { container } = render(<GemVerificationAgentPanel
+    verification={{ decision: "Pending", aiStatus: "Failed" }}
+    aiResult={{ status: "Failed", findings: "Rate limit reached.", retryAfterSeconds: 45,
+      confidenceScore: 0.91, imageAnalyzed: false }}
+    analyzing={false} onRunAnalysis={vi.fn()} />);
+  const failure = screen.getByRole("alert");
+  expect(failure).toHaveTextContent("Analysis could not be completed");
+  expect(failure).toHaveTextContent("Rate limit reached.");
+  expect(failure).toHaveTextContent("wait at least 45 seconds");
+  expect(container.querySelector(".gemora-agent-results")).not.toBeInTheDocument();
+  expect(screen.queryByText("91%")).not.toBeInTheDocument();
+});
+
+it("shows an empty report message when completed analysis has no detail", () => {
+  render(<GemVerificationAgentPanel
+    verification={{ decision: "Pending", aiStatus: "Completed" }}
+    aiResult={{ status: "Completed", imageAnalyzed: false }}
+    analyzing={false} onRunAnalysis={vi.fn()} />);
+  expect(screen.getByText(/No detailed findings were returned/)).toBeInTheDocument();
+  expect(screen.getByText("Image Analysis Status").nextElementSibling).toHaveTextContent("Not Performed");
+});
