@@ -19677,6 +19677,38 @@ article:nth-child(3) {
   .agent-overview .agent-result-summary { grid-template-columns: 1fr; }
   .agent-overview .agent-result-summary article { padding: 10px 12px; }
 }
+
+/* Keep real findings prominent and execution history available on demand. */
+.gemora-agent-results { margin-top: 16px; padding: 18px; }
+.agent-findings-card { border-color: rgba(221,169,88,.3); background: rgba(221,169,88,.075); }
+.agent-findings-card p { color: #f2f3eb; font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
+.agent-insight-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.agent-insight-grid .agent-report-block { min-width: 0; margin-top: 0; }
+.agent-insight-grid > :only-child { grid-column: 1 / -1; }
+.agent-report-block li { overflow-wrap: anywhere; }
+.agent-risk-report { border-color: rgba(234,178,87,.4); background: rgba(218,163,79,.11); }
+.agent-risk-report h4, .agent-risk-report li span { color: #f2cb8a; }
+.agent-validation-report { border-color: rgba(228,139,122,.3); background: rgba(210,92,79,.075); }
+.gemora-agent-execution { margin-top: 14px; padding: 0; }
+.agent-workflow-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 16px; list-style: none; cursor: pointer; }
+.agent-workflow-summary::-webkit-details-marker { display: none; }
+.agent-workflow-summary > span { color: #f4e9d6; font-size: 13px; font-weight: 700; }
+.agent-workflow-summary small { color: #b9cfc3; font-size: 11px; }
+.agent-workflow-summary::after { content: "⌄"; color: #e0b46c; font-size: 18px; line-height: 1; }
+.gemora-agent-execution[open] .agent-workflow-summary { border-bottom: 1px solid rgba(255,255,255,.1); }
+.gemora-agent-execution[open] .agent-workflow-summary::after { transform: rotate(180deg); }
+.agent-workflow-summary:focus-visible { outline: 2px solid #e0b46c; outline-offset: -3px; border-radius: 12px; }
+.gemora-agent-execution .agent-timeline { padding: 14px 16px 6px; }
+.gemora-agent-execution .agent-timeline-step { min-height: 44px; }
+.gemora-agent-execution .agent-step-pending .agent-timeline-marker { color: #d5ded7; }
+.gemora-agent-execution .agent-step-skipped .agent-timeline-marker { border-style: dashed; color: #aab9b0; }
+.gemora-agent-execution .agent-step-failed .agent-timeline-content small { color: #ffaaa2; }
+.gemora-agent-execution .agent-step-completed .agent-timeline-content small { color: #8cddb6; }
+.agent-workflow-empty { margin: 0; padding: 16px; color: #c9d9d0; font-size: 12px; }
+@media (max-width: 700px) {
+  .agent-insight-grid { grid-template-columns: 1fr; }
+  .agent-workflow-summary { flex-wrap: wrap; }
+}
 /* ============================================================
    GEMORA HOME — FINAL DESKTOP WIDTH
    Reduce unnecessary left/right whitespace

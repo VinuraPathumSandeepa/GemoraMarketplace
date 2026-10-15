@@ -29,6 +29,9 @@ it("shows backend failure and skipped steps without inventing completions", () =
     .toHaveClass("agent-step-skipped");
   expect(screen.getByText("Provider rate limited")).toBeInTheDocument();
   expect(screen.queryByText("85%")).not.toBeInTheDocument();
+  expect(screen.getByText("Analysis Workflow").closest("details")).not.toHaveAttribute("open");
+  fireEvent.click(screen.getByText("Analysis Workflow"));
+  expect(screen.getByText("Analysis Workflow").closest("details")).toHaveAttribute("open");
   fireEvent.click(screen.getByRole("button", { name: /Retry Agent Analysis/ }));
   expect(onRunAnalysis).toHaveBeenCalledTimes(1);
 });
@@ -91,4 +94,39 @@ it("does not reconstruct detailed steps from a legacy status or audit-message co
     analyzing={false} onRunAnalysis={vi.fn()} />);
   expect(screen.getByText(/Detailed step history was not recorded/)).toBeInTheDocument();
   expect(screen.queryByText("Run AI analysis")).not.toBeInTheDocument();
+});
+
+it("puts AI findings and paired insights before the expandable workflow", () => {
+  const { container } = render(<GemVerificationAgentPanel
+    verification={{ decision: "Pending", aiStatus: "Completed" }}
+    aiResult={{ status: "Completed", imageAnalyzed: true, findings: "Color differs from seller description.",
+      visualObservations: ["Oval cut", "Blue tone"], riskFlags: ["Color inconsistency"],
+      evidenceWarnings: ["Certificate not supplied"], validationIssues: ["Certificate review needed"],
+      workflowSteps: steps.map((step) => ({ ...step, status: "Completed" })) }}
+    analyzing={false} onRunAnalysis={vi.fn()} />);
+  const report = container.querySelector(".gemora-agent-results");
+  const workflow = container.querySelector(".gemora-agent-execution");
+  expect(report.compareDocumentPosition(workflow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(within(report).getByText("AI FINDINGS").closest(".agent-findings-card"))
+    .toHaveTextContent("Color differs from seller description.");
+  const insights = report.querySelector(".agent-insight-grid");
+  expect(within(insights).getByText("Oval cut")).toBeInTheDocument();
+  expect(within(insights).getByText("Color inconsistency")).toBeInTheDocument();
+  expect(within(insights).queryByText("Certificate not supplied")).not.toBeInTheDocument();
+  expect(within(report).getByText("Evidence Warnings").closest(".agent-validation-report"))
+    .toHaveTextContent("Certificate not supplied");
+  expect(screen.getByText("Human decision required")).toBeInTheDocument();
+});
+
+it("labels deterministic evidence results without implying Gemini image analysis", () => {
+  const { container } = render(<GemVerificationAgentPanel
+    verification={{ decision: "Pending", aiStatus: "NeedsMoreEvidence" }}
+    aiResult={{ status: "NeedsMoreEvidence", findings: "Certificate is missing.",
+      imageAnalyzed: false, evidenceWarnings: ["Certificate is missing."],
+      riskFlags: ["Old model flag"] }} analyzing={false} onRunAnalysis={vi.fn()} />);
+  expect(screen.getByText("EVIDENCE VALIDATION OUTCOME")).toBeInTheDocument();
+  expect(screen.queryByText("✓ Image Analyzed")).not.toBeInTheDocument();
+  expect(container.querySelector(".agent-insight-grid")).not.toHaveTextContent("Old model flag");
+  expect(screen.getByText("Evidence Warnings").closest(".agent-validation-report"))
+    .toHaveTextContent("Certificate is missing.");
 });

@@ -430,105 +430,10 @@ function GemVerificationAgentPanel({
 
 
       {/* ======================================================
-          AGENT EXECUTION TIMELINE
-          ====================================================== */}
-
-      {(isProcessing ||
-        isCompleted ||
-        needsMoreEvidence ||
-        isFailed) && (
-        <div className="gemora-agent-execution">
-
-          <div className="agent-section-heading">
-
-            <div>
-
-              <span>
-                AGENT EXECUTION
-              </span>
-
-              <h3>
-                Analysis Workflow
-              </h3>
-
-            </div>
-
-
-            <small>
-              Structured agent steps
-            </small>
-
-          </div>
-
-
-          {workflowSteps.length === 0 && <p>{isProcessing
-            ? "Waiting for backend step results."
-            : "Detailed step history was not recorded for this analysis."}</p>}
-          {workflowSteps.length > 0 && <div className="agent-timeline">
-
-            {defaultSteps.map(
-              (
-                [id, step],
-                index
-              ) => {
-
-                const state =
-                  getStepState(id);
-
-
-                return (
-                  <div
-                    key={step}
-                    className={`agent-timeline-step agent-step-${state}`}
-                  >
-
-                    {/* MARKER */}
-
-                    <div className="agent-timeline-marker">
-
-                      {state ===
-                      "completed"
-                        ? "✓"
-                        : state ===
-                          "running"
-                        ? "◆"
-                        : state === "failed" ? "!"
-                        : state === "skipped" ? "–"
-                        : index +
-                          1}
-
-                    </div>
-
-
-                    {/* STEP CONTENT */}
-
-                    <div className="agent-timeline-content">
-
-                      <strong>
-                        {step}
-                      </strong>
-
-
-                      <small>{state.charAt(0).toUpperCase() + state.slice(1)}</small>
-
-                    </div>
-
-                  </div>
-                );
-              }
-            )}
-
-          </div>}
-
-        </div>
-      )}
-
-
-      {/* ======================================================
           AGENT ANALYSIS REPORT
           ====================================================== */}
 
-      {(isCompleted ||
+      {!isProcessing && (isCompleted ||
         needsMoreEvidence) &&
         aiResult && (
           <div className="gemora-agent-results">
@@ -552,7 +457,7 @@ function GemVerificationAgentPanel({
               </div>
 
 
-              {aiResult.imageAnalyzed && (
+              {isCompleted && aiResult.imageAnalyzed && (
                 <div className="agent-image-analyzed">
                   ✓ Image Analyzed
                 </div>
@@ -568,9 +473,7 @@ function GemVerificationAgentPanel({
             {aiResult.findings && (
               <div className="agent-findings-card">
 
-                <span>
-                  AGENT FINDINGS
-                </span>
+                <span>{isCompleted ? "AI FINDINGS" : "EVIDENCE VALIDATION OUTCOME"}</span>
 
                 <p>
                   {
@@ -586,6 +489,7 @@ function GemVerificationAgentPanel({
                 VISUAL OBSERVATIONS
                 ================================================ */}
 
+            <div className="agent-insight-grid">
             {Array.isArray(
               aiResult.visualObservations
             ) &&
@@ -630,22 +534,11 @@ function GemVerificationAgentPanel({
               )}
 
 
-            {evidenceWarnings.length > 0 && (
-              <div className="agent-report-block agent-validation-report">
-                <h4>Evidence Warnings</h4>
-                <ul>
-                  {evidenceWarnings.map((warning, index) => (
-                    <li key={`${warning}-${index}`}><span>!</span>{warning}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
             {/* ================================================
                 RISK FLAGS
                 ================================================ */}
 
-            {riskFlags.length > 0 && (
+            {isCompleted && riskFlags.length > 0 && (
                 <div className="agent-report-block agent-risk-report">
 
                   <h4>
@@ -680,6 +573,18 @@ function GemVerificationAgentPanel({
 
                 </div>
               )}
+            </div>
+
+            {evidenceWarnings.length > 0 && (
+              <div className="agent-report-block agent-validation-report">
+                <h4>Evidence Warnings</h4>
+                <ul>
+                  {evidenceWarnings.map((warning, index) => (
+                    <li key={`${warning}-${index}`}><span>!</span>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
 
             {/* ================================================
@@ -729,6 +634,35 @@ function GemVerificationAgentPanel({
 
           </div>
         )}
+
+      {(isProcessing || isCompleted || needsMoreEvidence || isFailed) && (
+        <details className="gemora-agent-execution">
+          <summary className="agent-workflow-summary">
+            <span>Analysis Workflow</span>
+            <small>{workflowSteps.length > 0
+              ? `${workflowSteps.filter((step) => step.status?.toLowerCase() === "completed").length} of ${workflowSteps.length} steps completed`
+              : "View execution steps"}</small>
+          </summary>
+          {workflowSteps.length === 0 ? <p className="agent-workflow-empty">{isProcessing
+            ? "Waiting for backend step results."
+            : "Detailed step history was not recorded for this analysis."}</p> :
+            <div className="agent-timeline">
+              {defaultSteps.map(([id, step], index) => {
+                const state = getStepState(id);
+                return <div key={id} className={`agent-timeline-step agent-step-${state}`}>
+                  <div className="agent-timeline-marker" aria-hidden="true">
+                    {state === "completed" ? "✓" : state === "running" ? "◆" :
+                      state === "failed" ? "!" : state === "skipped" ? "–" : index + 1}
+                  </div>
+                  <div className="agent-timeline-content">
+                    <strong>{step}</strong>
+                    <small>{state.charAt(0).toUpperCase() + state.slice(1)}</small>
+                  </div>
+                </div>;
+              })}
+            </div>}
+        </details>
+      )}
 
 
       {/* ======================================================
