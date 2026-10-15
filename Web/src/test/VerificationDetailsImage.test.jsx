@@ -52,6 +52,13 @@ it("shows a useful fallback when no gemstone image was supplied", async () => {
   expect(screen.queryByRole("link", { name: /Open Original/ })).not.toBeInTheDocument();
 });
 
+it("replaces a failed image with the existing unavailable state", async () => {
+  renderDetails();
+  fireEvent.error(await screen.findByRole("img", { name: "Blue Sapphire" }));
+  expect(screen.getByText("Gemstone image unavailable")).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: /Open Original/ })).not.toBeInTheDocument();
+});
+
 it("sends only one AI request after rapid repeated clicks", async () => {
   let finishAnalysis;
   api.post.mockImplementation(() => new Promise((resolve) => { finishAnalysis = resolve; }));
